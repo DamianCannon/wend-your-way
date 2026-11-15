@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  T043 Waterside fixture, near Box Hill (the features are invented; only the place is real). Four
+  footpaths each about 280 m long, running east, and water just north of them, its near edge about
+  11 m away: a canal along all of path 100; nothing near path 101; a sewage works' tanks along all
+  of path 102; a river along the western half of path 103. osm2pgsql needs all nodes before all
+  ways, each sorted by ID. 0.001° of latitude here is about 111 m; 0.001° of longitude about 70 m.
+-->
+<osm version="0.6" generator="hand">
+  <node id="1" lat="51.2400" lon="-0.3300"/>
+  <node id="2" lat="51.2400" lon="-0.3260"/>
+  <node id="3" lat="51.2450" lon="-0.3300"/>
+  <node id="4" lat="51.2450" lon="-0.3260"/>
+  <node id="5" lat="51.2500" lon="-0.3300"/>
+  <node id="6" lat="51.2500" lon="-0.3260"/>
+  <node id="7" lat="51.2550" lon="-0.3300"/>
+  <node id="8" lat="51.2550" lon="-0.3260"/>
+  <!-- The canal by path 100, the tanks by path 102, the river by the west half of path 103. -->
+  <node id="10" lat="51.24010" lon="-0.3310"/>
+  <node id="11" lat="51.24010" lon="-0.3250"/>
+  <node id="12" lat="51.24030" lon="-0.3250"/>
+  <node id="13" lat="51.24030" lon="-0.3310"/>
+  <node id="14" lat="51.25010" lon="-0.3310"/>
+  <node id="15" lat="51.25010" lon="-0.3250"/>
+  <node id="16" lat="51.25030" lon="-0.3250"/>
+  <node id="17" lat="51.25030" lon="-0.3310"/>
+  <node id="18" lat="51.25510" lon="-0.3310"/>
+  <node id="19" lat="51.25510" lon="-0.3280"/>
+  <node id="20" lat="51.25530" lon="-0.3280"/>
+  <node id="21" lat="51.25530" lon="-0.3310"/>
+  <!-- T048: path 104 beside a river mapped only as a line, path 105 beside a stream. -->
+  <node id="30" lat="51.2600" lon="-0.3300"/>
+  <node id="31" lat="51.2600" lon="-0.3260"/>
+  <node id="32" lat="51.26015" lon="-0.3310"/>
+  <node id="33" lat="51.26015" lon="-0.3250"/>
+  <node id="34" lat="51.2650" lon="-0.3300"/>
+  <node id="35" lat="51.2650" lon="-0.3260"/>
+  <node id="36" lat="51.26515" lon="-0.3310"/>
+  <node id="37" lat="51.26515" lon="-0.3250"/>
+  <way id="100">
+    <nd ref="1"/><nd ref="2"/>
+    <tag k="highway" v="footway"/>
+  </way>
+  <way id="101">
+    <nd ref="3"/><nd ref="4"/>
+    <tag k="highway" v="footway"/>
+  </way>
+  <way id="102">
+    <nd ref="5"/><nd ref="6"/>
+    <tag k="highway" v="footway"/>
+  </way>
+  <way id="103">
+    <nd ref="7"/><nd ref="8"/>
+    <tag k="highway" v="footway"/>
+  </way>
+  <way id="104"><nd ref="30"/><nd ref="31"/><tag k="highway" v="footway"/></way>
+  <way id="105"><nd ref="34"/><nd ref="35"/><tag k="highway" v="footway"/></way>
+  <way id="110">
+    <nd ref="10"/><nd ref="11"/><nd ref="12"/><nd ref="13"/><nd ref="10"/>
+    <tag k="natural" v="water"/>
+    <tag k="water" v="canal"/>
+  </way>
+  <way id="111">
+    <nd ref="14"/><nd ref="15"/><nd ref="16"/><nd ref="17"/><nd ref="14"/>
+    <tag k="natural" v="water"/>
+    <tag k="water" v="wastewater"/>
+  </way>
+  <way id="112">
+    <nd ref="18"/><nd ref="19"/><nd ref="20"/><nd ref="21"/><nd ref="18"/>
+    <tag k="waterway" v="riverbank"/>
+  </way>
+  <way id="113"><nd ref="32"/><nd ref="33"/><tag k="waterway" v="river"/></way>
+  <way id="114"><nd ref="36"/><nd ref="37"/><tag k="waterway" v="stream"/></way>
+</osm>

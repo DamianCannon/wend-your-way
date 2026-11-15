@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  The default test run (PLAN T122): every spec but those that read the user's real Network
+  (RealNetwork: London's or Great Britain's built Network; minutes, and timings on this laptop) and
+  the timings (Performance). CONTRIBUTING.md says how to run those by name.
+-->
+<RunSettings>
+  <NUnit>
+    <Where>cat != RealNetwork and cat != Performance</Where>
+  </NUnit>
+</RunSettings>

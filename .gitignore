@@ -1,0 +1,21 @@
+bin/
+obj/
+.vs/
+*.user
+# local data: OSM extracts, terrain tiles, backups, build output
+/data/
+*.osm.pbf
+/backups/
+# local tools downloaded by scripts/setup.ps1 (osm2pgsql)
+/tools/
+
+# spike output: real OSM around home, rendered maps (holds home location and the tile key)
+spikes/out/
+spikes/**/bin/
+spikes/**/obj/
+
+# Claude Code's own permission rules can hold secrets typed into approved commands
+.claude/settings.local.json
+
+# Docker compose's own settings (T142): the user's keys and Home.
+.env

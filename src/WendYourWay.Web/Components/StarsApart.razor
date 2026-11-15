@@ -1,0 +1,15 @@
+@* Where the user's stars and the app's part by 2 or more (T097, STORY-045 AC3): said beside them,
+   the route standing out in the list, so the scoring can be looked at there. *@
+
+@if (Stars.Disagree(User, App))
+{
+    <span class="apart" title="The app's score and you disagree here: worth a look">You gave it @User @(User == 1 ? "star" : "stars"), the app @App</span>
+}
+
+@code {
+    /// <summary>The user's stars, or none.</summary>
+    [Parameter] public int? User { get; set; }
+
+    /// <summary>The app's stars, or none.</summary>
+    [Parameter] public int? App { get; set; }
+}

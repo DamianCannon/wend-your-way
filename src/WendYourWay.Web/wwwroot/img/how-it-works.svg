@@ -1,0 +1,90 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1080 450" role="img" aria-labelledby="title desc">
+  <title id="title">How the parts of Wend Your Way connect</title>
+  <desc id="desc">OpenStreetMap data goes through wend network build into the network drawer of a PostgreSQL and PostGIS database. Your Strava archive goes through wend outings import-strava into the app drawer. The web app loads nearby Segments from the network drawer, finds and scores Loops, and shows them in your browser on a tiled map, ready to export as GPX.</desc>
+  <style>
+    .bg { fill: #f7f3ea; }
+    .box { fill: #fffdf8; stroke: #d8cfbc; stroke-width: 1.5; }
+    .db { fill: none; stroke: #1e3b2f; stroke-width: 1.5; }
+    .net { fill: #ffffff; stroke: #2e7d32; stroke-width: 2; }
+    .app { fill: #ffffff; stroke: #1f78c8; stroke-width: 2; }
+    .title { font: 600 19px system-ui, "Segoe UI", Roboto, sans-serif; fill: #1f2a24; }
+    .cmd { font: 500 13.5px Consolas, "Cascadia Mono", "SF Mono", monospace; fill: #1f2a24; }
+    .body { font: 13.5px system-ui, "Segoe UI", Roboto, sans-serif; fill: #5b6760; }
+    .small { font: 12px system-ui, "Segoe UI", Roboto, sans-serif; fill: #5b6760; }
+    .label { font: 700 11.5px system-ui, "Segoe UI", Roboto, sans-serif; fill: #1e3b2f; letter-spacing: 0.12em; }
+    .arrow { stroke: #1f2a24; stroke-width: 1.75; fill: none; }
+    .later { stroke: #5b6760; stroke-width: 1.5; fill: none; stroke-dasharray: 5 4; }
+    .loop { stroke: #e8590c; stroke-width: 3; fill: none; stroke-linecap: round; }
+  </style>
+  <defs>
+    <marker id="head" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#1f2a24"/></marker>
+    <marker id="head-later" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#5b6760"/></marker>
+  </defs>
+  <rect class="bg" x="0" y="0" width="1080" height="450" rx="12"/>
+
+  <text class="label" x="20" y="28">COMES IN</text>
+  <text class="label" x="270" y="28">CT, THE COMMAND LINE</text>
+  <text class="label" x="550" y="28">KEPT</text>
+  <text class="label" x="810" y="28">YOU USE</text>
+
+  <rect class="box" x="20" y="50" width="210" height="100" rx="8"/>
+  <text class="title" x="36" y="80">OpenStreetMap</text>
+  <text class="body" x="36" y="104">Great Britain extract</text>
+  <text class="body" x="36" y="124">2.2 GB, from Geofabrik</text>
+
+  <rect class="box" x="20" y="300" width="210" height="100" rx="8"/>
+  <text class="title" x="36" y="330">Your Strava archive</text>
+  <text class="body" x="36" y="354">every activity you've logged</text>
+  <text class="body" x="36" y="374">read in place, never copied</text>
+
+  <rect class="box" x="270" y="50" width="240" height="100" rx="8"/>
+  <text class="cmd" x="286" y="80">wend network build</text>
+  <text class="body" x="286" y="104">cuts ways into Segments,</text>
+  <text class="body" x="286" y="124">classifies ground, clips to E&amp;W</text>
+
+  <rect class="box" x="270" y="300" width="240" height="100" rx="8"/>
+  <text class="cmd" x="286" y="330">wend outings import-strava</text>
+  <text class="body" x="286" y="354">what each run covered,</text>
+  <text class="body" x="286" y="374">and where it left the map</text>
+
+  <rect class="db" x="550" y="44" width="220" height="370" rx="14"/>
+  <text class="title" x="566" y="74">PostgreSQL + PostGIS</text>
+  <rect class="net" x="566" y="92" width="188" height="120" rx="8"/>
+  <text class="cmd" x="582" y="120">network</text>
+  <text class="body" x="582" y="144">13.4 million Segments</text>
+  <text class="body" x="582" y="164">rebuilt from OSM,</text>
+  <text class="body" x="582" y="184">never edited by hand</text>
+  <rect class="app" x="566" y="270" width="188" height="120" rx="8"/>
+  <text class="cmd" x="582" y="298">app</text>
+  <text class="body" x="582" y="322">your Outings, coverage</text>
+  <text class="body" x="582" y="342">and gaps; a rebuild</text>
+  <text class="body" x="582" y="362">never touches them</text>
+
+  <rect class="box" x="810" y="50" width="250" height="140" rx="8"/>
+  <text class="title" x="826" y="80">Web app + route finder</text>
+  <text class="body" x="826" y="104">loads the ~100,000 Segments</text>
+  <text class="body" x="826" y="124">near your start, tries about</text>
+  <text class="body" x="826" y="144">a hundred Loops with A*,</text>
+  <text class="body" x="826" y="164">keeps the best-scoring one</text>
+
+  <rect class="box" x="810" y="290" width="250" height="110" rx="8"/>
+  <text class="title" x="826" y="320">Your browser</text>
+  <text class="body" x="826" y="344">the map of your choice,</text>
+  <text class="body" x="826" y="364">the Loop and its Breakdown,</text>
+  <text class="body" x="826" y="384">GPX to your watch or OS Maps</text>
+  <path class="loop" d="M1010,322 c18,-10 30,4 22,18 c-6,12 -24,10 -28,0 c-3,-8 0,-14 6,-18"/>
+
+  <line class="arrow" x1="230" y1="100" x2="268" y2="100" marker-end="url(#head)"/>
+  <line class="arrow" x1="230" y1="350" x2="268" y2="350" marker-end="url(#head)"/>
+  <path class="arrow" d="M510,100 H538 V152 H564" marker-end="url(#head)"/>
+  <path class="arrow" d="M510,350 H538 V330 H564" marker-end="url(#head)"/>
+  <path class="arrow" d="M754,152 H782 V120 H808" marker-end="url(#head)"/>
+  <path class="later" d="M754,330 H790 V172 H808" marker-end="url(#head-later)"/>
+  <text class="small" x="660" y="240" text-anchor="middle">rows link by OSM identity,</text>
+  <text class="small" x="660" y="256" text-anchor="middle">so a rebuild loses nothing</text>
+  <line class="arrow" x1="920" y1="190" x2="920" y2="288" marker-end="url(#head)"/>
+  <line class="arrow" x1="950" y1="288" x2="950" y2="192" marker-end="url(#head)"/>
+  <text class="small" x="912" y="244" text-anchor="end">a Loop</text>
+  <text class="small" x="958" y="244">your click</text>
+  <text class="small" x="798" y="262" text-anchor="end">later: Familiarity</text>
+</svg>

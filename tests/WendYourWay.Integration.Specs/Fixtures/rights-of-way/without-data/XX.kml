@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<!-- T021: an invented authority whose Definitive Map isn't open, Nowhere, round way 408 of
+     trail-rides.osm, drawn as rowmaps.com's realbounds files are; and, as Brent's file holds
+     Brentwood, a neighbour sharing its file, Nowhereton, round way 403, which isn't it. -->
+<kml xmlns="http://www.opengis.net/kml/2.2">
+<Document><Folder><name>Nowhere</name>
+<Placemark><name>Nowhereton (B)</name>
+<ExtendedData><SchemaData schemaUrl="#district_borough_unitary_region"><SimpleData name="Name">Nowhereton (B)</SimpleData></SchemaData></ExtendedData>
+<Polygon><outerBoundaryIs><LinearRing><coordinates>-1.801,51.509 -1.789,51.509 -1.789,51.511 -1.801,51.511 -1.801,51.509</coordinates></LinearRing></outerBoundaryIs></Polygon>
+</Placemark>
+<Placemark><name>Nowhere (B)</name>
+<ExtendedData><SchemaData schemaUrl="#district_borough_unitary_region"><SimpleData name="Name">Nowhere (B)</SimpleData></SchemaData></ExtendedData>
+<Polygon><outerBoundaryIs><LinearRing><coordinates>-1.801,51.514 -1.789,51.514 -1.789,51.516 -1.801,51.516 -1.801,51.514</coordinates></LinearRing></outerBoundaryIs></Polygon>
+</Placemark>
+</Folder></Document>
+</kml>

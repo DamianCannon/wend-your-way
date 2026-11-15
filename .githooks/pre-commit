@@ -1,0 +1,54 @@
+#!/bin/sh
+# Refuses a commit that would put the user's home location or the map key into git.
+# Home and the key are read from dotnet user-secrets (src/WendYourWay.Web) and never printed.
+# Enable once per clone:  git config core.hooksPath .githooks
+# Test against a file instead of the staged changes:  WEND_HOOK_SCAN=<file> .githooks/pre-commit
+
+secrets=$(dotnet user-secrets list --project src/WendYourWay.Web 2>/dev/null)
+home_lat=$(printf '%s\n' "$secrets" | sed -n 's/^Home:Latitude = //p' | tr -d '\r')
+home_lon=$(printf '%s\n' "$secrets" | sed -n 's/^Home:Longitude = //p' | tr -d '\r')
+tile_key=$(printf '%s\n' "$secrets" | sed -n 's/^Thunderforest:ApiKey = //p' | tr -d '\r')
+
+if [ -z "$home_lat" ] || [ -z "$home_lon" ]; then
+    echo "pre-commit: no Home in user-secrets, so it can't check for home coordinates." >&2
+fi
+
+# The text to check: lines being added, as "file<TAB>text", including inside gzipped files.
+staged() {
+    if [ -n "$WEND_HOOK_SCAN" ]; then
+        sed "s|^|$WEND_HOOK_SCAN	|" "$WEND_HOOK_SCAN"
+        return
+    fi
+    git diff --cached --name-only --diff-filter=ACMR | while IFS= read -r file; do
+        case "$file" in
+            *.gz) git show ":$file" | gzip -dc 2>/dev/null | sed "s|^|$file	|" ;;
+            *) git diff --cached -U0 --no-color -- "$file" | sed -n '/^+++/d; s/^+//p' | sed "s|^|$file	|" ;;
+        esac
+    done
+}
+
+found=$(staged | awk -F '\t' -v lat="$home_lat" -v lon="$home_lon" -v key="$tile_key" '
+    function abs(x) { return x < 0 ? -x : x }
+    {
+        file = $1; text = substr($0, length($1) + 2)
+        if (key != "" && index(text, key) > 0) { print file ": contains the Thunderforest key"; next }
+        if (lat == "" || lon == "") next
+        nearLat = 0; nearLon = 0; rest = text
+        # Decimal numbers with at least three places, as coordinates are written; 0.0135° of
+        # latitude and 0.0216° of longitude are each about 1.5 km here.
+        while (match(rest, /-?[0-9]+\.[0-9][0-9][0-9]+/)) {
+            n = substr(rest, RSTART, RLENGTH) + 0
+            if (abs(n - lat) < 0.0135) nearLat = 1
+            if (abs(n - lon) < 0.0216) nearLon = 1
+            rest = substr(rest, RSTART + RLENGTH)
+        }
+        if (nearLat && nearLon) print file ": has a latitude and longitude within about 1.5 km of home"
+    }' | sort | uniq -c)
+
+if [ -n "$found" ]; then
+    echo "pre-commit: refusing to commit:" >&2
+    printf '%s\n' "$found" >&2
+    echo "Move the data elsewhere (a public landmark well away from home), or unstage it." >&2
+    exit 1
+fi
+exit 0

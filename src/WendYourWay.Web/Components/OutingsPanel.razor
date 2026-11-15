@@ -1,0 +1,361 @@
+@* The Outings panel (STORY-030): the user's imported runs and rides, latest first. Choosing one
+   draws it on the map over the Segments it covered, and lists its gaps. *@
+@inject IOutingViews Outings
+@inject IJSRuntime JS
+@inject ILogger<OutingsPanel> Logger
+
+@if (_problem is not null)
+{
+    <p class="later" role="alert"><strong>@_problem</strong></p>
+}
+@if (_outings is null)
+{
+    @if (_problem is null)
+    {
+        <p class="later">Loading your Outings…</p>
+    }
+}
+else if (_outings.Count == 0)
+{
+    <p class="later">No Outings yet. Import your runs and rides with <code>wend outings import-strava &lt;export.zip&gt;</code> or <code>wend outings import-gpx &lt;folder&gt;</code>.</p>
+}
+else
+{
+    @* Filtered by the user's own stars and by name (T110, user: "by default I'd see all of them
+       but could filter and perhaps a name filter"); both narrow together. *@
+    <div class="outing-filters" role="group" aria-label="Show">
+        @foreach (var (filter, label) in Filters)
+        {
+            <button type="button" aria-pressed="@(_filter == filter ? "true" : "false")" @onclick="() => FilterAsync(filter)">@label</button>
+        }
+        @* How many are listed (T113): all of them, or how many of them. *@
+        <span class="outing-count" aria-live="polite">@Count</span>
+    </div>
+    <input type="search" class="outing-search" placeholder="Name" aria-label="Find an Outing by name" value="@_search" @oninput="SearchAsync" />
+    @if (!Visible.Any())
+    {
+        <p class="later none-match">No Outings match.</p>
+    }
+    <ul class="outings">
+        @foreach (var outing in Visible)
+        {
+            <li class="@Classes(outing)">
+                @* The app's stars and the user's one under the other, lined up (user, 2026-11-10). *@
+                <button type="button" @onclick="() => ShowAsync(outing)"><span class="name">@outing.Name</span> <span class="facts">@Facts(outing)</span></button>
+                <div class="stars"><AppStars Value="outing.Stars" NotScored="@(outing.Scored ? null : "Not scored yet: run wend outings score")" /><MyStars Value="outing.UserStars" OnRate="stars => RateAsync(outing, stars)" /></div>
+                <StarsApart User="outing.UserStars" App="outing.Stars" />
+                @* The Outing chosen opens in its own row, where it was chosen (user, 2026-11-10: "the
+                   selected entry should expand ... that way it wouldn't be stuck at the top of the
+                   list and somehow not where you expect it"); choosing another moves it there. *@
+                @if (_shown is { } shown && shown.Id == outing.Id)
+                {
+                    <section class="outing" aria-label="@shown.Name">
+                        @* Kept as a route (T084): matched as an imported GPX is, shown to nudge and save. *@
+                        @* Renamed in place (T111), as a Saved Route is; Escape or Cancel keeps the old name. *@
+                        @if (_renaming)
+                        {
+                            <form class="rename-outing-form" @onsubmit="() => RenameAsync(shown)">
+                                <input class="new-name" aria-label="New name" maxlength="100" @bind="_newName" @bind:event="oninput" @onkeydown="RenameKeyAsync" />
+                                <button type="submit" class="save-name">Save</button>
+                                <button type="button" class="keep-name" @onclick="() => _renaming = false">Cancel</button>
+                            </form>
+                        }
+                        <div class="as-route">
+                            @* Asking whether to delete, the question and its Yes and No have the row (T116). *@
+                            @if (!_deleting)
+                            {
+                            <button type="button" class="make-route" disabled="@_making" title="Make it a route: shown on the map to nudge, export and save under Saved Routes" @onclick="() => MakeRouteAsync(shown)">To Route</button>
+                            @* Its own track, to overlay in OpenStreetMap's editor, even where it can't be made a route. *@
+                            <button type="button" class="download-gpx" title="Download its own track as a GPX file: to overlay in OpenStreetMap's editor, say" @onclick="() => DownloadAsync(shown)">GPX</button>
+                            <button type="button" class="rename-outing" title="Rename it" @onclick="() => StartRenaming(shown)">Rename</button>
+                            }
+                            @* Deleted (T106; user: "Gone, never re-imported"), after asking: the next one is shown. *@
+                            @if (_deleting)
+                            {
+                                <span class="asking" title="Deleted, it won't come back on a re-import">Delete?</span>
+                                <button type="button" class="confirm-delete" @onclick="() => DeleteAsync(shown)">Yes</button>
+                                <button type="button" class="keep" @onclick="() => _deleting = false">No</button>
+                            }
+                            else
+                            {
+                                <button type="button" class="delete-outing" title="Delete it: gone from the list and from the ground you've covered, and never imported again" @onclick="() => _deleting = true">Delete</button>
+                            }
+                            @if (_making)
+                            {
+                                <span class="later">Matching it to the map…</span>
+                            }
+                            else if (_routeProblem is { } problem)
+                            {
+                                <p class="route-problem" role="alert">@problem</p>
+                            }
+                        </div>
+                        <ul class="legend">
+                            <li><span class="swatch off-road"></span>Off-road</li>
+                            <li><span class="swatch traffic-free"></span>Traffic-free</li>
+                            <li><span class="swatch connector"></span>Connector</li>
+                            <li><span class="swatch track"></span>Your track</li>
+                            <li><span class="swatch gap"></span>Gap</li>
+                        </ul>
+                        @if (shown.Gaps.Count == 0)
+                        {
+                            <p class="later">No gaps: it never left the Network.</p>
+                        }
+                        else
+                        {
+                            <details class="gaps-shown">
+                                <summary>Gaps (@shown.Gaps.Count)</summary>
+                                <p class="later">Where it was more than 25 m from any way: a path OSM may be missing, ground with no paths, or GPS gone astray.</p>
+                                <ol class="gaps">
+                                    @for (var i = 0; i < shown.Gaps.Count; i++)
+                                    {
+                                        <li>Gap @(i + 1) · @Metres(shown.Gaps[i].LengthM)</li>
+                                    }
+                                </ol>
+                            </details>
+                        }
+                    </section>
+                }
+            </li>
+        }
+    </ul>
+
+}
+
+@code {
+    /// <summary>Raised when the user chooses an Outing, with it ready to draw.</summary>
+    [Parameter] public EventCallback<OutingView> OnShow { get; set; }
+
+    /// <summary>Raised when the Outing shown is deleted and none is left to show (T106).</summary>
+    [Parameter] public EventCallback OnGone { get; set; }
+
+    /// <summary>The Outing shown, to be made a route (T084): shows it, or says why it can't.</summary>
+    /// <summary>The Outing made a route, with the user's stars for it as they are now (T135); why not, if it can't be.</summary>
+    [Parameter] public Func<OutingView, int?, Task<string?>>? OnMakeRoute { get; set; }
+
+    private bool _making;
+    private string? _routeProblem;
+    private bool _deleting;
+    private bool _renaming;
+    private string _newName = "";
+
+    private void StartRenaming(OutingView outing) => (_renaming, _deleting, _newName) = (true, false, outing.Name);
+
+    private void RenameKeyAsync(KeyboardEventArgs e)
+    {
+        if (e.Key == "Escape") _renaming = false;
+    }
+
+    // Kept, then listed and shown by its new name; a blank name is refused (the box stays open).
+    private async Task RenameAsync(OutingView outing)
+    {
+        if (string.IsNullOrWhiteSpace(_newName)) return;
+        var name = _newName.Trim();
+        _problem = null;
+        try
+        {
+            await Outings.RenameAsync(outing.Id, name);
+        }
+        catch (Exception e)
+        {
+            Log.OutingsFailed(Logger, e);
+            _problem = "Couldn't rename that Outing. The app's log says why.";
+            return;
+        }
+        _renaming = false;
+        _outings = [.. _outings!.Select(o => o.Id == outing.Id ? o with { Name = name } : o)];
+        if (_shown?.Id == outing.Id) _shown = _shown with { Name = name };
+        await CloseIfFilteredOutAsync();
+    }
+
+    // Deleted, then the one after it in the list shown (or the one before, at the end), so a long
+    // list can be gone through one after another; with none left, the map is cleared.
+    private async Task DeleteAsync(OutingView outing)
+    {
+        (_problem, _deleting) = (null, false);
+        try
+        {
+            await Outings.DeleteAsync(outing.Id);
+        }
+        catch (Exception e)
+        {
+            Log.OutingsFailed(Logger, e);
+            _problem = "Couldn't delete that Outing. The app's log says why.";
+            return;
+        }
+        // The next of those listed, as filtered (T110).
+        var at = Visible.ToList().FindIndex(o => o.Id == outing.Id);
+        _outings = [.. _outings!.Where(o => o.Id != outing.Id)];
+        await ShowTheOneAtAsync(at);
+    }
+
+    // The Outing shown gone from the list, the one now where it was is shown (or the one before, at
+    // the end); with none left, or it wasn't listed, the map is cleared.
+    private async Task ShowTheOneAtAsync(int at)
+    {
+        _shown = null;
+        var listed = Visible.ToList();
+        if (listed.Count == 0 || at < 0)
+        {
+            await OnGone.InvokeAsync();
+            return;
+        }
+        await ShowAsync(listed[Math.Min(at, listed.Count - 1)]);
+    }
+
+    private async Task MakeRouteAsync(OutingView outing)
+    {
+        if (OnMakeRoute is null) return;
+        (_making, _routeProblem) = (true, null);
+        try
+        {
+            _routeProblem = await OnMakeRoute(outing, _outings?.FirstOrDefault(o => o.Id == outing.Id)?.UserStars);
+        }
+        finally
+        {
+            _making = false;
+        }
+    }
+
+    private static readonly System.Globalization.CultureInfo Culture = System.Globalization.CultureInfo.InvariantCulture;
+
+    private IReadOnlyList<OutingSummary>? _outings;
+
+    private enum OutingFilter { All, Five, FourOrFive, NotRated }
+
+    private static readonly (OutingFilter Filter, string Label)[] Filters =
+        [(OutingFilter.All, "All"), (OutingFilter.Five, "★5"), (OutingFilter.FourOrFive, "★4–5"), (OutingFilter.NotRated, "Not rated")];
+
+    private OutingFilter _filter = OutingFilter.All;
+    private string _search = "";
+
+    private bool Matches(OutingSummary outing) =>
+        _filter switch
+        {
+            OutingFilter.Five => outing.UserStars == 5,
+            OutingFilter.FourOrFive => outing.UserStars >= 4,
+            OutingFilter.NotRated => outing.UserStars is null,
+            _ => true,
+        }
+        && (_search.Trim().Length == 0 || outing.Name.Contains(_search.Trim(), StringComparison.OrdinalIgnoreCase));
+
+    private IEnumerable<OutingSummary> Visible => _outings?.Where(Matches) ?? [];
+
+    // "1,332 Outings", or narrowed by a filter or the name box, "412 of 1,332" (T113).
+    private string Count
+    {
+        get
+        {
+            var all = _outings?.Count ?? 0;
+            var listed = Visible.Count();
+            return listed == all
+                ? all.ToString("N0", Culture) + (all == 1 ? " Outing" : " Outings")
+                : listed.ToString("N0", Culture) + " of " + all.ToString("N0", Culture);
+        }
+    }
+
+    private Task FilterAsync(OutingFilter filter)
+    {
+        _filter = filter;
+        return CloseIfFilteredOutAsync();
+    }
+
+    private Task SearchAsync(ChangeEventArgs e)
+    {
+        _search = e.Value?.ToString() ?? "";
+        return CloseIfFilteredOutAsync();
+    }
+
+    // The Outing shown stays shown while it still matches; filtered out, it closes and leaves the map.
+    private async Task CloseIfFilteredOutAsync()
+    {
+        if (_shown is null || Visible.Any(o => o.Id == _shown.Id)) return;
+        (_shown, _deleting) = (null, false);
+        await OnGone.InvokeAsync();
+    }
+    private OutingView? _shown;
+    private string? _problem;
+
+    // A database that fails says so and leaves the screen usable, as the planner does.
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            _outings = await Outings.ListAsync();
+        }
+        catch (Exception e)
+        {
+            Log.OutingsFailed(Logger, e);
+            _problem = "Couldn't load your Outings. The app's log says why.";
+        }
+    }
+
+    private async Task ShowAsync(OutingSummary outing)
+    {
+        (_problem, _routeProblem, _deleting, _renaming) = (null, null, false, false);
+        try
+        {
+            _shown = await Outings.ViewAsync(outing.Id);
+        }
+        catch (Exception e)
+        {
+            Log.OutingsFailed(Logger, e);
+            _problem = "Couldn't show that Outing. The app's log says why.";
+            return;
+        }
+        if (_shown is not null) await OnShow.InvokeAsync(_shown);
+    }
+
+    private IJSObjectReference? _download;
+
+    // Its own track, every point recorded, saved by the browser (2026-11-10).
+    private async Task DownloadAsync(OutingView outing)
+    {
+        var gpx = OutingGpx.Of(outing.Name, outing.RouteTrack.Count > 0 ? outing.RouteTrack : outing.Track);
+        _download ??= await JS.InvokeAsync<IJSObjectReference>("import", "./js/download.js");
+        await _download.InvokeVoidAsync("saveFile", gpx.FileName, "application/gpx+xml", gpx.Content);
+    }
+
+    // The user's own stars (T097): kept, then shown in the list as given.
+    private async Task RateAsync(OutingSummary outing, int? stars)
+    {
+        _problem = null;
+        try
+        {
+            await Outings.RateAsync(outing.Id, stars);
+        }
+        catch (Exception e)
+        {
+            Log.OutingsFailed(Logger, e);
+            _problem = "Couldn't keep your stars. The app's log says why.";
+            return;
+        }
+        var at = Visible.ToList().FindIndex(o => o.Id == outing.Id);
+        _outings = [.. _outings!.Select(o => o.Id == outing.Id ? o with { UserStars = stars } : o)];
+        // The one shown, rated out of the list, gives way to the next, as after a Delete (T116; user
+        // chose "When it leaves the list"): "Not rated" worked through one after another.
+        if (_shown?.Id == outing.Id && !Visible.Any(o => o.Id == outing.Id))
+        {
+            _deleting = false;
+            await ShowTheOneAtAsync(at);
+        }
+    }
+
+    // Chosen, and where the user's stars and the app's part (T097).
+    private string? Classes(OutingSummary outing) =>
+        string.Join(" ", new[] { outing.Id == _shown?.Id ? "on" : null, Stars.Disagree(outing.UserStars, outing.Stars) ? "disagree" : null }.OfType<string>()) is { Length: > 0 } classes ? classes : null;
+
+    private static string Facts(OutingSummary outing)
+    {
+        var gaps = outing.Gaps switch { 0 => "no gaps", 1 => "1 gap", var n => $"{n} gaps" };
+        var date = outing.StartedAt?.UtcDateTime.ToString("d MMM yyyy", Culture);
+        return string.Join(" · ", new[]
+        {
+            date,
+            (outing.LengthM / 1000).ToString("0.0", Culture) + " km",
+            (outing.Coverage * 100).ToString("0", Culture) + "% covered",
+            gaps,
+        }.Where(part => part is not null));
+    }
+
+    private static string Metres(double metres) => metres.ToString("0", Culture) + " m";
+}

@@ -1,0 +1,283 @@
+@* The Admin panel (T129, STORY-048; user: "in truth I'm not going to be running commands in the terminal
+   so we might want an admin panel"): Wend Your Way at a glance, and the jobs that keep it so, started
+   here. Looked at again every half minute while one runs. *@
+@using WendYourWay.Data.Building
+@using WendYourWay.Web.Planning
+@inject IAdmin Admin
+@inject ILogger<AdminPanel> Logger
+@implements IDisposable
+
+<div class="admin">
+    @if (_status.Running is { } running)
+    {
+        <p class="running" role="status">@What(running.Kind): @running.Stage</p>
+    }
+    <section class="the-map">
+        <h3>The map</h3>
+        <MapUpdateLine />
+        @* Back to the map before (#135, T131), if a new one turns out bad; done again, forward. *@
+        @if (_status.LastBack is { } back && back.Id != _status.Running?.Id)
+        {
+            <p class="last-back">@BackSaid(back)</p>
+        }
+        @if (_status.MapBefore is { Fits: false })
+        {
+            <p class="map-before">@NetworkBefore.OlderMake</p>
+        }
+        else if (_status.MapBefore is { } before)
+        {
+            <button type="button" class="job back" disabled="@(_starting || _status.Running is not null)"
+                    @onclick="() => (_goingBack, _backRefused) = (true, null)">Go @Way(before) to @Which(before)</button>
+            @if (_goingBack)
+            {
+                @* Asked here, not by the browser (T131). *@
+                <div class="confirm" role="alertdialog">
+                    <p class="question">Go @Way(before) to @Which(before)? The map in use now is kept to @(before.Newer ? "go back to" : "come forward to"), until the next map update replaces it. Your Outings are covered and scored again on it, which takes a while.</p>
+                    <button type="button" class="job yes" @onclick="GoBackAsync">Go @Way(before)</button>
+                    <button type="button" class="no" @onclick="() => _goingBack = false">Cancel</button>
+                </div>
+            }
+        }
+        @if (_backRefused is { } backRefused)
+        {
+            <p class="problem" role="alert">@backRefused</p>
+        }
+    </section>
+    <section class="runs">
+        <h3>Your runs</h3>
+        <p>@_status.Outings.ToString("N0", Culture) @(_status.Outings == 1 ? "Outing" : "Outings"), @_status.Unrated.ToString("N0", Culture) not rated by you.</p>
+        @* Said once (T134): the last import's own lines when there's one, else when Outings last came in. *@
+        @if (_status.LastImport is null)
+        {
+            <p>@(_status.LastImported is { } imported ? "Last imported " + Day(imported) : "Last imported: not known").</p>
+        }
+        @if (_status.LastImport is { } import && import.Id != _status.Running?.Id)
+        {
+            <p class="last-import">
+                @foreach (var line in ImportSaid(import))
+                {
+                    <span class="line">@line</span>
+                }
+            </p>
+        }
+        <button type="button" class="job import" disabled="@(_starting || _status.Running is not null)"
+                title="Your newest Strava export there, and every GPX, TCX or FIT you recorded: planned routes, ones already in and ones you deleted are skipped"
+                @onclick="() => StartAsync(JobKind.Import)">Import runs from Downloads</button>
+        @if (_refused is { } refused)
+        {
+            <p class="problem" role="alert">@refused</p>
+        }
+    </section>
+    <section class="backups">
+        <h3>Backups</h3>
+        <p>@(_status.LastBackup is { } backedUp ? $"Last backed up {Day(backedUp)}, {backedUp.ToLocalTime().ToString("HH:mm", Culture)}" : "No backup yet"), in @(_status.BackupFolder ?? "no folder").</p>
+        @* Takes no lock (T132): the one button left on while a job runs. *@
+        <button type="button" class="job backup" disabled="@(_backingUp || _status.BackupFolder is null)" @onclick="BackUpAsync">@(_backingUp ? "Backing up…" : "Back up now")</button>
+        @if (_backedUp is { } backedUpSaid)
+        {
+            <p class="backed-up" role="status">@backedUpSaid</p>
+        }
+        @if (_status.LastRestore is { } restore && restore.Id != _status.Running?.Id)
+        {
+            <p class="last-restore">@RestoreSaid(restore)</p>
+        }
+        @if (_status.Backups is { Count: > 0 } backups)
+        {
+            <ul class="backup-list">
+                @foreach (var backup in backups)
+                {
+                    <li>
+                        <span class="when">@When(backup)</span>
+                        <button type="button" class="restore" disabled="@(_starting || _status.Running is not null)"
+                                title="Put your data back as it was then: what's there now is backed up first"
+                                @onclick="() => (_restoring, _restoreRefused) = (backup, null)">Restore</button>
+                    </li>
+                }
+            </ul>
+        }
+        @if (_restoring is { } chosen)
+        {
+            @* Asked here, not by the browser (T132). *@
+            <div class="confirm" role="alertdialog">
+                <p class="question">Put back your data as it was on @Day(chosen.TakenAt), @chosen.TakenAt.ToLocalTime().ToString("HH:mm", Culture): @Outings(chosen.Outings)? What's there now is backed up first.</p>
+                <button type="button" class="job yes" @onclick="() => RestoreAsync(chosen)">Restore</button>
+                <button type="button" class="no" @onclick="() => _restoring = null">Cancel</button>
+            </div>
+        }
+        @if (_restoreRefused is { } restoreRefused)
+        {
+            <p class="problem" role="alert">@restoreRefused</p>
+        }
+    </section>
+    <section class="disk">
+        <h3>Disk</h3>
+        <p>
+            @(_status.FreeGb is { } free ? $"{free.ToString("N0", Culture)} GB free on {_status.Drive}" : "Free space not known")@(_status.RoomForAnUpdate ? "." : $": too little for a map update, which needs {UpdateRoom.LeastGb:0} GB.")
+        </p>
+    </section>
+</div>
+
+@code {
+    private static readonly System.Globalization.CultureInfo Culture = System.Globalization.CultureInfo.InvariantCulture;
+
+    private static readonly TimeSpan LookEvery = TimeSpan.FromSeconds(30);
+
+    private const int LooksForAStart = 20;
+
+    private AdminStatus _status = AdminStatus.Unknown;
+    private string? _refused;
+    private bool _starting;
+    private bool _backingUp;
+    private string? _backedUp;
+    private BackupListed? _restoring;
+    private string? _restoreRefused;
+    private bool _goingBack;
+    private string? _backRefused;
+    private Timer? _looking;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LookAsync();
+        _looking = new Timer(_ => _ = InvokeAsync(async () =>
+        {
+            if (_status.Running is null) return;
+            await LookAsync();
+            StateHasChanged();
+        }), null, LookEvery, LookEvery);
+    }
+
+    private async Task LookAsync()
+    {
+        try
+        {
+            _status = await Admin.StatusAsync();
+        }
+        catch (Exception e) when (e is not OperationCanceledException)
+        {
+            // Not knowing how things are is no reason not to show what can be.
+            Log.AdminFailed(Logger, e);
+        }
+    }
+
+    private async Task StartAsync(string kind) => _refused = await StartingAsync(kind);
+
+    private async Task RestoreAsync(BackupListed backup)
+    {
+        _restoring = null;
+        _restoreRefused = await StartingAsync(JobKind.Restore, backup.Name);
+    }
+
+    private async Task GoBackAsync()
+    {
+        _goingBack = false;
+        _backRefused = await StartingAsync(JobKind.Back);
+    }
+
+    // The last job of this kind the status knows.
+    private Job? LastOf(string kind) => kind switch
+    {
+        JobKind.Import => _status.LastImport,
+        JobKind.Restore => _status.LastRestore,
+        JobKind.Back => _status.LastBack,
+        _ => null,
+    };
+
+    // A job started; why not, if it can't be.
+    private async Task<string?> StartingAsync(string kind, string? backup = null)
+    {
+        _starting = true;
+        var lastBefore = LastOf(kind)?.Id;
+        try
+        {
+            string? refused;
+            try
+            {
+                refused = await Admin.StartAsync(kind, backup);
+            }
+            catch (Exception e) when (e is not OperationCanceledException)
+            {
+                Log.AdminFailed(Logger, e);
+                refused = "Couldn't start it. The app's log says why.";
+            }
+            await LookAsync();
+            // wend takes a few seconds to begin (T132, found by hand): looked for till it's seen, a
+            // while, its buttons off till then so a second click starts no second wend; or till it's
+            // done, if that's sooner (T131).
+            for (var look = 0; refused is null && _status.Running is null && LastOf(kind)?.Id == lastBefore && look < LooksForAStart; look++)
+            {
+                StateHasChanged();
+                await Task.Delay(TimeSpan.FromSeconds(1));
+                await LookAsync();
+            }
+            return refused;
+        }
+        finally
+        {
+            _starting = false;
+        }
+    }
+
+    private async Task BackUpAsync()
+    {
+        (_backingUp, _backedUp) = (true, null);
+        try
+        {
+            _backedUp = await Admin.BackUpAsync();
+        }
+        catch (Exception e) when (e is not OperationCanceledException)
+        {
+            Log.AdminFailed(Logger, e);
+            _backedUp = "The backup failed. The app's log says why.";
+        }
+        finally
+        {
+            _backingUp = false;
+        }
+        await LookAsync();
+    }
+
+    // How the last import went, a line each (T133): its date, what came in, what was skipped. One
+    // still "running" but not the job running stopped part-way.
+    private static IEnumerable<string> ImportSaid(Job import) => import.Outcome switch
+    {
+        "running" => [$"The last import stopped part-way, {import.Stage}."],
+        "failed" => [$"The last import failed: {import.Message}"],
+        _ => [$"Last import, {Day(import.FinishedAt ?? import.StartedAt)}:", .. Lines(import.Message ?? "")],
+    };
+
+    // "Imported 3 new runs. Skipped: 2 already in." as its two sentences.
+    private static IEnumerable<string> Lines(string message) =>
+        message.Split(" Skipped: ", 2) is [var came, var skipped] ? [came, "Skipped: " + skipped] : [message];
+
+    // "back" or "forward" (T131): a map with no date counts as the older.
+    private static string Way(MapBefore before) => before.Newer ? "forward" : "back";
+
+    private static string Which(MapBefore before) => before.At is { } at ? $"the map of {at.UtcDateTime.ToString("d MMM yyyy", Culture)}" : "the map before this one";
+
+    // How the last change of map went (T131), as the last restore's is said.
+    private static string BackSaid(Job back) => back.Outcome switch
+    {
+        "running" => $"Changing the map stopped part-way, {back.Stage}.",
+        "failed" => $"Changing the map failed: {back.Message}",
+        _ => $"Last change of map, {Day(back.FinishedAt ?? back.StartedAt)}: {back.Message}",
+    };
+
+    // How the last restore went (T132), as the last import's is said.
+    private static string RestoreSaid(Job restore) => restore.Outcome switch
+    {
+        "running" => $"The last restore stopped part-way, {restore.Stage}.",
+        "failed" => $"The last restore failed: {restore.Message}",
+        _ => $"Last restore, {Day(restore.FinishedAt ?? restore.StartedAt)}: {restore.Message} Reload the page to see it everywhere.",
+    };
+
+    private static string When(BackupListed backup) =>
+        $"{Day(backup.TakenAt)}, {backup.TakenAt.ToLocalTime().ToString("HH:mm", Culture)} · {Outings(backup.Outings)}";
+
+    private static string Outings(long outings) => $"{outings.ToString("N0", Culture)} {(outings == 1 ? "Outing" : "Outings")}";
+
+    public void Dispose() => _looking?.Dispose();
+
+    private static string Day(DateTimeOffset at) => at.ToLocalTime().ToString("d MMM yyyy", Culture);
+
+    private static string What(string kind) => JobWords.What(kind);
+}

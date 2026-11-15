@@ -1,0 +1,422 @@
+@using WendYourWay.Web.Planning
+@* The card at the bottom centre that pages through offered Loops (R10.5) and opens upwards into
+   the current Loop's Breakdown (R10.6). *@
+
+@implements IDisposable
+
+<div class="pager @(_open ? "open" : null)" role="status">
+    @if (Finding && Loops.Count == 0)
+    {
+        @if (Progress is { } progress)
+        {
+            @Progressing(progress)
+        }
+        else
+        {
+            <span class="empty">Finding a Loop…</span>
+        }
+    }
+    else if (Current < Loops.Count && Loops[Current] is var loop)
+    {
+        @if (_open)
+        {
+            @* Named only opened, where a long name can wrap; the bar stays short (user, 2026-11-03). *@
+            @if (Place is { } place)
+            {
+                <h3 class="place">From @place</h3>
+            }
+            @if (loop.Profile.Count > 0)
+            {
+                <ProfileChart Profile="loop.Profile" ClimbM="loop.Breakdown.ClimbM" OnPoint="OnPlace" />
+            }
+            <table class="breakdown">
+                <tr><th>Length</th><td>@Km(loop.Breakdown.LengthM, "0.00")</td></tr>
+                <tr title="Metres of ascent going round, from OS Terrain 50"><th>Climbing</th><td>@Metres(loop.Breakdown.ClimbM)</td></tr>
+                <tr><th>Off-road</th><td>@Percent(loop.Breakdown.OffRoadPercent)</td></tr>
+                @if (Activity == Activity.TrailRide)
+                {
+                    @* Off the tarmac, a Trail Ride may only be on a byway or a green lane (T021). *@
+                    <tr class="byways" title="Byways open to all traffic and green lanes, off the tarmac"><th>Byways</th><td>@Km(loop.Breakdown.LengthM * loop.Breakdown.OffRoadPercent / 100, "0.00")</td></tr>
+                }
+                <tr><th>Traffic-free</th><td>@Percent(loop.Breakdown.TrafficFreePercent)</td></tr>
+                <tr><th>Longest green</th><td>@Km(loop.Breakdown.LongestGreenM, "0.00")</td></tr>
+                <tr title="Busy roads, used only for short links"><th>Main Road</th><td>@Km(loop.Breakdown.MainRoadLengthM, "0.00")</td></tr>
+                <tr title="How much of it runs beside parks, woods, commons and water"><th>Greenery</th><td>@Percent(loop.Breakdown.GreeneryPercent)</td></tr>
+                <tr title="How much of it runs beside rivers, canals and lakes"><th>Waterside</th><td>@Percent(loop.Breakdown.WatersidePercent)</td></tr>
+                <tr title="Roads it crosses by a crossing, and how many of them are Main Roads"><th>Crossings</th><td>@loop.Breakdown.Crossings · @loop.Breakdown.MainRoadCrossings of Main Roads</td></tr>
+                @if (loop.Breakdown.UnconfirmedM > 0)
+                {
+                    <tr class="unconfirmed" title="@(Activity == Activity.TrailRide ? "Green lanes and byways the Definitive Map can't confirm, or with a closure the map can't read: check before you ride" : "Paths where the map can't tell whether a bike may go: check before you ride")"><th>Unconfirmed access</th><td>@Km(loop.Breakdown.UnconfirmedM, "0.00")</td></tr>
+                }
+                @if (loop.Breakdown.Obstacles is { Count: > 0 } obstacles)
+                {
+                    <tr class="obstacles" title="Gates, stiles, barriers and fords on the way, which slow a bike"><th>Obstacles</th><td>@string.Join(" · ", obstacles.Select(Obstacle))</td></tr>
+                }
+            </table>
+            @if (Activity == Activity.TrailRide)
+            {
+                @* No open list of closures exists (T020): a link to where riders report them, not their data. *@
+                <p class="closures">Check for closures before riding: byways close by traffic order, some for the winter, and not every one is on the map. <a href="https://findgreenlanes.com/" target="_blank" rel="noopener">Find Green Lanes</a> lists those reported.</p>
+                <p class="credit">Climbing contains OS data © Crown copyright and database right 2026. Byways from the highway authorities' Definitive Maps, open data under the Open Government Licence, via rowmaps.com.</p>
+            }
+            else
+            {
+                <p class="credit">Climbing contains OS data © Crown copyright and database right 2026</p>
+            }
+        }
+        @if (PhoneAsked)
+        {
+            @* The Loop on its way to the phone (T099): its QR code, its link, its terms. *@
+            <section class="to-phone" aria-label="To phone">
+                @if (Phone is { } phone)
+                {
+                    <img class="qr" src="@QrOf(phone.Url)" alt="A QR code of the link" />
+                    <p class="link">@phone.Url</p>
+                    <p class="terms">@Countdown(phone)</p>
+                }
+                else
+                {
+                    <p class="terms">No home network to send it over: is the laptop on your Wi-Fi?</p>
+                }
+                <button type="button" class="close-phone" disabled="@(_preparing == "qr")" @onclick="OnPhoneClosed">Done</button>
+            </section>
+        }
+        @if (loop.InAnotherDirection)
+        {
+            @* Added because few Loops were good enough, heading where none of them goes (T096, STORY-044). *@
+            <p class="other-way" title="Few Loops were good enough, so this one, weaker, was added in a direction none of them goes">In another direction, below the usual bar</p>
+        }
+        <div class="bar">
+            <button type="button" class="page" aria-label="Previous Loop" disabled="@(Loops.Count < 2)" @onclick="() => OnPage.InvokeAsync(-1)">‹</button>
+            <span class="summary">@(Current + 1) of @Loops.Count · @Km(loop.Breakdown.LengthM, "0.0")@Longer(loop)</span>
+            <button type="button" class="page" aria-label="Next Loop" disabled="@(Loops.Count < 2)" @onclick="() => OnPage.InvokeAsync(1)">›</button>
+            @* One click to see the ground under the route (user, 2026-11-06: "not hidden away"). *@
+            <button type="button" class="route" aria-pressed="@(RouteHidden ? "true" : "false")"
+                    aria-label="@(RouteHidden ? "Show route" : "Hide route")" title="@(RouteHidden ? "Show the route again" : "Hide the route, to see the paths and roads under it")"
+                    @onclick="OnToggleRoute">
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12z" /><circle cx="12" cy="12" r="3" />
+                    @if (RouteHidden)
+                    {
+                        <path d="M4 20L20 4" />
+                    }
+                </svg>
+            </button>
+            <button type="button" class="save" aria-label="Save this route" title="Save this route, to find it under Saved Routes" aria-expanded="@(_naming ? "true" : "false")" @onclick="StartNaming">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6.5 3.5h11v17l-5.5-4-5.5 4z" /></svg>
+            </button>
+            @* Each says so while it's made (T139, user: "there's a short delay with no feedback"), and
+               none of the three is pressed again till it's done; a screen reader is told. *@
+            <span class="visually-hidden" role="status">@Announced</span>
+            <button type="button" class="phone @Preparing("qr")" aria-label="To phone" title="Send it to your phone: a QR code to scan on your Wi-Fi"
+                    aria-disabled="@Off" aria-busy="@Busy("qr")" @onclick='() => PrepareAsync("qr", OnPhone)'>
+                @if (_preparing == "qr")
+                {
+                    <span class="spinner" aria-hidden="true"></span><span>Preparing…</span>
+                }
+                else
+                {
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h2v2h-2zM18 18h2v2h-2zM14 18h2M18 14h2" /></svg>
+                    <span>QR</span>
+                }
+            </button>
+            <button type="button" class="export @Preparing("gpx")" aria-label="Export GPX" title="Export GPX, to follow in OS Maps"
+                    aria-disabled="@Off" aria-busy="@Busy("gpx")" @onclick='() => PrepareAsync("gpx", OnExport)'>
+                @if (_preparing == "gpx")
+                {
+                    <span class="spinner" aria-hidden="true"></span><span>Preparing…</span>
+                }
+                else
+                {
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v11M7.5 10.5L12 15l4.5-4.5M5 19h14" /></svg>
+                    <span>GPX</span>
+                }
+            </button>
+            @* Another download, beside the others (user, 2026-11-10): for a watch (T100), the same
+               route as a TCX course, its turns as course points. *@
+            <button type="button" class="export export-tcx @Preparing("tcx")" aria-label="Export TCX" title="Export TCX: the route as a course with its turns as prompts, for a watch"
+                    aria-disabled="@Off" aria-busy="@Busy("tcx")" @onclick='() => PrepareAsync("tcx", OnExportTcx)'>
+                @if (_preparing == "tcx")
+                {
+                    <span class="spinner" aria-hidden="true"></span><span>Preparing…</span>
+                }
+                else
+                {
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v11M7.5 10.5L12 15l4.5-4.5M5 19h14" /></svg>
+                    <span>TCX</span>
+                }
+            </button>
+            <button type="button" class="expand" aria-expanded="@(_open ? "true" : "false")"
+                    aria-label="@(_open ? "Hide the Breakdown" : "Show the Breakdown")" @onclick="() => _open = !_open">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="@(_open ? "M6.5 9.5L12 15l5.5-5.5" : "M6.5 14.5L12 9l5.5 5.5")" /></svg>
+            </button>
+        </div>
+        @* Saving (T080): a name asked for, where it starts and its km offered. *@
+        @if (_naming)
+        {
+            <form class="saving" @onsubmit="SaveAsync">
+                <input class="save-name" aria-label="Name for the Saved Route" maxlength="100" @bind="_name" @bind:event="oninput" />
+                <button type="submit" class="avoid-this">Save</button>
+                <button type="button" class="cancel" @onclick="() => _naming = false">Cancel</button>
+            </form>
+        }
+        @* Undo and Redo (T076, T078) on a line of their own, so the bar stays put; centred, both there
+           once there's anything to undo or redo, one greyed out at its end (user, 2026-11-07). *@
+        @if (CanUndo || CanRedo)
+        {
+            <div class="nudged">
+                <button type="button" class="undo" title="Undo (Ctrl+Z): the last change to the route, or the last new start" disabled="@(!CanUndo)" @onclick="OnUndo">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 7L4.5 11.5 9 16M5 11.5h9.5a5 5 0 0 1 0 10H12" /></svg>
+                    <span>Undo</span>
+                </button>
+                <button type="button" class="redo" title="Redo (Ctrl+Y)" disabled="@(!CanRedo)" @onclick="OnRedo">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 7l4.5 4.5L15 16M19 11.5H9.5a5 5 0 0 0 0 10H12" /></svg>
+                    <span>Redo</span>
+                </button>
+            </div>
+        }
+        @if (NudgeNote is { } note)
+        {
+            <p class="nudge-note">@note</p>
+        }
+        @* An imported route's gaps (T083), drawn in red: where the GPX left the map. *@
+        @if (loop.Gaps.Count > 0)
+        {
+            <p class="gap-note">@GapNote(loop.Gaps)</p>
+        }
+        @if ((Finding || Searching) && Progress is { } progress)
+        {
+            @Progressing(progress)
+        }
+        else if (Searching)
+        {
+            <p class="searching">Looking for more Loops…</p>
+        }
+    }
+    else if (Problem is { } problem)
+    {
+        <span class="empty"><strong>@problem</strong></span>
+    }
+    else if (NothingFound)
+    {
+        <span class="empty"><strong>No Loop found</strong> near that start for that Distance. Try another start or Distance.</span>
+    }
+    else
+    {
+        <span class="empty">No Loops yet</span>
+    }
+</div>
+
+@code {
+
+    /// <summary>What the card shows (T124e), made by the planner's session.</summary>
+    [Parameter] public PagerView View { get; set; } = PagerView.None;
+
+    // Its values by the names the card has always used for them.
+    private IReadOnlyList<PlannedLoop> Loops => View.Loops;
+    private int Current => View.Current;
+    private double? ShortestM => View.ShortestM;
+    private bool Finding => View.Finding;
+    private bool NothingFound => View.NothingFound;
+    private PlanningProgress? Progress => View.Progress;
+    private bool Searching => View.Searching;
+    private string? Place => View.Place;
+    private string? Problem => View.Problem;
+    private bool PhoneAsked => View.PhoneAsked;
+    private WendYourWay.Web.Phone.PhoneLink? Phone => View.Phone;
+    private bool RouteHidden => View.RouteHidden;
+    private bool CanUndo => View.CanUndo;
+    private string SuggestedName => View.SuggestedName;
+    private Activity Activity => View.Activity;
+    private bool CanRedo => View.CanRedo;
+    private string? NudgeNote => View.NudgeNote;
+
+
+
+    // Under 50 m longer, it is the shortest way, near enough.
+    private string Longer(PlannedLoop loop) =>
+        ShortestM is not { } shortest ? ""
+        : loop.Breakdown.LengthM - shortest < 50 ? " · shortest"
+        : " · +" + Km(loop.Breakdown.LengthM - shortest, "0.0");
+
+    /// <summary>An arrow was pressed: +1 for the next Loop, −1 for the one before.</summary>
+    [Parameter] public EventCallback<int> OnPage { get; set; }
+
+
+
+
+
+
+
+    /// <summary>A place on the Loop pointed at on its elevation profile, or null when the pointer leaves it.</summary>
+    [Parameter] public EventCallback<LatLon?> OnPlace { get; set; }
+
+    /// <summary>Export GPX was pressed for the Loop shown.</summary>
+    [Parameter] public EventCallback OnExport { get; set; }
+
+    /// <summary>Asked to export the Loop shown as a TCX course (T100).</summary>
+    [Parameter] public EventCallback OnExportTcx { get; set; }
+
+    /// <summary>Asked to send the Loop shown to the phone (T099).</summary>
+    [Parameter] public EventCallback OnPhone { get; set; }
+
+
+
+    [Parameter] public EventCallback OnPhoneClosed { get; set; }
+
+    // Which of QR, GPX and TCX is being made (T139), if one is.
+    private string? _preparing;
+
+    private string? Preparing(string what) => _preparing == what ? "preparing" : null;
+
+    // Off while one is made: aria-disabled, not disabled, so the focus stays where it was (T139 review).
+    private string? Off => _preparing is null ? null : "true";
+
+    private string? Busy(string what) => _preparing == what ? "true" : null;
+
+    // What a screen reader is told while one is made.
+    private string Announced => _preparing switch
+    {
+        "qr" => "Preparing the QR code…",
+        "gpx" => "Preparing the GPX…",
+        "tcx" => "Preparing the TCX…",
+        _ => "",
+    };
+
+    private async Task PrepareAsync(string what, EventCallback made)
+    {
+        // A second press before the first is drawn as off reaches here too (T139 review).
+        if (_preparing is not null) return;
+        _preparing = what;
+        try
+        {
+            await made.InvokeAsync();
+        }
+        finally
+        {
+            _preparing = null;
+        }
+    }
+
+    // The link as a QR code, drawn here as a PNG: an image, which the card's icon styles can't reach.
+    private static string QrOf(Uri url)
+    {
+        using var generator = new QRCoder.QRCodeGenerator();
+        using var data = generator.CreateQrCode(url.ToString(), QRCoder.QRCodeGenerator.ECCLevel.M);
+        return "data:image/png;base64," + Convert.ToBase64String(new QRCoder.PngByteQRCode(data).GetGraphic(8));
+    }
+
+    // How long the link has left, to the second (user, 2026-11-10: "Scan link valid for xx:xx").
+    private static string Countdown(WendYourWay.Web.Phone.PhoneLink phone)
+    {
+        var left = phone.Until - DateTimeOffset.Now;
+        return left <= TimeSpan.Zero
+            ? "Link expired: press QR again"
+            : $"Scan link valid for {(int)left.TotalMinutes:00}:{left.Seconds:00}";
+    }
+
+    // Ticks while a code is shown, so the countdown counts.
+    private Timer? _tick;
+
+    protected override void OnParametersSet()
+    {
+        if (PhoneAsked && Phone is not null) _tick ??= new Timer(_ => InvokeAsync(StateHasChanged), null, TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(1));
+        else StopTicking();
+    }
+
+    private void StopTicking()
+    {
+        _tick?.Dispose();
+        _tick = null;
+    }
+
+    public void Dispose() => StopTicking();
+
+
+    /// <summary>The route's show/hide button was clicked.</summary>
+    [Parameter] public EventCallback OnToggleRoute { get; set; }
+
+
+    /// <summary>Undo was clicked.</summary>
+    [Parameter] public EventCallback OnUndo { get; set; }
+
+
+    /// <summary>The Loop shown to be saved by this name (T080).</summary>
+    [Parameter] public EventCallback<string> OnSave { get; set; }
+
+    private bool _naming;
+    private string _name = "";
+
+    private void StartNaming()
+    {
+        _name = SuggestedName;
+        _naming = true;
+    }
+
+    private async Task SaveAsync()
+    {
+        if (string.IsNullOrWhiteSpace(_name)) return;
+        _naming = false;
+        await OnSave.InvokeAsync(_name.Trim());
+    }
+
+
+
+    /// <summary>Redo was clicked.</summary>
+    [Parameter] public EventCallback OnRedo { get; set; }
+
+
+    private static string GapNote(IReadOnlyList<RouteGap> gaps) =>
+        string.Create(System.Globalization.CultureInfo.InvariantCulture,
+            $"{gaps.Count} {(gaps.Count == 1 ? "gap" : "gaps")}, {gaps.Sum(g => g.LengthM) / 1000:0.0} km not on the map");
+
+    private bool _open;
+
+    // How far a Request has got, in its own numbers, with a meter once there's a total (T054).
+    private RenderFragment Progressing(PlanningProgress progress) => @<div class="progress">
+        <span class="says">@Says(progress, Searching)</span>
+        @if (progress.Total is > 0 and var total)
+        {
+            <div class="meter"><div class="done" style="width: @(Math.Round(100.0 * progress.Done / total))%"></div></div>
+        }
+    </div>;
+
+    private static string Says(PlanningProgress progress, bool searching)
+    {
+        var culture = System.Globalization.CultureInfo.InvariantCulture;
+        var of = progress.Total is { } total ? " of " + total.ToString("N0", culture) : "";
+        var left = progress.Left is { } l && l > TimeSpan.Zero ? $" · about {Math.Max(1, Math.Round(l.TotalSeconds)).ToString("0", culture)} s left" : "";
+        return progress.Stage switch
+        {
+            PlanningStage.Reading => $"Reading the map · {progress.Done.ToString("N0", culture)}{of} paths and roads{left}",
+            PlanningStage.Trying => $"{(searching ? "Looking for more Loops" : "Trying Loops")} · {progress.Done.ToString("N0", culture)}{of}{left}",
+            _ => "Drawing the Loops",
+        };
+    }
+
+    // "4 gates", "1 kissing gate" (T069).
+    private static string Obstacle(WendYourWay.Core.Scoring.ObstacleCount obstacle)
+    {
+        var name = obstacle.Kind switch
+        {
+            WendYourWay.Core.Network.ObstacleKind.Gate => "gate",
+            WendYourWay.Core.Network.ObstacleKind.CycleBarrier => "cycle barrier",
+            WendYourWay.Core.Network.ObstacleKind.KissingGate => "kissing gate",
+            WendYourWay.Core.Network.ObstacleKind.Turnstile => "turnstile",
+            WendYourWay.Core.Network.ObstacleKind.MotorcycleBarrier => "motorcycle barrier",
+            WendYourWay.Core.Network.ObstacleKind.Stile => "stile",
+            WendYourWay.Core.Network.ObstacleKind.CattleGrid => "cattle grid",
+            _ => "ford",
+        };
+        return $"{obstacle.Count} {name}{(obstacle.Count == 1 ? "" : "s")}";
+    }
+
+    private static string Km(double metres, string format) =>
+        (metres / 1000).ToString(format, System.Globalization.CultureInfo.InvariantCulture) + " km";
+
+    private static string Metres(double metres) =>
+        metres.ToString("0", System.Globalization.CultureInfo.InvariantCulture) + " m";
+
+    private static string Percent(double percent) =>
+        percent.ToString("0", System.Globalization.CultureInfo.InvariantCulture) + "%";
+}

@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  T030 England and Wales fixture: three invented boxes by Carter Bar on the Scottish border,
+  tagged like OSM's country relations (only the place is real). Scotland lies north of
+  England, and a box standing in for Wales lies south of it. One way in each country, one
+  path across the border, a second way in Scotland, and one path east of all three (the sea, say).
+  osm2pgsql needs all nodes before all ways before all relations, each sorted by ID.
+-->
+<osm version="0.6" generator="hand">
+  <!-- The boxes' corners: Wales 55.25-55.30, England 55.30-55.35, Scotland 55.35-55.40. -->
+  <node id="1" lat="55.30" lon="-2.55"/>
+  <node id="2" lat="55.30" lon="-2.45"/>
+  <node id="3" lat="55.35" lon="-2.45"/>
+  <node id="4" lat="55.35" lon="-2.55"/>
+  <node id="5" lat="55.40" lon="-2.45"/>
+  <node id="6" lat="55.40" lon="-2.55"/>
+  <node id="7" lat="55.25" lon="-2.55"/>
+  <node id="8" lat="55.25" lon="-2.45"/>
+  <node id="20" lat="55.32" lon="-2.53"/>
+  <node id="21" lat="55.32" lon="-2.47"/>
+  <node id="22" lat="55.38" lon="-2.53"/>
+  <node id="23" lat="55.38" lon="-2.47"/>
+  <node id="24" lat="55.34" lon="-2.50"/>
+  <node id="25" lat="55.36" lon="-2.50"/>
+  <node id="26" lat="55.27" lon="-2.53"/>
+  <node id="27" lat="55.27" lon="-2.47"/>
+  <node id="28" lat="55.32" lon="-2.42"/>
+  <node id="29" lat="55.32" lon="-2.40"/>
+  <node id="30" lat="55.39" lon="-2.53"/>
+  <node id="31" lat="55.39" lon="-2.47"/>
+  <way id="100">
+    <nd ref="20"/><nd ref="21"/>
+    <tag k="highway" v="unclassified"/>
+    <tag k="name" v="In England"/>
+  </way>
+  <way id="101">
+    <nd ref="22"/><nd ref="23"/>
+    <tag k="highway" v="track"/>
+    <tag k="name" v="In Scotland"/>
+  </way>
+  <way id="102">
+    <nd ref="24"/><nd ref="25"/>
+    <tag k="highway" v="path"/>
+    <tag k="name" v="Across the border"/>
+  </way>
+  <way id="103">
+    <nd ref="26"/><nd ref="27"/>
+    <tag k="highway" v="footway"/>
+    <tag k="name" v="In Wales"/>
+  </way>
+  <way id="104">
+    <nd ref="28"/><nd ref="29"/>
+    <tag k="highway" v="path"/>
+    <tag k="name" v="In none of them"/>
+  </way>
+  <way id="105">
+    <nd ref="30"/><nd ref="31"/>
+    <tag k="highway" v="footway"/>
+    <tag k="name" v="Also in Scotland"/>
+  </way>
+  <way id="900">
+    <nd ref="1"/><nd ref="2"/><nd ref="3"/><nd ref="4"/><nd ref="1"/>
+  </way>
+  <way id="901">
+    <nd ref="4"/><nd ref="3"/><nd ref="5"/><nd ref="6"/><nd ref="4"/>
+  </way>
+  <way id="902">
+    <nd ref="7"/><nd ref="8"/><nd ref="2"/><nd ref="1"/><nd ref="7"/>
+  </way>
+  <relation id="9001">
+    <member type="way" ref="900" role="outer"/>
+    <tag k="type" v="boundary"/>
+    <tag k="boundary" v="administrative"/>
+    <tag k="admin_level" v="4"/>
+    <tag k="ISO3166-2" v="GB-ENG"/>
+    <tag k="name" v="England"/>
+  </relation>
+  <relation id="9002">
+    <member type="way" ref="902" role="outer"/>
+    <tag k="type" v="boundary"/>
+    <tag k="boundary" v="administrative"/>
+    <tag k="admin_level" v="4"/>
+    <tag k="ISO3166-2" v="GB-WLS"/>
+    <tag k="name" v="Cymru / Wales"/>
+  </relation>
+  <relation id="9003">
+    <member type="way" ref="901" role="outer"/>
+    <tag k="type" v="boundary"/>
+    <tag k="boundary" v="administrative"/>
+    <tag k="admin_level" v="4"/>
+    <tag k="ISO3166-2" v="GB-SCT"/>
+    <tag k="name" v="Alba / Scotland"/>
+  </relation>
+</osm>

@@ -1,0 +1,115 @@
+@* A Loop's elevation profile (T051, R3.5): the ground's height by distance round, on a simple
+   axis from its lowest point to its highest and from 0 to its length. Pointing at it puts an
+   orange dot there, as on the map, with its height and distance on the axes, as Route Mapper
+   does. *@
+
+<figure class="profile">
+    <div class="chart @(_pointed is null ? null : "pointing")">
+        <div class="plot" @onmouseleave="LeaveAsync">
+            <svg viewBox="0 0 @Width @Height" preserveAspectRatio="none" role="img"
+                 aria-label="Elevation profile, from @Metres(_lowest) to @Metres(_highest) over @Km(_length)">
+                <path class="ground" d="@_ground" />
+                @for (var i = 0; i < _buckets.Length; i++)
+                {
+                    var sample = _buckets[i];
+                    <rect class="at" x="@Number(i * Width / (double)_buckets.Length)" y="0" width="@Number(Width / (double)_buckets.Length)" height="@Height"
+                          @onmouseover="() => PointAsync(sample)" />
+                }
+            </svg>
+            @if (_pointed is { } dot)
+            {
+                <span class="dot" style="left: @Percent(Across(dot.DistanceM)); top: @Percent(Down(dot.HeightM))"></span>
+            }
+        </div>
+        @* The moving labels are clamped so near an edge they stay inside the card. *@
+        <div class="y-axis" aria-hidden="true">
+            <span class="top" style="top: @Percent(Down(_highest))">@Metres(_highest)</span>
+            <span class="bottom" style="top: @Percent(Down(_lowest))">@Metres(_lowest)</span>
+            @if (_pointed is { } at)
+            {
+                <span class="now" style="top: clamp(0.6em, @Percent(Down(at.HeightM)), calc(100% - 0.6em))">@Metres(at.HeightM)</span>
+            }
+        </div>
+        <div class="x-axis" aria-hidden="true">
+            <span class="start">0 km</span>
+            <span class="end">@Km(_length)</span>
+            @if (_pointed is { } along)
+            {
+                <span class="now" style="left: clamp(1.8em, @Percent(Across(along.DistanceM)), calc(100% - 1.8em))">@Km(along.DistanceM)</span>
+            }
+        </div>
+    </div>
+    <figcaption>@Metres(ClimbM) of climbing</figcaption>
+</figure>
+
+@code {
+    private const int Width = 300;
+    private const int Height = 60;
+
+    // Pointing targets across the profile: enough to follow a hill, few enough to stay light.
+    private const int MostBuckets = 120;
+
+    // The least height the profile spans, so a flat Loop looks flat rather than stretched.
+    private const double LeastSpanM = 50;
+
+    [Parameter, EditorRequired] public IReadOnlyList<ProfileSample> Profile { get; set; } = [];
+
+    /// <summary>The Loop's climbing; round a Loop its descent is the same, so it's given once.</summary>
+    [Parameter] public double ClimbM { get; set; }
+
+    /// <summary>The place pointed at on the profile, or null when the pointer leaves it.</summary>
+    [Parameter] public EventCallback<LatLon?> OnPoint { get; set; }
+
+    private string _ground = "";
+    private double _lowest, _highest, _length, _bottom, _span;
+    private ProfileSample[] _buckets = [];
+    private ProfileSample? _pointed;
+
+    private IReadOnlyList<ProfileSample>? _drawn;
+
+    protected override void OnParametersSet()
+    {
+        // The page redraws as the pointer moves (the map's mark goes through it): only a new
+        // Loop's profile is drawn afresh.
+        if (ReferenceEquals(Profile, _drawn)) return;
+        _drawn = Profile;
+        _pointed = null;
+        if (Profile.Count == 0) return;
+        _lowest = Profile.Min(p => p.HeightM);
+        _highest = Profile.Max(p => p.HeightM);
+        _length = Math.Max(Profile[^1].DistanceM, 1);
+        _bottom = _lowest - (Math.Max(0, LeastSpanM - (_highest - _lowest)) / 2);
+        _span = Math.Max(_highest - _lowest, LeastSpanM);
+        _ground = $"M0 {Height} " + string.Join(" ", Profile.Select(p => $"L{Number(Across(p.DistanceM) * Width)} {Number(Down(p.HeightM) * Height)}")) + $" L{Width} {Height} Z";
+
+        // Each target takes the sample nearest its middle.
+        var count = Math.Min(MostBuckets, Profile.Count);
+        _buckets = [.. Enumerable.Range(0, count).Select(i => Profile.MinBy(p => Math.Abs(p.DistanceM - ((i + 0.5) / count * _length)))!)];
+    }
+
+    // Where a distance and a height fall on the plot, as shares of its width and height from its
+    // top left; a little room is left above and below the ground.
+    private double Across(double distanceM) => distanceM / _length;
+
+    private double Down(double heightM) => (Height - 2 - ((heightM - _bottom) / _span * (Height - 4))) / Height;
+
+    private async Task PointAsync(ProfileSample sample)
+    {
+        _pointed = sample;
+        await OnPoint.InvokeAsync(sample.At);
+    }
+
+    private async Task LeaveAsync()
+    {
+        _pointed = null;
+        await OnPoint.InvokeAsync(null);
+    }
+
+    private static string Number(double value) => value.ToString("0.#", System.Globalization.CultureInfo.InvariantCulture);
+
+    private static string Percent(double share) => (share * 100).ToString("0.##", System.Globalization.CultureInfo.InvariantCulture) + "%";
+
+    private static string Metres(double metres) => metres.ToString("0", System.Globalization.CultureInfo.InvariantCulture) + " m";
+
+    private static string Km(double metres) => (metres / 1000).ToString("0.0", System.Globalization.CultureInfo.InvariantCulture) + " km";
+}

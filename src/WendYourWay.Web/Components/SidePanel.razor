@@ -1,0 +1,105 @@
+@* The left side of the planner screen (R10.1): an icon rail, and the panel it opens. *@
+
+<nav class="rail" aria-label="Panels">
+    @foreach (var section in Sections)
+    {
+        <button type="button" aria-label="@section.Label" title="@section.Label"
+                aria-pressed="@(Showing(section) ? "true" : "false")"
+                class="@(Showing(section) ? "on" : null)"
+                @onclick="() => Show(section)">
+            <svg viewBox="0 0 24 24" aria-hidden="true">@section.Icon</svg>
+        </button>
+    }
+</nav>
+
+@if (!_collapsed)
+{
+<section class="panel" aria-label="@Current.Label">
+    <header>
+        <h2>@Current.Label</h2>
+        <button type="button" class="collapse" aria-label="Collapse the panel" title="Collapse the panel" @onclick="() => _collapsed = true">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14.5 6.5L9 12l5.5 5.5" /></svg>
+        </button>
+    </header>
+    @if (_open == PanelId.Request)
+    {
+        @Request
+    }
+    else if (_open == PanelId.Outings && Outings is not null)
+    {
+        @Outings
+    }
+    else if (_open == PanelId.SavedRoutes && SavedRoutes is not null)
+    {
+        @SavedRoutes
+    }
+    else if (_open == PanelId.Admin && Admin is not null)
+    {
+        @Admin
+    }
+    else if (_open == PanelId.Help)
+    {
+        <p class="later">@Current.Later</p>
+        <p class="later"><a href="how-it-works">How Wend Your Way works</a>: the parts, how they connect, and what it's built on.</p>
+    }
+    else
+    {
+        <p class="later">@Current.Later</p>
+    }
+</section>
+}
+
+@code {
+    /// <summary>What the Request panel holds (filled in by the planner page).</summary>
+    [Parameter] public RenderFragment? Request { get; set; }
+
+    /// <summary>What the Outings panel holds (filled in by the planner page).</summary>
+    [Parameter] public RenderFragment? Outings { get; set; }
+
+    /// <summary>What the Saved Routes panel holds (T080; filled in by the planner page).</summary>
+    [Parameter] public RenderFragment? SavedRoutes { get; set; }
+
+    /// <summary>What the Admin panel holds (T129; filled in by the planner page).</summary>
+    [Parameter] public RenderFragment? Admin { get; set; }
+
+    /// <summary>Raised when the user opens a panel from the rail, with its label.</summary>
+    [Parameter] public EventCallback<string> OnOpen { get; set; }
+
+    private enum PanelId { Request, SavedRoutes, Outings, Admin, Help }
+
+    private sealed record Section(PanelId Id, string Label, RenderFragment Icon, string Later);
+
+    private static readonly Section[] Sections =
+    [
+        new(PanelId.Request, "Request",
+            @<g><circle cx="12" cy="12" r="7.5" /><circle cx="12" cy="4.5" r="2" class="dot" /></g>,
+            ""),
+        new(PanelId.SavedRoutes, "Saved Routes",
+            @<path d="M6.5 3.5h11v17l-5.5-4-5.5 4z" />,
+            "Routes you keep will be listed here."),
+        new(PanelId.Outings, "Outings",
+            @<path d="M2.5 16.5l5-6 4 3.5 5-7.5 5 6" />,
+            "Your imported runs and rides will be listed here."),
+        // Wend Your Way looked after from here (T129): its map, runs, backups and disk.
+        new(PanelId.Admin, "Admin",
+            @<g><circle cx="12" cy="12" r="3" /><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5.3 5.3l2.1 2.1M16.6 16.6l2.1 2.1M5.3 18.7l2.1-2.1M16.6 7.4l2.1-2.1" /></g>,
+            ""),
+        new(PanelId.Help, "Help",
+            @<g><circle cx="12" cy="12" r="8.5" /><path d="M9.6 9.4a2.5 2.5 0 1 1 3.4 2.3c-.6.3-1 .8-1 1.5v.8" /><circle cx="12" cy="16.9" r=".6" class="dot" /></g>,
+            "Click the map to set a start, choose a Distance, and press Go."),
+    ];
+
+    private PanelId _open = PanelId.Request;
+    private bool _collapsed;
+
+    private bool Showing(Section section) => !_collapsed && section.Id == _open;
+
+    private async Task Show(Section section)
+    {
+        _open = section.Id;
+        _collapsed = false;
+        await OnOpen.InvokeAsync(section.Label);
+    }
+
+    private Section Current => Sections.Single(s => s.Id == _open);
+}

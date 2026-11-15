@@ -1,0 +1,30 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Wend Your Way opened with one click (#142, T138, STORY-049): starts the app, shows the planner in
+       a window of its own (WebView2, Edge's engine, part of Windows 11) and stops the app when that
+       window closes. Its decisions are in WendYourWay.Launching, specced. -->
+  <PropertyGroup>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <OutputType>WinExe</OutputType>
+    <UseWindowsForms>true</UseWindowsForms>
+    <ApplicationIcon>wend-your-way.ico</ApplicationIcon>
+    <RootNamespace>WendYourWay.Launcher</RootNamespace>
+    <!-- Windows Forms' own globalization; the rest of the solution stays invariant. -->
+    <InvariantGlobalization>false</InvariantGlobalization>
+    <!-- For LibraryImport's generated marshalling of the few Windows calls. -->
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="wend-your-way.ico" />
+  </ItemGroup>
+
+  <PropertyGroup>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.4314.35" />
+    <ProjectReference Include="..\WendYourWay.Launching\WendYourWay.Launching.csproj" />
+  </ItemGroup>
+
+</Project>

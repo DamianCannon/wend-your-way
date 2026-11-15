@@ -1,0 +1,28 @@
+@* The app's stars for a route (T097, STORY-045), from its score (a Run's as Loops are ranked, T108),
+   banded among the user's Outings,
+   labelled App beside the user's own, labelled You (user, 2026-11-09).
+   Not scored, it says why; scored but too little of it on the map to rate, a dash. *@
+
+@if (Value is { } stars)
+{
+    <span class="app-stars" aria-label="@($"The app's stars: {stars} of 5")" title="The app's stars, from its score: banded among your Outings to match how you rate"><span class="who" aria-hidden="true">App</span>@(" ")@for (var i = 1; i <= 5; i++) {<span class="star">@(i <= stars ? "★" : "☆")</span>}</span>
+}
+else if (NotScored is { } why)
+{
+    <span class="app-stars none" aria-label="@why" title="@why"><span class="who" aria-hidden="true">App</span> @Short</span>
+}
+else
+{
+    <span class="app-stars none" aria-label="The app can't rate it: too little of it is on the map" title="The app can't rate it: too little of it is on the map"><span class="who" aria-hidden="true">App</span> –</span>
+}
+
+@code {
+    /// <summary>The app's stars, one to five, or none.</summary>
+    [Parameter] public int? Value { get; set; }
+
+    /// <summary>Why it has no score at all, if it hasn't: said in place of the stars.</summary>
+    [Parameter] public string? NotScored { get; set; }
+
+    /// <summary>What's shown in place of the stars when it hasn't been scored.</summary>
+    [Parameter] public string Short { get; set; } = "not scored yet";
+}

@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  T069 Obstacles fixture, near Box Hill (the features are invented; only the place is real). Three
+  ways end to end, running east, about 70 m between nodes:
+    400 a bridleway, nodes 1-4: a gate (2) and a kissing gate (3) inside it, and a gate (4) on the
+        junction with 401
+    401 a track, nodes 4-6: a stile (5) inside it
+    402 a track tagged ford=yes, nodes 6-9: a bollard (7), which a bike rides through, and a
+        swing gate (8), a gate
+  osm2pgsql needs all nodes before all ways, each sorted by ID.
+-->
+<osm version="0.6" generator="hand">
+  <node id="1" lat="51.2250" lon="-0.3400"/>
+  <node id="2" lat="51.2250" lon="-0.3390">
+    <tag k="barrier" v="gate"/>
+  </node>
+  <node id="3" lat="51.2250" lon="-0.3380">
+    <tag k="barrier" v="kissing_gate"/>
+  </node>
+  <node id="4" lat="51.2250" lon="-0.3370">
+    <tag k="barrier" v="gate"/>
+  </node>
+  <node id="5" lat="51.2250" lon="-0.3360">
+    <tag k="barrier" v="stile"/>
+  </node>
+  <node id="6" lat="51.2250" lon="-0.3350"/>
+  <node id="7" lat="51.2250" lon="-0.3340">
+    <tag k="barrier" v="bollard"/>
+  </node>
+  <node id="8" lat="51.2250" lon="-0.3330">
+    <tag k="barrier" v="swing_gate"/>
+  </node>
+  <node id="9" lat="51.2250" lon="-0.3320"/>
+  <way id="400">
+    <nd ref="1"/><nd ref="2"/><nd ref="3"/><nd ref="4"/>
+    <tag k="highway" v="bridleway"/>
+  </way>
+  <way id="401">
+    <nd ref="4"/><nd ref="5"/><nd ref="6"/>
+    <tag k="highway" v="track"/>
+  </way>
+  <way id="402">
+    <nd ref="6"/><nd ref="7"/><nd ref="8"/><nd ref="9"/>
+    <tag k="highway" v="track"/>
+    <tag k="ford" v="yes"/>
+  </way>
+</osm>

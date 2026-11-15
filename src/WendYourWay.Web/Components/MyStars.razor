@@ -1,0 +1,31 @@
+@* The user's own stars for a route, one to five (T097, STORY-045): a click gives that many; a click
+   on the star given takes them away. Beside the app's stars, never inside the button that opens the
+   route, so rating it doesn't open it. *@
+
+<span class="my-stars" role="group" aria-label="Your stars">
+    <span class="who" aria-hidden="true">You</span>
+    @for (var i = 1; i <= 5; i++)
+    {
+        var stars = i;
+        <button type="button" class="@(stars <= (Value ?? 0) ? "on" : null)" aria-pressed="@(stars <= (Value ?? 0) ? "true" : "false")"
+                aria-label="@Label(stars)" title="@Label(stars)" @onclick="() => RateAsync(stars)">★</button>
+    }
+</span>
+
+@code {
+    /// <summary>The user's stars for it, or none.</summary>
+    [Parameter] public int? Value { get; set; }
+
+    /// <summary>Raised with the stars given, or null when they're taken away.</summary>
+    [Parameter] public EventCallback<int?> OnRate { get; set; }
+
+    private string Label(int stars) => stars == Value
+        ? $"Take away your {stars} {(stars == 1 ? "star" : "stars")}"
+        : $"Give it {stars} {(stars == 1 ? "star" : "stars")}";
+
+    private async Task RateAsync(int stars)
+    {
+        Value = stars == Value ? null : stars;
+        await OnRate.InvokeAsync(Value);
+    }
+}

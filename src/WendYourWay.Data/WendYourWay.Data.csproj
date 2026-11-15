@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <ProjectReference Include="..\WendYourWay.Core\WendYourWay.Core.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="dbup-postgresql" Version="7.0.1" />
+    <PackageReference Include="Npgsql" Version="10.0.3" />
+    <PackageReference Include="Npgsql.NetTopologySuite" Version="10.0.3" />
+    <!-- FIT files, from watches and Strava's archive (ARCHITECTURE: Garmin's official FIT SDK). -->
+    <PackageReference Include="Garmin.FIT.Sdk" Version="21.218.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- db/migrations/*.sql (once each) and db/functions/*.sql (every run) ship inside this assembly. -->
+    <!-- Named as they were first (T140): the databases' journals and every backup's manifest record
+         each migration by this name, so the rename to Wend Your Way leaves them matching. -->
+    <EmbeddedResource Include="..\..\db\migrations\*.sql" LinkBase="Migrations" LogicalName="CutThrough.Data.Migrations.%(Filename)%(Extension)" />
+    <EmbeddedResource Include="..\..\db\functions\*.sql" LinkBase="Functions" LogicalName="CutThrough.Data.Functions.%(Filename)%(Extension)" />
+    <!-- The osm2pgsql style ships inside this assembly too, so the build needs no file paths. -->
+    <EmbeddedResource Include="..\..\db\osm2pgsql\cutthrough.lua" LogicalName="cutthrough.lua" />
+  </ItemGroup>
+
+</Project>

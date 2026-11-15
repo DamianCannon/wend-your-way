@@ -1,0 +1,11 @@
+.git
+.github
+.vs
+**/bin
+**/obj
+data
+tools
+spikes
+tests
+docs
+*.md

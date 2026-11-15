@@ -1,0 +1,46 @@
+# One command to run, tested where Docker is (#146, T142, STORY-046; the author's laptop has no Docker):
+# the image built, `docker compose up` starting PostgreSQL and the planner, a small region built with the
+# wend command line, and the planner answering on it.
+name: Docker
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: [Dockerfile, compose.yaml, .dockerignore, .github/workflows/docker.yml, "src/**", "db/**"]
+
+jobs:
+  one-command:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build the image
+        run: docker compose build
+
+      - name: Start PostgreSQL and the planner, with one command
+        run: docker compose up -d --wait
+
+      - name: The planner answers
+        run: curl --fail --silent --retry 30 --retry-delay 3 --retry-all-errors http://127.0.0.1:5018/ | grep -q '<title>Wend Your Way</title>'
+
+      - name: A region of your own
+        # The byways from the repository's test fixtures, not rowmaps.com, so a run doesn't fetch them every time.
+        run: >
+          docker compose run --rm
+          -v "$PWD/tests/WendYourWay.Integration.Specs/Fixtures/rights-of-way:/data/rights-of-way:ro"
+          wend network build --region rutland
+
+      - name: Its Network is there
+        run: |
+          segments=$(docker compose exec -T db psql -U cutthrough -d cutthrough -tAc "select count(*) from network.segments")
+          echo "Segments: $segments"
+          test "$segments" -gt 1000
+
+      - name: The planner still answers
+        run: curl --fail --silent http://127.0.0.1:5018/ | grep -q '<title>Wend Your Way</title>'
+
+      - name: What happened, if it failed
+        if: failure()
+        run: docker compose logs --no-color

@@ -1,0 +1,38 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+    <!-- The real Network's specs and the timings run only by name (T122): tests/default.runsettings. -->
+    <RunSettingsFilePath>$(MSBuildThisFileDirectory)..\default.runsettings</RunSettingsFilePath>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.11.0" />
+    <PackageReference Include="Npgsql" Version="10.0.3" />
+    <PackageReference Include="NUnit" Version="5.0.0" />
+    <PackageReference Include="NUnit.Analyzers" Version="4.15.0">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+    <PackageReference Include="NUnit3TestAdapter" Version="6.3.1" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Include="NUnit.Framework" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\WendYourWay.Core\WendYourWay.Core.csproj" />
+    <ProjectReference Include="..\..\src\WendYourWay.Data\WendYourWay.Data.csproj" />
+    <ProjectReference Include="..\..\src\WendYourWay.Cli\WendYourWay.Cli.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="Fixtures\**\*.csv;Fixtures\**\*.osm;Fixtures\**\*.osm.gz;Fixtures\**\*.gpx;Fixtures\**\*.asc;Fixtures\rights-of-way\**\*.json;Fixtures\rights-of-way\**\*.kml;Fixtures\rights-of-way\**\*.tsv" CopyToOutputDirectory="PreserveNewest" />
+    <!-- GPX 1.1, shared with the Web specs -->
+    <None Include="..\WendYourWay.Web.Specs\Schemas\*.xsd" Link="Schemas\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+</Project>

@@ -1,0 +1,95 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  T021 Trail Ride fixture near Barbury Castle, Wiltshire (the features are invented; only the place
+  is real). Each way about 700 m long, running east, with Definitive Map byways in
+  rights-of-way/WT/mutated4.json: A along lat 51.5000 and B along 51.5050 (lon -1.8000 to -1.7900),
+  C along 51.5000 (lon -1.7800 to -1.7700).
+    400 along Definitive Map byway A, 3 m off
+    401 a track 67 m from byway A: no recorded right
+    402 a footway 9 m beside byway A
+    403 OSM's byway on no Definitive Map line
+    404 a road
+    405 a green lane
+    406 along byway B, closed in winter
+    408 OSM's byway where no Definitive Map is open
+    409 a footpath OSM records along byway C
+    407 a track across byway A, north to south (40 m of its 222 m within 20 m)
+  A without_data area is drawn by the spec round 408. osm2pgsql needs all nodes before all ways, each sorted by ID.
+-->
+<osm version="0.6" generator="hand">
+  <node id="1" lat="51.50003" lon="-1.8000"/>
+  <node id="2" lat="51.50003" lon="-1.7900"/>
+  <node id="3" lat="51.50060" lon="-1.8000"/>
+  <node id="4" lat="51.50060" lon="-1.7900"/>
+  <node id="5" lat="51.49992" lon="-1.8000"/>
+  <node id="6" lat="51.49992" lon="-1.7900"/>
+  <node id="7" lat="51.51000" lon="-1.8000"/>
+  <node id="8" lat="51.51000" lon="-1.7900"/>
+  <node id="9" lat="51.49500" lon="-1.8000"/>
+  <node id="10" lat="51.49500" lon="-1.7900"/>
+  <node id="11" lat="51.52000" lon="-1.8000"/>
+  <node id="12" lat="51.52000" lon="-1.7900"/>
+  <node id="13" lat="51.50502" lon="-1.8000"/>
+  <node id="14" lat="51.50502" lon="-1.7900"/>
+  <node id="15" lat="51.51500" lon="-1.8000"/>
+  <node id="16" lat="51.51500" lon="-1.7900"/>
+  <node id="17" lat="51.50003" lon="-1.7800"/>
+  <node id="18" lat="51.50003" lon="-1.7700"/>
+  <node id="19" lat="51.49900" lon="-1.7950"/>
+  <node id="20" lat="51.50100" lon="-1.7950"/>
+  <way id="400">
+    <nd ref="1"/>
+    <nd ref="2"/>
+    <tag k="highway" v="track"/>
+  </way>
+  <way id="401">
+    <nd ref="3"/>
+    <nd ref="4"/>
+    <tag k="highway" v="track"/>
+  </way>
+  <way id="402">
+    <nd ref="5"/>
+    <nd ref="6"/>
+    <tag k="highway" v="footway"/>
+  </way>
+  <way id="403">
+    <nd ref="7"/>
+    <nd ref="8"/>
+    <tag k="highway" v="track"/>
+    <tag k="designation" v="byway_open_to_all_traffic"/>
+  </way>
+  <way id="404">
+    <nd ref="9"/>
+    <nd ref="10"/>
+    <tag k="highway" v="residential"/>
+  </way>
+  <way id="405">
+    <nd ref="11"/>
+    <nd ref="12"/>
+    <tag k="highway" v="track"/>
+    <tag k="designation" v="unclassified_highway"/>
+  </way>
+  <way id="406">
+    <nd ref="13"/>
+    <nd ref="14"/>
+    <tag k="highway" v="track"/>
+    <tag k="motor_vehicle:conditional" v="no @ (Oct-Apr)"/>
+  </way>
+  <way id="407">
+    <nd ref="19"/>
+    <nd ref="20"/>
+    <tag k="highway" v="track"/>
+  </way>
+  <way id="408">
+    <nd ref="15"/>
+    <nd ref="16"/>
+    <tag k="highway" v="track"/>
+    <tag k="designation" v="byway_open_to_all_traffic"/>
+  </way>
+  <way id="409">
+    <nd ref="17"/>
+    <nd ref="18"/>
+    <tag k="highway" v="track"/>
+    <tag k="designation" v="public_footpath"/>
+  </way>
+</osm>

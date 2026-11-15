@@ -1,0 +1,57 @@
+# Wend Your Way with one command (#146, T142, STORY-046): `docker compose up -d` runs PostgreSQL with
+# PostGIS and the planner, on http://127.0.0.1:5018 (this computer only). Your settings are in .env
+# (copy .env.example). The `wend` command line runs beside them, for example to build your region:
+#   docker compose run --rm wend byways get
+#   docker compose run --rm wend network build --region surrey
+name: wend-your-way
+
+x-database: &database
+  WEND_DATABASE: Host=db;Port=5432;Database=cutthrough;Username=cutthrough;Password=${DB_PASSWORD:-wend-your-way}
+
+services:
+  db:
+    image: postgis/postgis:17-3.5
+    environment:
+      POSTGRES_USER: cutthrough
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-wend-your-way}
+      POSTGRES_DB: cutthrough
+    volumes:
+      - db:/var/lib/postgresql/data
+    shm_size: 1g
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U cutthrough -d cutthrough"]
+      interval: 5s
+      retries: 30
+
+  app:
+    build: .
+    image: wend-your-way:local
+    environment:
+      ConnectionStrings__WendYourWay: Host=db;Port=5432;Database=cutthrough;Username=cutthrough;Password=${DB_PASSWORD:-wend-your-way}
+      Thunderforest__ApiKey: ${THUNDERFOREST_KEY:-}
+      Home__Latitude: ${HOME_LATITUDE:-}
+      Home__Longitude: ${HOME_LONGITUDE:-}
+    ports:
+      - "127.0.0.1:5018:5018"
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+  wend:
+    image: wend-your-way:local
+    profiles: [tools]
+    entrypoint: ["dotnet", "/app/wend/wend.dll"]
+    # From the top, so its data/ (extracts, byways, terrain) is the data volume.
+    working_dir: /
+    environment:
+      <<: *database
+    volumes:
+      - data:/data
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  db:
+  data:

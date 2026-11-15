@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk.Web"><PropertyGroup>  <UserSecretsId>91909945-361e-428b-be07-0f1b0d7b3332</UserSecretsId>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\WendYourWay.Core\WendYourWay.Core.csproj" />
+    <ProjectReference Include="..\WendYourWay.Data\WendYourWay.Data.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="QRCoder" Version="1.8.1" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- The planner's session and its parts are internal; their specs read them (T124c). -->
+    <InternalsVisibleTo Include="WendYourWay.Web.Specs" />
+  </ItemGroup>
+
+</Project>

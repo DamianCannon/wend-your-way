@@ -1,0 +1,157 @@
+@page "/how-it-works"
+@* How Wend Your Way works (user, 2026-10-19): the parts, how they connect and what it's built on,
+   for whoever opens the app. Reached from the Help panel. *@
+
+<PageTitle>How Wend Your Way works</PageTitle>
+
+<main class="how">
+    <a class="back" href="./">← Back to the map</a>
+
+    <header>
+        <h1>How Wend Your Way works</h1>
+        <p class="lede">
+            A planner for running and gravel Loops in England and Wales that favour footpaths, alleys and
+            cut-throughs over roads with traffic. Everything runs on this laptop; only the map pictures come
+            from outside.
+        </p>
+        <ul class="ground-key" aria-label="Ground, as coloured on the map">
+            <li><span class="swatch off-road"></span>Off-road</li>
+            <li><span class="swatch traffic-free"></span>Traffic-free</li>
+            <li><span class="swatch connector"></span>Connector</li>
+            <li><span class="swatch loop"></span>Your Loop</li>
+            <li><span class="swatch gap"></span>Gap</li>
+        </ul>
+    </header>
+
+    <figure>
+        <div class="diagram-scroll">
+            <img class="diagram" src="img/how-it-works.svg"
+                 alt="OpenStreetMap data goes through wend network build into the network part of a PostgreSQL and PostGIS database; your Strava archive goes through wend outings import-strava into the app part. The web app loads the Segments near your start, finds and scores Loops, and shows them in your browser on a tiled map, ready to export as GPX." />
+        </div>
+        <figcaption>
+            Two pipelines fill one database: the map from public data, your history from Strava. The planner reads
+            only the part of the map near where you start. The dashed line is still to come: your runs will steer
+            Loops towards ground you know, or away from it.
+        </figcaption>
+    </figure>
+
+    <section>
+        <h2>Five jobs, three drawers</h2>
+        <p>
+            The database keeps the map, the place names and your history apart, so rebuilding the map from fresh
+            OpenStreetMap data never touches your runs.
+        </p>
+        <div class="jobs">
+            <article>
+                <h3><code>wend network build</code></h3>
+                <p>
+                    Turns OpenStreetMap into Segments, the stretch of a way between two junctions. Labels each
+                    one's ground, spots pavements running beside roads, and keeps only England and Wales. Joins the
+                    green ground into Off-road networks and finds the car parks beside the large ones.
+                </p>
+            </article>
+            <article>
+                <h3><code>wend outings import-strava</code></h3>
+                <p>
+                    Reads your Strava export: runs, walks, hikes and road rides (swims and trainer rides are
+                    skipped). Works out which Segments each Outing covered and where it left the map, then
+                    follows each onto the map and scores it as a Loop is, for the app's stars.
+                </p>
+            </article>
+            <article>
+                <h3><code>wend places import</code></h3>
+                <p>
+                    Loads Ordnance Survey's place names and postcodes, so the search box can take the map anywhere
+                    in England and Wales without asking any outside service.
+                </p>
+            </article>
+            <article>
+                <h3>The route finder</h3>
+                <p>
+                    Takes the nearby part of the map into memory and tries Loops through points round your start,
+                    joining them with A*, where cost means how much you'd dislike the ground. Keeps the Loop that
+                    scores best for its length.
+                </p>
+            </article>
+            <article>
+                <h3>This page's app</h3>
+                <p>
+                    Draws the map, takes your start and Distance, shows five Loops with their Breakdowns, and
+                    hands you the GPX (or a TCX for a watch, or a QR code to send it
+                    to your phone), its turns marked. Lists the car parks around the map in view, with Loop 1 from
+                    each of the best five to compare. The Outings panel shows each of your runs (any you don't want deleted, for good), its gaps, and the
+                    app's stars beside your own.
+                </p>
+            </article>
+        </div>
+    </section>
+
+    <section>
+        <h2>Words you'll see</h2>
+        <dl>
+            <dt>Segment</dt><dd>The stretch of one way between two junctions: the smallest piece a Loop is made of.</dd>
+            <dt>Off-road</dt><dd>Unsurfaced and free of traffic: field paths, bridleways, tracks, woodland trails.</dd>
+            <dt>Traffic-free</dt><dd>Paved but no cars: alleys, cut-throughs, park paths, greenwalks.</dd>
+            <dt>Connector</dt><dd>Roads, and pavements beside them: the glue between the good bits.</dd>
+            <dt>Outing</dt><dd>One of your own runs, walks or rides, imported from Strava or a GPX file.</dd>
+            <dt>Off-road network</dt><dd>Green ground joined up, across short road links: how long a Loop can stay off roads there.</dd>
+            <dt>Trailhead</dt><dd>A public car park beside a large Off-road network: the car parks listed around here.</dd>
+            <dt>Gap</dt><dd>Where an Outing went more than 25 m from any way on the map: often open ground, sometimes a path OpenStreetMap is missing.</dd>
+            <dt>Stars</dt><dd>The app's, from its score (a Run's with what off-road ground and climbing add, as Loops are ranked), banded among your Outings to match how you rate: a Run's lowest tenth 1 star, its top 30% 5; and yours, given with a click. Two or more apart, and it stands out. The Outings list filters by your stars (★5, ★4–5, Not rated) and by name.</dd>
+            <dt>Turn point</dt><dd>A junction where the route turns 45 degrees or more and there's a choice of way: in the GPX and the TCX, in words.</dd>
+        </dl>
+    </section>
+
+    <section>
+        <h2>Keeping it up to date</h2>
+        <p>
+            Your Outings, stars, Saved Routes and Marks are kept apart from the map, linked by OpenStreetMap's own
+            ids, so refreshing the map never loses them. Every command is in the README, with all its options.
+        </p>
+        <div class="table-scroll">
+            <table>
+                <thead><tr><th>Data</th><th>To refresh</th></tr></thead>
+                <tbody>
+                    <tr><td>OpenStreetMap</td><td>Download <code>great-britain-latest.osm.pbf</code> from Geofabrik, then <code>wend network build</code> it: about 4&frac12; hours, best overnight.</td></tr>
+                    <tr><td>Byways (Trail Rides)</td><td><code>scripts/get-rights-of-way.ps1</code>, then <code>wend network rebuild</code>.</td></tr>
+                    <tr><td>Place names</td><td>OS Open Names' CSV, quarterly: <code>wend places import</code>, under a minute.</td></tr>
+                    <tr><td>Heights</td><td>OS Terrain 50, yearly: new tiles in <code>data/terrain50/asc</code>, then <code>wend network rebuild</code>.</td></tr>
+                    <tr><td>Your runs</td><td>A new Strava export: <code>wend outings import-strava</code> adds only what's new.</td></tr>
+                    <tr><td>Your own data</td><td>Backed up by itself to "Wend Your Way Backups" in OneDrive, after every import and build and each day the app starts; 10 kept, spread over a month. The Admin panel backs up at a click, lists the last ten with their Outings, and puts one back, asking first.</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    <section>
+        <h2>What it's built on</h2>
+        <div class="table-scroll">
+            <table>
+                <thead><tr><th>Part</th><th>What it does</th></tr></thead>
+                <tbody>
+                    <tr><td>C# on .NET 10</td><td>The app, the command line and the tests</td></tr>
+                    <tr><td>Blazor Server</td><td>This web page, written in C#</td></tr>
+                    <tr><td>PostgreSQL 17 + PostGIS 3.6</td><td>The database that understands maps</td></tr>
+                    <tr><td>osm2pgsql 2.3</td><td>Loads OpenStreetMap files into it</td></tr>
+                    <tr><td>Npgsql and DbUp</td><td>Talks to the database; applies its changes in order</td></tr>
+                    <tr><td>OpenStreetMap via Geofabrik</td><td>The paths and roads</td></tr>
+                    <tr><td>Garmin FIT SDK</td><td>Reads watch files in your Strava export</td></tr>
+                    <tr><td>Leaflet 1.9 + Thunderforest</td><td>Draws the map; the map pictures, with CyclOSM and OpenTopoMap (the only online services)</td></tr>
+                    <tr><td>OS Terrain 50 and OS Open Names</td><td>Heights for climbing; place names and postcodes for search</td></tr>
+                    <tr><td>Our own A* route finder</td><td>Finds Loops, with costs that change with every Request</td></tr>
+                    <tr><td>QRCoder</td><td>Draws the QR code that sends a route to your phone</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    <section>
+        <h2>The map pictures</h2>
+        <p>
+            The tiles are only the picture under the Loop: routing, scoring and GPX never use them. Choose a map with
+            the switcher at the top right of the planner: Thunderforest Outdoors and OpenCycleMap (with a Thunderforest
+            key), Ordnance Survey's Outdoor style (with an OS key), CyclOSM for tracks and surfaces, or OpenTopoMap for
+            contours. Your choice is remembered in this browser.
+        </p>
+    </section>
+</main>

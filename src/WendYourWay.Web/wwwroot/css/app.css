@@ -1,0 +1,567 @@
+/* Wend Your Way: a field map. Forest-green rail, paper panels, one hi-vis accent for action. */
+
+:root {
+    --ink: #1f2a24;
+    --ink-soft: #5b6760;
+    --paper: #f7f3ea;
+    --paper-edge: #e4dccb;
+    --forest: #1e3b2f;
+    --forest-light: #2f5a47;
+    --moss: #a9c4a1;
+    --hi-vis: #e8590c;
+    --rail: 56px;
+    /* 380: an Outing's four buttons on one line beside a long list's 16 px scrollbar need 370 (T115). */
+    --panel: min(380px, calc(100vw - var(--rail)));
+    --radius: 10px;
+    --shadow: 0 6px 24px rgb(20 30 25 / 0.18), 0 1px 3px rgb(20 30 25 / 0.12);
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    color: var(--ink);
+}
+
+html, body { margin: 0; height: 100%; background: var(--paper); }
+
+.planner { position: fixed; inset: 0; --side: var(--rail); }
+.planner:has(.panel) { --side: calc(var(--rail) + var(--panel)); }
+
+.map { position: absolute; inset: 0; z-index: 0; background: #e9e6dc; }
+
+/* The icon rail */
+.rail {
+    position: absolute; z-index: 1000; left: 0; top: 0; bottom: 0; width: var(--rail);
+    display: flex; flex-direction: column; align-items: center; gap: 4px; padding-top: 12px;
+    background: var(--forest);
+}
+.rail button {
+    width: 40px; height: 40px; border: 0; border-radius: 8px; padding: 8px;
+    background: transparent; color: var(--moss); cursor: pointer;
+}
+.rail button:hover { background: var(--forest-light); color: #fff; }
+.rail button.on { background: var(--paper); color: var(--forest); }
+.rail button:focus-visible, .panel button:focus-visible { outline: 2px solid var(--hi-vis); outline-offset: 2px; }
+
+/* The app's own line icons (never Leaflet's SVG layer, which draws the Loop) */
+.rail svg, .panel svg, .pager svg {
+    width: 100%; height: 100%; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round;
+}
+.rail svg .dot, .panel svg .dot { fill: currentColor; }
+
+/* The panel the rail opens */
+.panel {
+    position: absolute; z-index: 1000; left: var(--rail); top: 0; bottom: 0; width: var(--panel);
+    box-sizing: border-box; padding: 16px 20px; overflow-y: auto;
+    background: var(--paper); border-right: 1px solid var(--paper-edge); box-shadow: var(--shadow);
+}
+.panel header { position: sticky; top: -16px; z-index: 3; display: flex; align-items: center; justify-content: space-between; margin: -16px -20px 0; padding: 16px 20px 12px; background: var(--paper); }
+.panel h2 {
+    margin: 0; font-size: 0.8rem; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase;
+    color: var(--forest);
+}
+.panel .collapse {
+    width: 32px; height: 32px; border: 0; border-radius: 6px; padding: 6px;
+    background: transparent; color: var(--ink-soft); cursor: pointer;
+}
+.panel .collapse:hover { background: var(--paper-edge); color: var(--ink); }
+.later { margin: 0; color: var(--ink-soft); line-height: 1.5; }
+
+/* The pager card, centred over the part of the map the panel leaves visible */
+.pager {
+    position: absolute; z-index: 1000; bottom: 28px;
+    left: calc(var(--side) + (100% - var(--side)) / 2); transform: translateX(-50%);
+    /* A fixed width, so the buttons never move from under the pointer as Loops change (user, 2026-10-27);
+       410 px from T071, so the route's eye fits beside a summary still whole; 440 px from T080, the bookmark;
+       510 px from T099, the QR button; 580 px for TCX beside it (user, 2026-11-10) */
+    box-sizing: border-box; width: 580px; max-width: calc(100% - var(--side) - 32px); padding: 12px 20px; text-align: center;
+    background: var(--paper); border: 1px solid var(--paper-edge); border-radius: var(--radius); box-shadow: var(--shadow);
+}
+.pager .empty { color: var(--ink-soft); font-size: 0.95rem; }
+
+/* Leaflet's own controls, in the same paper */
+.leaflet-bar a, .leaflet-control-attribution, .leaflet-control-scale-line { background: rgb(247 243 234 / 0.92); }
+.leaflet-container .leaflet-control-attribution a { color: var(--forest-light); }
+
+/* The Request panel */
+.field { display: flex; flex-direction: column; gap: 4px; margin-bottom: 16px; }
+.field .label { font-size: 0.72rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-soft); }
+.start { font-size: 1rem; }
+.field .hint { font-size: 0.8rem; color: var(--ink-soft); }
+/* How recent the Network's paths are (T117), at the foot of the Request panel. */
+.panel .paths-as-of { margin: 18px 0 0; font-size: 0.8rem; line-height: 1.4; color: var(--ink-soft); }
+/* The map's update (T128), under its date: a line or two, and a button when there's one to do. */
+.panel .map-update { margin-top: 4px; font-size: 0.8rem; line-height: 1.4; color: var(--ink-soft); }
+.panel .map-update p { margin: 2px 0; }
+.panel .map-update .problem, .panel .admin .problem { color: var(--hi-vis); }
+.panel .admin .last-import .line { display: block; }
+/* A folder's long path wraps rather than widening the panel (found by hand, T132). */
+.panel .admin p { overflow-wrap: anywhere; }
+.panel .map-update button.update, .panel .admin button.job {
+    display: inline-block; width: auto; margin-top: 6px; padding: 5px 12px; border: 1px solid var(--forest); border-radius: 6px;
+    background: transparent; color: var(--forest); font: inherit; font-size: 0.85rem; font-weight: 600; cursor: pointer;
+}
+.panel .map-update button.update:hover, .panel .admin button.job:hover:enabled { background: var(--forest); color: #fff; }
+.panel .map-update button.update:disabled, .panel .admin button.job:disabled { opacity: 0.5; cursor: default; }
+/* The backups there (T132): when and how many Outings each, a quiet Restore beside it, asked first. */
+.panel .admin .backup-list { list-style: none; margin: 8px 0 0; padding: 0; font-size: 0.85rem; }
+.panel .admin .backup-list li { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 3px 0; border-top: 1px solid var(--line, #e3e6df); }
+.panel .admin .backup-list .when { min-width: 0; font-variant-numeric: tabular-nums; }
+.panel .admin .backup-list button.restore, .panel .admin .confirm button.no {
+    width: auto; padding: 2px 8px; border: 0; background: transparent; color: var(--forest); font: inherit; font-size: 0.8rem; text-decoration: underline; cursor: pointer;
+}
+.panel .admin .backup-list button.restore:disabled { opacity: 0.5; cursor: default; }
+.panel .admin .confirm { margin-top: 8px; padding: 8px 10px; border: 1px solid var(--hi-vis); border-radius: 6px; }
+.panel .admin .confirm .question { margin: 0; }
+.distance-input { display: flex; align-items: center; gap: 8px; }
+.lean-input { display: flex; align-items: center; gap: 8px; font-size: 0.85rem; color: var(--ink-soft); }
+.lean-input input { flex: 1; min-width: 0; accent-color: var(--hi-vis); }
+.distance {
+    width: 6.5em; padding: 8px 10px; font: inherit; font-size: 1rem; color: var(--ink);
+    background: #fff; border: 1px solid var(--paper-edge); border-radius: 6px;
+}
+.distance:focus-visible { outline: 2px solid var(--hi-vis); outline-offset: 1px; }
+.go {
+    width: 100%; padding: 11px 16px; border: 0; border-radius: 8px; cursor: pointer;
+    font: inherit; font-weight: 700; letter-spacing: 0.04em; color: #fff; background: var(--hi-vis);
+}
+.go:hover:not(:disabled) { background: #cf4e09; }
+/* Run or Gravel Ride (T068): two halves of one control, the chosen in forest */
+.activity { display: flex; margin-bottom: 16px; border: 1px solid var(--paper-edge); border-radius: 8px; overflow: hidden; }
+.activity button { flex: 1; padding: 7px 10px; white-space: nowrap; border: 0; background: transparent; color: var(--ink-soft); font: inherit; font-weight: 600; cursor: pointer; }
+.activity button + button { border-left: 1px solid var(--paper-edge); }
+.activity button:hover:not(.chosen) { color: var(--forest); }
+.activity button.chosen { background: var(--forest); color: var(--paper); }
+.distance-go { display: flex; align-items: flex-end; gap: 12px; margin-bottom: 16px; }
+.distance-go .field { margin-bottom: 0; }
+.distance-go .go { flex: 1; padding-block: 9px; }
+/* Put where the user dragged it (js/pager.js), its bar always in the window, however small */
+.pager-placed .pager {
+    left: max(0px, min(var(--pager-left), 100vw - 440px)); bottom: max(0px, min(var(--pager-bottom), 100vh - 48px));
+    transform: none; max-width: calc(100vw - 16px);
+}
+.pager.dragging, .pager.dragging .bar { cursor: grabbing; user-select: none; }
+.go:disabled { background: var(--paper-edge); color: var(--ink-soft); cursor: default; }
+
+/* Where to start (T060): the car parks around here, the start's marked */
+.where { margin-top: 22px; padding-top: 16px; border-top: 1px solid var(--paper-edge); }
+.starts { display: flex; flex-direction: column; gap: 6px; margin-top: 10px; }
+.starts button {
+    display: flex; flex-direction: column; align-items: flex-start; gap: 2px; padding: 8px 10px; text-align: left;
+    border: 1px solid var(--paper-edge); border-radius: 8px; background: transparent; color: var(--ink); font: inherit; cursor: pointer;
+}
+.starts button span { font-size: 0.8rem; color: var(--ink-soft); }
+.starts button:hover { border-color: var(--forest); }
+.starts button.chosen { border-color: var(--hi-vis); box-shadow: inset 3px 0 0 var(--hi-vis); }
+/* A place to start on the map: a parking sign in forest green, the chosen one in hi-vis */
+.trailhead-marker span {
+    display: flex; align-items: center; justify-content: center; width: 24px; height: 24px; box-sizing: border-box;
+    border: 2px solid #fff; border-radius: 6px; background: var(--forest); color: #fff;
+    font: 700 13px/1 system-ui, sans-serif; box-shadow: 0 1px 3px rgb(0 0 0 / 0.35);
+}
+.trailhead-marker.chosen span { background: var(--hi-vis); }
+.where .around { display: flex; align-items: center; font-size: 0.8rem; font-weight: 600; color: var(--ink-soft); }
+.starts button .details { font-size: 0.78rem; color: var(--ink-soft); }
+.starts button .preview { font-size: 0.78rem; color: var(--forest); font-variant-numeric: tabular-nums; }
+.starts .none { margin: 0; font-size: 0.85rem; color: var(--ink-soft); }
+
+/* The pager card's Loop and Breakdown */
+.pager .bar { display: flex; align-items: center; gap: 6px; cursor: grab; user-select: none; touch-action: none; }
+.pager .summary { flex: 1; min-width: 0; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* The car park started from (T061): cut short rather than push the buttons about */
+.pager .place { margin: 0 0 8px; font-size: 1rem; font-weight: 700; color: var(--forest); text-align: left; overflow-wrap: anywhere; text-wrap: balance; }
+.pager .page, .pager .expand {
+    width: 30px; height: 30px; border: 0; border-radius: 6px; padding: 5px;
+    background: transparent; color: var(--ink); font-size: 1.2rem; line-height: 1; cursor: pointer;
+}
+/* The route takes Nudges (T076): grab it to drag it; "Avoid this time" where it's clicked */
+.loop-grab { cursor: grab; }
+.nudge-popup .leaflet-popup-content { margin: 8px; }
+.avoid-this {
+    padding: 6px 12px; border: 0; border-radius: 6px; background: var(--hi-vis); color: #fff;
+    font: inherit; font-weight: 600; cursor: pointer;
+}
+.avoid-this:hover { filter: brightness(1.08); }
+.route-popup { display: flex; flex-direction: column; align-items: stretch; gap: 6px; }
+.route-popup .block-this {
+    padding: 6px 12px; border: 1px solid #c92a2a; border-radius: 6px; background: transparent; color: #c92a2a;
+    font: inherit; font-weight: 600; cursor: pointer;
+}
+.route-popup .block-this:hover { background: #c92a2a; color: #fff; }
+.route-popup .blocked-title { color: #c92a2a; text-align: center; }
+.route-popup .block-this.suggested { background: #c92a2a; color: #fff; }
+.route-popup .fix-hint { margin: 0; max-width: 220px; font-size: 0.85em; color: #555; text-align: center; }
+.leaflet-interactive.blocked { cursor: pointer; }
+.route-popup .osm-link { font-size: 0.85rem; color: var(--forest); text-align: center; }
+/* An Avoid (T079): a round hi-vis marker with "!", where the route was told to go round */
+.avoid-marker {
+    display: flex; align-items: center; justify-content: center; border-radius: 50%;
+    background: var(--hi-vis); color: #fff; border: 2px solid #fff; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
+    font-weight: 800; font-size: 0.85rem; line-height: 1; cursor: pointer;
+}
+.anchor-marker { cursor: pointer; }
+/* After a Nudge (T076): Undo and what it said, on a line under the bar */
+.pager .nudged { display: flex; align-items: center; justify-content: center; gap: 10px; margin-top: 8px; font-size: 0.85rem; }
+.pager .undo, .pager .redo {
+    display: flex; align-items: center; gap: 4px; height: 28px; padding: 4px 10px 4px 7px;
+    border: 1px solid var(--paper-edge); border-radius: 6px; background: transparent; color: var(--ink);
+    font: inherit; font-weight: 600; cursor: pointer;
+}
+.pager .undo svg, .pager .redo svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.pager .undo:hover:not(:disabled), .pager .redo:hover:not(:disabled) { background: var(--paper-edge); }
+.pager .undo:disabled, .pager .redo:disabled { color: var(--paper-edge); cursor: default; }
+.pager .undo:focus-visible, .pager .redo:focus-visible { outline: 2px solid var(--hi-vis); outline-offset: 1px; }
+.pager .nudge-note { margin: 6px 0 0; font-size: 0.85rem; color: var(--ink-soft); }
+/* Save the route (T080): a bookmark on the bar; its name asked for under it */
+.pager .save {
+    display: flex; align-items: center; justify-content: center; width: 30px; height: 30px; padding: 5px;
+    border: 0; border-radius: 6px; background: transparent; color: var(--ink); cursor: pointer;
+}
+.pager .save svg { width: 19px; height: 19px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linejoin: round; }
+.pager .save:hover, .pager .save[aria-expanded="true"] { background: var(--paper-edge); }
+.pager .save:focus-visible { outline: 2px solid var(--hi-vis); outline-offset: 1px; }
+.pager form.saving { display: flex; gap: 6px; margin-top: 8px; }
+.pager .save-name { flex: 1; min-width: 0; padding: 5px 8px; border: 1px solid var(--paper-edge); border-radius: 6px; font: inherit; }
+.pager form.saving .cancel { border: 0; background: transparent; color: var(--ink-soft); font: inherit; cursor: pointer; }
+/* Saved Routes (T080): newest first, each opened, renamed or deleted in place */
+/* Import a GPX (T083): a button-like label over the hidden file input, above the list. */
+.import { display: flex; flex-direction: column; gap: 6px; margin-bottom: 10px; }
+.import-gpx {
+    position: relative; align-self: flex-start; padding: 6px 12px; border: 1px solid var(--line, #d0d4d2); border-radius: 6px;
+    font-weight: 600; cursor: pointer;
+}
+.import-gpx:hover { background: rgba(0, 0, 0, 0.04); }
+.import-gpx.busy { opacity: 0.6; cursor: progress; }
+.import-gpx input[type=file] { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+.import-problem, .route-problem { margin: 0; color: #c92a2a; line-height: 1.4; }
+.pager .gap-note { margin: 4px 0 0; text-align: center; font-size: 0.85rem; color: #1f2a24; }
+/* Drawn as the map draws a route's gaps (T088): ink dots on white. */
+.pager .gap-note::before { content: ""; display: inline-block; width: 22px; height: 0; margin-right: 6px; vertical-align: middle; border-top: 4px dotted #1f2a24; }
+.saved-routes { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+/* The name across the top, cut short; km and date a line each beneath it, the buttons beside them */
+.saved-routes li {
+    display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-rows: auto auto; align-items: end; column-gap: 6px;
+    padding: 6px 8px; border: 1px solid var(--paper-edge); border-radius: 6px;
+}
+.saved-routes .open {
+    display: contents; text-align: left; border: 0; background: transparent; font: inherit; cursor: pointer; padding: 0;
+}
+.saved-routes .name {
+    grid-column: 1 / -1; grid-row: 1; font-weight: 600; cursor: pointer;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.saved-routes .km, .saved-routes .date { grid-column: 1; display: block; font-size: 0.8rem; color: var(--ink-soft); cursor: pointer; }
+.saved-routes .km { grid-row: 2; }
+.saved-routes .date { grid-row: 3; }
+.saved-routes .actions { grid-column: 2; grid-row: 2 / 4; display: flex; align-items: center; gap: 2px; }
+.saved-routes .asking { font-size: 0.8rem; color: var(--ink-soft); }
+.saved-routes li > form { grid-column: 1 / -1; }
+.saved-routes .rename, .saved-routes .delete, .saved-routes .confirm-delete, .saved-routes .keep {
+    border: 0; border-radius: 6px; background: transparent; color: var(--ink-soft); font: inherit; font-size: 0.8rem; cursor: pointer; padding: 4px 6px;
+}
+.saved-routes .rename:hover, .saved-routes .delete:hover, .saved-routes .keep:hover { background: var(--paper-edge); color: var(--ink); }
+.saved-routes .confirm-delete { background: var(--hi-vis); color: #fff; }
+.saved-routes form { display: flex; flex: 1; gap: 6px; }
+.saved-routes .new-name { flex: 1; min-width: 0; padding: 4px 6px; border: 1px solid var(--paper-edge); border-radius: 6px; font: inherit; }
+/* Hide or show the route (T071): an eye on the bar, hi-vis while the route is hidden */
+.pager .route {
+    display: flex; align-items: center; justify-content: center; width: 30px; height: 30px; padding: 5px;
+    border: 0; border-radius: 6px; background: transparent; color: var(--ink); cursor: pointer;
+}
+.pager .route svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.pager .route:hover { background: var(--paper-edge); }
+.pager .route[aria-pressed="true"] { background: var(--hi-vis); color: #fff; }
+.pager .route:focus-visible { outline: 2px solid var(--hi-vis); outline-offset: 1px; }
+.pager .export, .pager .phone {
+    display: flex; align-items: center; gap: 4px; height: 30px; padding: 4px 10px 4px 7px; margin-left: 4px;
+    border: 0; border-radius: 6px; background: var(--hi-vis); color: #fff; cursor: pointer;
+    font-family: inherit; font-size: 0.85rem; font-weight: 600; line-height: 1;
+}
+.pager .export svg, .pager .phone svg { width: 18px; height: 18px; stroke-width: 2.2; }
+.pager .export:hover, .pager .phone:hover { filter: brightness(1.08); }
+.pager .export:focus-visible, .pager .phone:focus-visible { outline: 2px solid var(--forest); outline-offset: 1px; }
+.pager .page:disabled { color: var(--paper-edge); cursor: default; }
+.pager .expand:hover, .pager .page:hover:not(:disabled) { background: var(--paper-edge); }
+.pager .expand:focus-visible, .pager .page:focus-visible { outline: 2px solid var(--hi-vis); outline-offset: 1px; }
+/* The elevation profile (T051): the ground in moss on a simple axis, the place pointed at in hi-vis */
+.profile { margin: 0 0 10px; }
+.profile .chart { display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-rows: 64px auto; column-gap: 6px; }
+.profile .plot { position: relative; }
+.pager .profile svg { display: block; width: 100%; height: 64px; stroke: none; }
+.profile .ground { fill: var(--moss); stroke: var(--forest-light); stroke-width: 1; vector-effect: non-scaling-stroke; }
+.profile .at { fill: transparent; }
+.profile .dot {
+    position: absolute; width: 10px; height: 10px; margin: -5px 0 0 -5px; border-radius: 50%; pointer-events: none;
+    background: var(--hi-vis); border: 2px solid #fff; box-shadow: 0 1px 3px rgb(0 0 0 / 0.35); box-sizing: border-box;
+}
+.profile .y-axis, .profile .x-axis { position: relative; font-size: 0.72rem; color: var(--ink-soft); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.profile .y-axis { width: 3.4em; }
+.profile .y-axis span { position: absolute; left: 0; transform: translateY(-50%); }
+.profile .x-axis { grid-column: 1; height: 1.4em; }
+.profile .x-axis span { position: absolute; top: 2px; }
+.profile .x-axis .start { left: 0; }
+.profile .x-axis .end { right: 0; }
+.profile .x-axis .now { transform: translateX(-50%); }
+.profile .now { z-index: 1; padding: 0 3px; border-radius: 3px; font-weight: 700; color: #fff; background: var(--hi-vis); }
+.profile .pointing .top, .profile .pointing .bottom, .profile .pointing .start, .profile .pointing .end { opacity: 0.35; }
+.profile figcaption { margin-top: 2px; font-size: 0.85rem; color: var(--ink-soft); font-variant-numeric: tabular-nums; }
+.breakdown { width: 100%; margin-bottom: 10px; border-collapse: collapse; font-size: 0.92rem; }
+.breakdown th { text-align: left; font-weight: 500; color: var(--ink-soft); padding: 4px 0; }
+.breakdown td { text-align: right; font-variant-numeric: tabular-nums; padding: 4px 0; }
+.breakdown tr + tr { border-top: 1px solid var(--paper-edge); }
+.pager .credit { margin: -4px 0 10px; font-size: 0.72rem; color: var(--ink-soft); }
+/* A Loop on its way to the phone (T099): its QR code above the bar. */
+.pager .to-phone { display: grid; justify-items: center; gap: 6px; margin: 0 0 10px; padding: 10px; border: 1px solid var(--paper-edge); border-radius: 8px; background: #fff; }
+.pager .to-phone .qr { display: block; width: 180px; height: 180px; image-rendering: pixelated; }
+.pager .to-phone .link { margin: 0; font-size: 0.75rem; word-break: break-all; color: var(--ink-soft); }
+.pager .to-phone .terms { margin: 0; font-size: 0.9rem; font-weight: 600; font-variant-numeric: tabular-nums; }
+.pager .to-phone .close-phone { padding: 4px 12px; border: 1px solid var(--paper-edge); border-radius: 6px; background: transparent; font: inherit; cursor: pointer; }
+.pager .other-way { margin: 0 0 6px; font-size: 0.8rem; color: var(--ink-soft); text-align: center; }
+/* The Loop in words (T101): read like a guidebook's line, not a table. */
+.pager .closures { margin: 0 0 10px; font-size: 0.8rem; line-height: 1.4; }
+.pager .empty strong { color: var(--ink); }
+.pager .searching { margin: 6px 0 0; font-size: 0.8rem; color: var(--ink-soft); }
+
+/* How far a Request has got (T054): its own numbers, and a meter once there's a total */
+.pager .progress { display: grid; gap: 6px; font-size: 0.9rem; color: var(--ink-soft); }
+.pager .bar + .progress { margin-top: 8px; font-size: 0.8rem; }
+.pager .progress .meter { height: 4px; border-radius: 2px; background: var(--paper-edge); overflow: hidden; }
+.pager .progress .done { height: 100%; background: var(--forest); transition: width 0.2s linear; }
+
+/* On the map: the start, the Loop's direction, its distance markers and its Anchors */
+.start-marker { border-radius: 50%; background: var(--hi-vis); border: 3px solid #fff; box-shadow: 0 1px 4px rgb(0 0 0 / 0.35); box-sizing: border-box; }
+/* A Point-to-point's finish (T091): a chequered flag's square beside the start's round pin. */
+.finish-marker { border-radius: 4px; border: 3px solid #fff; box-shadow: 0 1px 4px rgb(0 0 0 / 0.35); box-sizing: border-box;
+    background: repeating-conic-gradient(#1f2a24 0 25%, #fff 0 50%) 0 0 / 8px 8px; }
+.anchor-marker {
+    display: grid; place-items: center; border-radius: 50%; box-sizing: border-box;
+    background: var(--forest); color: #fff; border: 2px solid #fff; font: 700 12px/1 system-ui, sans-serif;
+    box-shadow: 0 1px 4px rgb(0 0 0 / 0.35);
+}
+.direction-arrow svg { display: block; width: 12px; height: 12px; fill: none; stroke: #fff; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.distance-marker {
+    translate: -50% -50%; padding: 2px 5px; border-radius: 9px; white-space: nowrap;
+    background: #fff; color: var(--ink); border: 1.5px solid var(--hi-vis);
+    font: 700 10px/1.2 system-ui, sans-serif; font-variant-numeric: tabular-nums;
+    box-shadow: 0 1px 3px rgb(0 0 0 / 0.3);
+}
+
+/* Blazor's own banner for a broken connection or an unrecoverable error (App.razor) */
+#blazor-error-ui {
+    display: none; position: fixed; z-index: 2000; left: 0; right: 0; bottom: 0;
+    padding: 12px 20px; background: var(--ink); color: #fff; font-size: 0.95rem;
+}
+#blazor-error-ui .reload { margin-left: 12px; color: var(--hi-vis); font-weight: 600; }
+
+/* The Outings panel (STORY-030) */
+/* The Outing chosen, opened in its own row (user, 2026-11-10): on paper inside the row's green,
+   so its key reads as the map draws it. */
+.outings li.on .outing { margin: 2px 6px 6px; padding: 10px 12px; border-radius: 6px; background: var(--paper); color: var(--ink); }
+.outing .as-route { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-bottom: 10px; }
+.outing .as-route .route-problem { flex-basis: 100%; }
+/* Its buttons alike, one font and one weight (user, 2026-11-10); the Yes to deleting in hi-vis. */
+.outings .outing .as-route button {
+    display: inline-block; width: auto; padding: 5px 10px; border: 1px solid var(--paper-edge); border-radius: 6px;
+    background: transparent; color: var(--ink); font: inherit; font-size: 0.85rem; font-weight: 600; white-space: nowrap; cursor: pointer;
+}
+.outings .outing .as-route button:hover { background: var(--paper-edge); }
+.outings .outing .as-route .confirm-delete { background: var(--hi-vis); border-color: var(--hi-vis); color: #fff; }
+.outing .asking { font-size: 0.85rem; color: var(--ink-soft); }
+.outing .gaps-shown summary { cursor: pointer; font-size: 0.85rem; font-weight: 600; margin: 4px 0; }
+.outing .gaps-shown[open] .gaps { max-height: 30vh; overflow-y: auto; }
+.outings { list-style: none; margin: 0 0 16px; padding: 0; }
+.outings > li + li { border-top: 1px solid var(--paper-edge); }
+.outings button {
+    display: block; width: 100%; padding: 9px 8px; border: 0; border-radius: 6px; text-align: left;
+    background: transparent; color: var(--ink); font: inherit; cursor: pointer;
+}
+.outings button:hover { background: var(--paper-edge); }
+.outings button:focus-visible { outline: 2px solid var(--hi-vis); outline-offset: 1px; }
+/* Chosen, the whole row is: the Outing, its stars and the user's (user, 2026-11-09: "isn't properly selected"). */
+.outings li.on { display: flow-root; background: var(--forest); color: #fff; border-radius: 6px; }
+.outings li.on > button { background: transparent; color: #fff; }
+.outings li.on > button:hover { background: rgb(255 255 255 / 0.08); }
+.outings .name { display: block; font-weight: 600; }
+.outings .facts { display: block; font-size: 0.85rem; color: var(--ink-soft); font-variant-numeric: tabular-nums; }
+.outings li.on .facts { color: rgb(255 255 255 / 0.8); }
+.app-stars { display: flex; align-items: center; font-size: 0.9rem; color: var(--forest); }
+/* The app's stars and the user's lined up, star over star (user, 2026-11-10): one label width,
+   one star box, the same size; in flex rows, so no space between the label and the stars counts. */
+.app-stars .star, .my-stars button { display: inline-block; width: 1.25em; padding: 0; text-align: center; font-size: 1.05rem; line-height: 1.25; }
+.outings .stars { padding: 0 8px 8px; }
+.outings .stars .my-stars { padding: 0; }
+.app-stars.none { color: var(--ink-soft); }
+.outings li.on .app-stars { color: #fff; }
+/* The user's own stars (T097): five to click, beside the app's, filled up to those given. */
+.my-stars { display: inline-flex; align-items: center; gap: 0; padding: 0 8px 8px; }
+/* App and You: whose stars are whose (user, 2026-11-09). */
+.who { display: inline-block; flex: none; width: 2.6em; min-width: 0; margin-right: 4px; font-size: 0.7rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-soft); }
+.outings li.on .who { color: rgb(255 255 255 / 0.75); }
+.outings li.on .my-stars button { color: rgb(255 255 255 / 0.4); }
+.outings li.on .my-stars button.on, .outings li.on .apart { color: #ffb380; }
+.my-stars button { border: 0; background: transparent; color: #b8ad98; cursor: pointer; }
+.my-stars button.on { color: var(--hi-vis); }
+.my-stars button:hover, .my-stars button:focus-visible { color: var(--ink-soft); outline: none; }
+.my-stars button.on:hover { color: var(--hi-vis); }
+.saved-routes .my-stars { padding: 0 0 6px; }
+/* Where the user and the app are 2 stars or more apart (T097): it stands out, and says so. */
+.outings li.disagree, .saved-routes li.disagree { box-shadow: inset 3px 0 0 var(--hi-vis); }
+.apart { display: block; padding: 0 8px 8px; font-size: 0.8rem; color: var(--hi-vis); font-weight: 600; }
+.saved-routes .apart { padding: 0 0 6px; }
+/* A Saved Route the map has changed under (T103): said under it, across the card. */
+.saved-routes .map-changed { grid-column: 1 / -1; margin: 0 0 6px; font-size: 0.8rem; color: var(--hi-vis); }
+/* Moved onto the map as it is (T136): under its note, across the card. */
+.saved-routes .move {
+    grid-column: 1 / -1; justify-self: start; margin: 0 0 4px; padding: 4px 10px; border: 1px solid var(--forest); border-radius: 6px;
+    background: transparent; color: var(--forest); font: inherit; font-size: 0.8rem; font-weight: 600; cursor: pointer;
+}
+.saved-routes .move:hover:enabled { background: var(--forest); color: #fff; }
+.saved-routes .move:disabled { opacity: 0.5; cursor: default; }
+.outing .legend { list-style: none; margin: 0 0 12px; padding: 0; display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 0.85rem; }
+.outing .swatch { display: inline-block; width: 18px; height: 6px; margin-right: 6px; vertical-align: middle; border-radius: 3px; }
+.swatch.off-road { background: #2e7d32; }
+.swatch.traffic-free { background: #1f78c8; }
+.swatch.connector { background: #8a8f8c; }
+.swatch.track { height: 2px; background: #1f2a24; }
+.swatch.gap { background: #d62828; box-shadow: 0 0 0 2px #fff, 0 0 0 3px var(--paper-edge); }
+.outing .gaps { margin: 8px 0 0; padding-left: 20px; font-variant-numeric: tabular-nums; }
+.outing .gaps li { padding: 2px 0; }
+.panel code { font-size: 0.85rem; background: var(--paper-edge); padding: 1px 4px; border-radius: 3px; }
+
+/* How Wend Your Way works: an ordinary scrolling page in the field-map palette */
+.how {
+    --off-road: #2e7d32; --traffic-free: #1f78c8; --connector: #8a8f8c; --gap: #d62828;
+    max-width: 72rem; margin: 0 auto; box-sizing: border-box;
+    padding: 24px max(16px, env(safe-area-inset-right, 0px)) 64px max(16px, env(safe-area-inset-left, 0px));
+    display: grid; gap: 36px; line-height: 1.6;
+}
+.how header, .how section { max-width: 44rem; min-width: 0; }
+.how section:has(.jobs) { max-width: none; }
+.how h1 { margin: 0 0 8px; font-size: clamp(2rem, 5vw, 2.8rem); line-height: 1.15; color: var(--forest); text-wrap: balance; }
+.how h2 { margin: 0 0 10px; font-size: 1.35rem; color: var(--forest); }
+.how h3 { margin: 0 0 6px; font-size: 1rem; }
+.how p { margin: 0 0 10px; }
+.how .lede { font-size: 1.1rem; color: var(--ink-soft); }
+.how .back { justify-self: start; color: var(--forest); font-weight: 600; text-decoration: none; }
+.how .back:hover { text-decoration: underline; }
+.how a:focus-visible { outline: 2px solid var(--hi-vis); outline-offset: 2px; }
+.how code { font-family: Consolas, "Cascadia Mono", monospace; font-size: 0.92em; }
+.how .ground-key { list-style: none; margin: 12px 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px 18px; }
+.how .ground-key li { display: inline-flex; align-items: center; gap: 8px; }
+.how .ground-key .swatch { width: 24px; height: 5px; border-radius: 3px; }
+.how .swatch.off-road { background: var(--off-road); }
+.how .swatch.traffic-free { background: var(--traffic-free); }
+.how .swatch.connector { background: var(--connector); }
+.how .swatch.loop { background: var(--hi-vis); }
+.how .swatch.gap { background: var(--gap); }
+.how figure { margin: 0; }
+.how .diagram-scroll { overflow-x: auto; border: 1px solid var(--paper-edge); border-radius: var(--radius); background: #fffdf8; }
+.how .diagram { display: block; width: 100%; min-width: 760px; height: auto; }
+.how figcaption { margin-top: 10px; color: var(--ink-soft); max-width: 44rem; }
+.how .jobs { display: grid; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); gap: 16px; }
+.how .jobs article { background: #fffdf8; border: 1px solid var(--paper-edge); border-radius: var(--radius); padding: 14px 16px; min-width: 0; }
+.how .jobs p { margin: 0; }
+.how dl { display: grid; grid-template-columns: max-content 1fr; gap: 6px 18px; margin: 0; }
+.how dt { font-weight: 700; }
+.how dd { margin: 0; }
+.how .table-scroll { overflow-x: auto; }
+.how table { border-collapse: collapse; width: 100%; }
+.how th, .how td { text-align: left; padding: 8px 12px 8px 0; border-bottom: 1px solid var(--paper-edge); vertical-align: top; }
+.how th { font-size: 0.8rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-soft); }
+.how td:first-child { font-weight: 600; white-space: nowrap; }
+@media (max-width: 520px) { .how dl { grid-template-columns: 1fr; gap: 0; } .how dd { margin-bottom: 8px; } }
+
+/* Search by name and postcode (T064): over the map, top middle of what's in view, in the panel's paper */
+/* The Request panel's Start and Finish (T093): the one a map click fills marked in hi-vis. */
+.place-search { position: relative; }
+.place-search.active input { border-color: var(--hi-vis); box-shadow: inset 3px 0 0 var(--hi-vis); }
+.ends .label:not(:first-child) { margin-top: 8px; }
+/* Swap the start and finish (T094): small, at the Finish label's right. */
+.ends .label { display: flex; align-items: center; justify-content: space-between; }
+.ends .swap-ends {
+    padding: 2px 8px; font: inherit; font-size: 0.8rem; text-transform: none; letter-spacing: 0; color: var(--ink);
+    background: var(--paper); border: 1px solid var(--paper-edge); border-radius: 6px; cursor: pointer;
+}
+.ends .swap-ends:hover { border-color: var(--hi-vis); }
+.place-search input {
+    box-sizing: border-box; width: 100%; padding: 9px 14px; font: inherit; font-size: 0.95rem; color: var(--ink);
+    background: var(--paper); border: 1px solid var(--paper-edge); border-radius: var(--radius); box-shadow: var(--shadow);
+}
+.place-search input:focus { outline: 2px solid var(--forest-light); outline-offset: 0; }
+.place-search .found {
+    position: absolute; left: 0; right: 0; z-index: 20; margin-top: 6px; overflow: hidden;
+    background: var(--paper); border: 1px solid var(--paper-edge); border-radius: var(--radius); box-shadow: var(--shadow);
+}
+.place-search ul { list-style: none; margin: 0; padding: 4px 0; }
+.place-search li { display: flex; flex-direction: column; gap: 1px; padding: 7px 14px; cursor: pointer; }
+.place-search li span { font-size: 0.8rem; color: var(--ink-soft); }
+.place-search li:hover, .place-search li.highlighted { background: var(--paper-edge); }
+.place-search li.highlighted { box-shadow: inset 3px 0 0 var(--hi-vis); }
+.place-search .none { margin: 0; padding: 10px 14px; font-size: 0.85rem; color: var(--ink-soft); }
+.place-search .credit { margin: 0; padding: 6px 14px 8px; border-top: 1px solid var(--paper-edge); font-size: 0.68rem; line-height: 1.35; color: var(--ink-soft); }
+
+/* Cafés and toilets (T067): small, quiet beside the car parks' P, each its own colour */
+/* Gravel hotspots (T072): a forest badge with the km of riding, beneath the car parks and Loops */
+.hotspot-marker span {
+    display: inline-block; transform: translate(-50%, -50%); padding: 3px 7px; border-radius: 12px;
+    background: var(--forest); color: #fff; border: 2px solid #fff; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
+    font: 700 0.75rem/1.2 inherit; white-space: nowrap; cursor: pointer;
+}
+.hotspot-marker span::after { content: " km"; font-weight: 600; }
+.amenity-marker span {
+    display: flex; align-items: center; justify-content: center; width: 20px; height: 20px; box-sizing: border-box;
+    border: 1.5px solid #fff; border-radius: 50%; box-shadow: 0 1px 2px rgb(0 0 0 / 0.3);
+    font: 700 8px/1 system-ui, sans-serif; color: #fff;
+}
+.amenity-marker.cafe span { background: #8d5b3a; }
+.amenity-marker.toilets span { background: #3d6f9e; }
+.amenity-marker svg { width: 13px; height: 13px; fill: none; stroke: #fff; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+
+/* Unconfirmed access (T068): flagged in hi-vis, a thing to check before riding */
+.breakdown tr.unconfirmed th, .breakdown tr.unconfirmed td { color: var(--hi-vis); }
+
+/* Outings filtered by the user's stars and by name (T110): one row of choices, the one in force
+   in forest green, then the name box the panel's width. */
+.outing-filters { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 8px; }
+.outing-filters button {
+    padding: 4px 10px; border: 1px solid var(--paper-edge); border-radius: 999px; background: transparent;
+    color: var(--ink); font: inherit; font-size: 0.85rem; font-weight: 600; white-space: nowrap; cursor: pointer;
+}
+.outing-filters button:hover { background: var(--paper-edge); }
+.outing-filters button[aria-pressed="true"] { background: var(--forest); border-color: var(--forest); color: #fff; }
+.outing-filters .outing-count { margin-left: auto; align-self: center; font-size: 0.85rem; color: var(--ink-soft); white-space: nowrap; }
+.outing-search {
+    box-sizing: border-box; width: 100%; margin-bottom: 10px; padding: 6px 10px;
+    border: 1px solid var(--paper-edge); border-radius: 6px; background: #fff; color: var(--ink); font: inherit; font-size: 0.9rem;
+}
+
+/* Renaming an Outing (T111): the name box over its buttons, styled as they are. */
+.outing .rename-outing-form { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-bottom: 8px; }
+.outing .rename-outing-form .new-name {
+    flex: 1 1 100%; min-width: 0; padding: 5px 8px; border: 1px solid var(--paper-edge); border-radius: 6px;
+    background: #fff; color: var(--ink); font: inherit; font-size: 0.9rem;
+}
+.outing .rename-outing-form button {
+    display: inline-block; width: auto; padding: 5px 10px; border: 1px solid var(--paper-edge); border-radius: 6px; background: transparent;
+    color: var(--ink); font: inherit; font-size: 0.85rem; font-weight: 600; white-space: nowrap; cursor: pointer;
+}
+.outing .rename-outing-form .save-name { background: var(--forest); border-color: var(--forest); color: #fff; }
+
+/* A long job under way (T138), over the top of the map wherever you are: what, how long, what's safe. */
+.job-under-way {
+    position: absolute; top: 10px; left: 50%; transform: translateX(-50%); z-index: 1100; max-width: min(720px, calc(100% - 120px));
+    display: flex; align-items: center; gap: 10px; padding: 8px 14px; border-radius: 8px;
+    background: var(--forest); color: #fff; font-size: 0.85rem; line-height: 1.35; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+}
+.job-under-way .spinner {
+    flex: none; width: 14px; height: 14px; border-radius: 50%; border: 2px solid rgba(255, 255, 255, 0.35); border-top-color: var(--hi-vis);
+    animation: job-spin 0.9s linear infinite;
+}
+@keyframes job-spin { to { transform: rotate(360deg); } }
+
+/* An export being made (T139): its button's spinner, as the job line's. */
+.pager .bar button .spinner {
+    display: inline-block; width: 13px; height: 13px; border-radius: 50%; vertical-align: middle;
+    border: 2px solid rgba(255, 255, 255, 0.35); border-top-color: #fff; animation: job-spin 0.9s linear infinite;
+}
+.pager .bar button.preparing { cursor: progress; }
+/* The others, off till it's done (T139 review): seen to be off. */
+.pager .export[aria-disabled="true"]:not(.preparing), .pager .phone[aria-disabled="true"]:not(.preparing) { opacity: 0.55; cursor: default; filter: none; }
+/* Read by a screen reader, not seen. */
+.visually-hidden { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }

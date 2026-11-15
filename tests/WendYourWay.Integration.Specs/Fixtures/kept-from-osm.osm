@@ -1,0 +1,108 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  T035 and T048 fixture: one of everything the osm2pgsql style keeps beyond routable ways, near Box Hill
+  (the features are invented; only the place is real). osm2pgsql needs all nodes before all ways
+  before all relations, each sorted by ID.
+-->
+<osm version="0.6" generator="hand">
+  <!-- A footway (100) runs east into a pedestrian square (101, drawn as an area) and on along a byway (102). -->
+  <node id="1" lat="51.2500" lon="-0.3200"/>
+  <node id="2" lat="51.2500" lon="-0.3180"/>
+  <node id="3" lat="51.2510" lon="-0.3180"/>
+  <node id="4" lat="51.2510" lon="-0.3160"/>
+  <node id="5" lat="51.2500" lon="-0.3160"/>
+  <node id="6" lat="51.2500" lon="-0.3100"/>
+  <!-- A motorway (103). -->
+  <node id="7" lat="51.2450" lon="-0.3200"/>
+  <node id="8" lat="51.2450" lon="-0.3100"/>
+  <!-- A park (110), a car park (111), and a wood (112, outer of relation 200). -->
+  <node id="10" lat="51.2520" lon="-0.3200"/>
+  <node id="11" lat="51.2520" lon="-0.3180"/>
+  <node id="12" lat="51.2540" lon="-0.3180"/>
+  <node id="13" lat="51.2540" lon="-0.3200"/>
+  <node id="14" lat="51.2480" lon="-0.3150"/>
+  <node id="15" lat="51.2480" lon="-0.3145"/>
+  <node id="16" lat="51.2483" lon="-0.3145"/>
+  <node id="17" lat="51.2483" lon="-0.3150"/>
+  <node id="18" lat="51.2520" lon="-0.3140"/>
+  <node id="19" lat="51.2520" lon="-0.3110"/>
+  <node id="20" lat="51.2540" lon="-0.3110"/>
+  <node id="21" lat="51.2540" lon="-0.3140"/>
+  <!-- Points: a gate on the byway, a crossing, a viewpoint, a drinking fountain, and a bakery. -->
+  <node id="30" lat="51.2500" lon="-0.3130"><tag k="barrier" v="gate"/></node>
+  <node id="31" lat="51.2490" lon="-0.3190"><tag k="highway" v="crossing"/><tag k="crossing" v="zebra"/></node>
+  <node id="32" lat="51.2530" lon="-0.3120"><tag k="tourism" v="viewpoint"/><tag k="name" v="The View"/></node>
+  <node id="33" lat="51.2505" lon="-0.3170"><tag k="amenity" v="drinking_water"/></node>
+  <node id="34" lat="51.2506" lon="-0.3171"><tag k="shop" v="bakery"/></node>
+  <!-- T048: lines (a fence, a railway, a railway in a tunnel, a river, a stream, a power line) and a military area. -->
+  <node id="40" lat="51.2550" lon="-0.3200"/>
+  <node id="41" lat="51.2550" lon="-0.3180"/>
+  <node id="42" lat="51.2560" lon="-0.3200"/>
+  <node id="43" lat="51.2560" lon="-0.3180"/>
+  <node id="44" lat="51.2570" lon="-0.3200"/>
+  <node id="45" lat="51.2570" lon="-0.3180"/>
+  <node id="46" lat="51.2580" lon="-0.3200"/>
+  <node id="47" lat="51.2580" lon="-0.3180"/>
+  <node id="48" lat="51.2590" lon="-0.3200"/>
+  <node id="49" lat="51.2590" lon="-0.3180"/>
+  <node id="50" lat="51.2600" lon="-0.3200"/>
+  <node id="51" lat="51.2600" lon="-0.3180"/>
+  <node id="52" lat="51.2610" lon="-0.3200"/>
+  <node id="53" lat="51.2610" lon="-0.3180"/>
+  <node id="54" lat="51.2620" lon="-0.3180"/>
+  <node id="55" lat="51.2620" lon="-0.3200"/>
+  <way id="100">
+    <nd ref="1"/><nd ref="2"/>
+    <tag k="highway" v="footway"/>
+  </way>
+  <way id="101">
+    <nd ref="2"/><nd ref="3"/><nd ref="4"/><nd ref="5"/><nd ref="2"/>
+    <tag k="highway" v="pedestrian"/>
+    <tag k="area" v="yes"/>
+    <tag k="name" v="The Square"/>
+  </way>
+  <way id="102">
+    <nd ref="5"/><nd ref="30"/><nd ref="6"/>
+    <tag k="highway" v="byway"/>
+  </way>
+  <way id="103">
+    <nd ref="7"/><nd ref="8"/>
+    <tag k="highway" v="motorway"/>
+    <tag k="ref" v="M99"/>
+  </way>
+  <way id="110">
+    <nd ref="10"/><nd ref="11"/><nd ref="12"/><nd ref="13"/><nd ref="10"/>
+    <tag k="leisure" v="park"/>
+    <tag k="name" v="The Park"/>
+  </way>
+  <way id="111">
+    <nd ref="14"/><nd ref="15"/><nd ref="16"/><nd ref="17"/><nd ref="14"/>
+    <tag k="amenity" v="parking"/>
+  </way>
+  <way id="112">
+    <nd ref="18"/><nd ref="19"/><nd ref="20"/><nd ref="21"/><nd ref="18"/>
+  </way>
+  <way id="120"><nd ref="40"/><nd ref="41"/><tag k="barrier" v="fence"/></way>
+  <way id="121"><nd ref="42"/><nd ref="43"/><tag k="railway" v="rail"/></way>
+  <way id="122"><nd ref="44"/><nd ref="45"/><tag k="railway" v="rail"/><tag k="tunnel" v="yes"/></way>
+  <way id="123"><nd ref="46"/><nd ref="47"/><tag k="waterway" v="river"/></way>
+  <way id="124"><nd ref="48"/><nd ref="49"/><tag k="waterway" v="stream"/></way>
+  <way id="125"><nd ref="50"/><nd ref="51"/><tag k="power" v="line"/></way>
+  <way id="126">
+    <nd ref="52"/><nd ref="53"/><nd ref="54"/><nd ref="55"/><nd ref="52"/>
+    <tag k="landuse" v="military"/>
+  </way>
+  <relation id="200">
+    <member type="way" ref="112" role="outer"/>
+    <tag k="type" v="multipolygon"/>
+    <tag k="natural" v="wood"/>
+  </relation>
+  <relation id="201">
+    <member type="way" ref="100" role=""/>
+    <member type="way" ref="102" role=""/>
+    <tag k="type" v="route"/>
+    <tag k="route" v="hiking"/>
+    <tag k="network" v="lwn"/>
+    <tag k="name" v="The Test Ring"/>
+  </relation>
+</osm>

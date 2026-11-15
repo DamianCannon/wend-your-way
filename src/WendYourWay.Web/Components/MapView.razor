@@ -1,0 +1,196 @@
+@* The full-screen Leaflet map (wwwroot/js/map.js) under the rest of the planner screen. *@
+@implements IAsyncDisposable
+@implements WendYourWay.Web.Planning.IPlannerMap
+@inject IJSRuntime JS
+@inject MapTiles Tiles
+
+<div class="map" @ref="_element"></div>
+
+@code {
+    /// <summary>Where the map opens; central London when not given.</summary>
+    [Parameter] public LatLon? Centre { get; set; }
+
+    /// <summary>Raised when the user clicks the map.</summary>
+    [Parameter] public EventCallback<LatLon> OnClick { get; set; }
+
+    private readonly TaskCompletionSource _ready = new(TaskCreationOptions.RunContinuationsAsynchronously);
+    private ElementReference _element;
+    private IJSObjectReference? _module;
+    private DotNetObjectReference<MapView>? _self;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender) return;
+        try
+        {
+            _module = await JS.InvokeAsync<IJSObjectReference>("import", "./js/map.js");
+            _self = DotNetObjectReference.Create(this);
+            await _module.InvokeVoidAsync("create", _element, Tiles, Centre, _self);
+            _ready.SetResult();
+        }
+        catch (JSException e)
+        {
+            // No map (Leaflet didn't load, say): every later call fails with why, rather than
+            // waiting for a map that will never come.
+            _ready.TrySetException(e);
+        }
+    }
+
+    /// <summary>Marks the start of the next Request.</summary>
+    public Task ShowStartAsync(LatLon start) => Call("showStart", start);
+
+    /// <summary>Marks where a Point-to-point ends (T091).</summary>
+    public Task ShowFinishAsync(LatLon finish) => Call("showFinish", finish);
+
+    /// <summary>Takes the finish off the map.</summary>
+    public Task ClearFinishAsync() => Call("clearFinish");
+
+    /// <summary>The start's pin dragged to here (T091).</summary>
+    [Parameter] public EventCallback<LatLon> OnStartDragged { get; set; }
+
+    [JSInvokable]
+    public Task StartDragged(double latitude, double longitude) => OnStartDragged.InvokeAsync(new LatLon(latitude, longitude));
+
+    /// <summary>The finish's pin removed (T093): a Loop again.</summary>
+    [Parameter] public EventCallback OnFinishRemoved { get; set; }
+
+    [JSInvokable]
+    public Task FinishRemoved() => OnFinishRemoved.InvokeAsync();
+
+    /// <summary>The finish's pin dragged to here (T091).</summary>
+    [Parameter] public EventCallback<LatLon> OnFinishDragged { get; set; }
+
+    [JSInvokable]
+    public Task FinishDragged(double latitude, double longitude) => OnFinishDragged.InvokeAsync(new LatLon(latitude, longitude));
+
+    /// <summary>Draws a Loop, with its direction of travel and its Anchors numbered (R10.7).</summary>
+    /// <param name="fit">
+    /// Whether the map is fitted to it: a different route shown, not a change to the one shown
+    /// (T087: "it should remember my zoom").
+    /// </param>
+    public Task ShowLoopAsync(PlannedLoop loop, bool fit = true) => Call("showLoop", loop, fit);
+
+    /// <summary>Puts the Loop shown on the map, or takes it off to see the ground under it, and any Loop shown after (T071).</summary>
+    public Task ShowRouteAsync(bool shown) => Call("showRoute", shown);
+
+    /// <summary>Marks a place on the Loop, pointed at on its elevation profile (T051).</summary>
+    public Task MarkPlaceAsync(LatLon place) => Call("markPlace", place);
+
+    /// <summary>Takes the place marked off the map.</summary>
+    public Task ClearPlaceAsync() => Call("clearPlace");
+
+    /// <summary>Takes the last Loop off the map.</summary>
+    public Task ClearLoopAsync() => Call("clearLoop");
+
+    /// <summary>Draws an Outing: the Segments it covered, coloured by ground, its track over them, and its gaps.</summary>
+    public Task ShowOutingAsync(OutingView outing) => Call("showOuting", OutingOnMap.From(outing));
+
+    /// <summary>Takes the Outing shown off the map.</summary>
+    public Task ClearOutingAsync() => Call("clearOuting");
+
+    /// <summary>Marks the places to start found (T025), the one at <paramref name="chosen"/> as chosen (−1 for none).</summary>
+    public Task ShowStartsAsync(IReadOnlyList<StartOnMap> starts, int chosen) => Call("showStarts", starts, chosen);
+
+    /// <summary>Takes the places to start off the map.</summary>
+    public Task ClearStartsAsync() => Call("clearStarts");
+
+    /// <summary>Takes the map to a place searched for (T064), reported as the user's own move, so the car parks follow.</summary>
+    public Task GoToAsync(LatLon place, int zoom) => Call("goTo", place, zoom);
+
+    /// <summary>
+    /// The user moved or zoomed the map (T060): the part in view and the zoom. Not when the map
+    /// fits a Loop or an Outing itself, so a list that follows the map stays put then.
+    /// </summary>
+    [Parameter] public EventCallback<MapViewport> OnViewChanged { get; set; }
+
+    [JSInvokable]
+    public Task ViewChanged(double south, double west, double north, double east, int zoom) =>
+        OnViewChanged.InvokeAsync(new MapViewport(new MapBounds(south, west, north, east), zoom));
+
+    /// <summary>A place to start marked on the map was clicked: its place in the list.</summary>
+    [Parameter] public EventCallback<int> OnStartClicked { get; set; }
+
+    [JSInvokable]
+    public Task StartClicked(int index) => OnStartClicked.InvokeAsync(index);
+
+    /// <summary>The left (−1) or right (+1) arrow key was pressed, outside any box being typed in.</summary>
+    [Parameter] public EventCallback<int> OnPageKey { get; set; }
+
+    [JSInvokable]
+    public Task PageKey(int step) => OnPageKey.InvokeAsync(step);
+
+    [JSInvokable]
+    public Task MapClicked(double latitude, double longitude) => OnClick.InvokeAsync(new LatLon(latitude, longitude));
+
+    /// <summary>The route was dragged (T076): grabbed at one place, dropped at another.</summary>
+    [Parameter] public EventCallback<ViaNudge> OnRouteDragged { get; set; }
+
+    [JSInvokable]
+    public Task RouteDragged(double fromLatitude, double fromLongitude, double toLatitude, double toLongitude) =>
+        OnRouteDragged.InvokeAsync(new ViaNudge(new LatLon(fromLatitude, fromLongitude), new LatLon(toLatitude, toLongitude)));
+
+    /// <summary>"Remove" chosen on a numbered stop (T079): its place among the Loop's Anchors and Vias.</summary>
+    [Parameter] public EventCallback<RemoveStopNudge> OnStopRemoved { get; set; }
+
+    [JSInvokable]
+    public Task StopRemoved(int stop) => OnStopRemoved.InvokeAsync(new RemoveStopNudge(stop));
+
+    /// <summary>"Remove" chosen on an Avoid's marker (T079): its place in the Loop's Avoids.</summary>
+    [Parameter] public EventCallback<RemoveAvoidNudge> OnAvoidRemoved { get; set; }
+
+    [JSInvokable]
+    public Task AvoidRemoved(int avoid) => OnAvoidRemoved.InvokeAsync(new RemoveAvoidNudge(avoid));
+
+    /// <summary>Draws the Blocked Segments (T082), in place of those drawn before.</summary>
+    public Task ShowMarksAsync(IReadOnlyList<MarkOnMap> marks) => Call("showMarks", marks);
+
+    /// <summary>"Never use this" (Blocked) chosen where the route was clicked (T082).</summary>
+    [Parameter] public EventCallback<LatLon> OnBlock { get; set; }
+
+    [JSInvokable]
+    public Task BlockClicked(double latitude, double longitude) => OnBlock.InvokeAsync(new LatLon(latitude, longitude));
+
+    /// <summary>"Unblock" chosen on a Blocked Segment (T082): its Mark's id.</summary>
+    [Parameter] public EventCallback<int> OnUnblock { get; set; }
+
+    [JSInvokable]
+    public Task UnblockClicked(int id) => OnUnblock.InvokeAsync(id);
+
+    /// <summary>Ctrl+Z, outside any box being typed in (T078).</summary>
+    [Parameter] public EventCallback OnUndoKey { get; set; }
+
+    [JSInvokable]
+    public Task UndoKey() => OnUndoKey.InvokeAsync();
+
+    /// <summary>Ctrl+Y or Ctrl+Shift+Z, outside any box being typed in (T078).</summary>
+    [Parameter] public EventCallback OnRedoKey { get; set; }
+
+    [JSInvokable]
+    public Task RedoKey() => OnRedoKey.InvokeAsync();
+
+    /// <summary>"Avoid this time" was chosen where the route was clicked (T076).</summary>
+    [Parameter] public EventCallback<AvoidNudge> OnAvoid { get; set; }
+
+    [JSInvokable]
+    public Task AvoidClicked(double latitude, double longitude) => OnAvoid.InvokeAsync(new AvoidNudge(new LatLon(latitude, longitude)));
+
+    // Waits until the map exists: a caller's first render can come before this component's.
+    private async Task Call(string function, params object?[] arguments)
+    {
+        await _ready.Task;
+        await _module!.InvokeVoidAsync(function, arguments);
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        _self?.Dispose();
+        try
+        {
+            if (_module is not null) await _module.DisposeAsync();
+        }
+        catch (JSDisconnectedException)
+        {
+            // The browser has gone; there's nothing left to tidy up.
+        }
+    }
+}

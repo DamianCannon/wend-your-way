@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  T046 Bridges fixture, near Box Hill (the features are invented; only the place is real). A river
+  about 100 m wide running east, and three footways about 220 m long running north across where it
+  is or isn't: 400 a footbridge over the river; 401 a footbridge 1 km east of the river's end, over
+  nothing; 402 a footway over the river with no bridge tagged (a ford). osm2pgsql needs all nodes
+  before all ways, each sorted by ID.
+-->
+<osm version="0.6" generator="hand">
+  <node id="1" lat="51.2090" lon="-0.3400"/>
+  <node id="2" lat="51.2110" lon="-0.3400"/>
+  <node id="3" lat="51.2090" lon="-0.3200"/>
+  <node id="4" lat="51.2110" lon="-0.3200"/>
+  <node id="5" lat="51.2090" lon="-0.3350"/>
+  <node id="6" lat="51.2110" lon="-0.3350"/>
+  <node id="10" lat="51.20955" lon="-0.3450"/>
+  <node id="11" lat="51.20955" lon="-0.3300"/>
+  <node id="12" lat="51.21045" lon="-0.3300"/>
+  <node id="13" lat="51.21045" lon="-0.3450"/>
+  <way id="400">
+    <nd ref="1"/><nd ref="2"/>
+    <tag k="highway" v="footway"/>
+    <tag k="bridge" v="yes"/>
+  </way>
+  <way id="401">
+    <nd ref="3"/><nd ref="4"/>
+    <tag k="highway" v="footway"/>
+    <tag k="bridge" v="yes"/>
+  </way>
+  <way id="402">
+    <nd ref="5"/><nd ref="6"/>
+    <tag k="highway" v="footway"/>
+  </way>
+  <way id="410">
+    <nd ref="10"/><nd ref="11"/><nd ref="12"/><nd ref="13"/><nd ref="10"/>
+    <tag k="natural" v="water"/>
+    <tag k="water" v="river"/>
+  </way>
+</osm>

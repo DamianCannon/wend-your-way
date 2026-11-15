@@ -1,0 +1,175 @@
+@* Search by name and postcode (T064): the Request panel's Start and Finish (T093), each showing
+   where it is and searched to move it. What's typed is never logged or kept: a postcode typed may
+   be home's. *@
+@using WendYourWay.Core.Places
+@using WendYourWay.Data.Places
+@inject IPlaceSearch Places
+@inject ILogger<PlaceSearchBox> Logger
+@implements IDisposable
+
+<div class="place-search @Class @(Active ? "active" : null)" role="search">
+    @* Clicked into, all it holds is selected, to be replaced (T115, js/select-on-focus.js). *@
+    <input type="search" placeholder="@Placeholder" aria-label="@Label" autocomplete="off" data-select-on-focus
+           value="@_text" @oninput="TypedAsync" @onkeydown="KeyAsync" @onfocus="() => OnFocused.InvokeAsync()" />
+    @if (_found is { } found && _open)
+    {
+        <div class="found">
+            @if (found.Count == 0)
+            {
+                <p class="none">No place or postcode of that name in England or Wales.</p>
+            }
+            else
+            {
+                <ul role="listbox">
+                    @for (var i = 0; i < found.Count; i++)
+                    {
+                        var place = found[i];
+                        <li role="option" class="@(i == _highlighted ? "highlighted" : null)" aria-selected="@(i == _highlighted ? "true" : "false")"
+                            @onclick="() => ChooseAsync(place)">
+                            <strong>@place.Name</strong>
+                            <span>@Describe(place)</span>
+                        </li>
+                    }
+                </ul>
+            }
+            <p class="credit">Contains OS data © Crown copyright and database right 2026 · Royal Mail data © Royal Mail copyright and database right 2026 · National Statistics data © Crown copyright and database right 2026</p>
+        </div>
+    }
+</div>
+
+@code {
+    /// <summary>The middle of the map: places nearer it come first among equals. Never home.</summary>
+    [Parameter] public LatLon Middle { get; set; }
+
+    /// <summary>A place chosen.</summary>
+    [Parameter] public EventCallback<FoundPlace> OnChosen { get; set; }
+
+    /// <summary>What it shows when not being typed in (T093): where its place is now.</summary>
+    [Parameter] public string Shown { get; set; } = "";
+
+    /// <summary>Shown in it when empty.</summary>
+    [Parameter] public string Placeholder { get; set; } = "Search for a place or postcode";
+
+    /// <summary>What it's called, to a screen reader.</summary>
+    [Parameter] public string Label { get; set; } = "Search for a place or postcode";
+
+    /// <summary>Its own class, beside place-search.</summary>
+    [Parameter] public string? Class { get; set; }
+
+    /// <summary>Marked as the box a map click fills (T093).</summary>
+    [Parameter] public bool Active { get; set; }
+
+    /// <summary>Clicked or tabbed into (T093).</summary>
+    [Parameter] public EventCallback OnFocused { get; set; }
+
+    /// <summary>Emptied by the user (T093).</summary>
+    [Parameter] public EventCallback OnCleared { get; set; }
+
+    private string _shown = "";
+
+    // What it shows follows its place, unless that's unchanged since it was last shown, so what's
+    // being typed stays.
+    protected override void OnParametersSet()
+    {
+        if (Shown == _shown) return;
+        _shown = Shown;
+        Show(Shown);
+    }
+
+    // Typing settles before a search, and a later search drops an earlier one.
+    private static readonly TimeSpan SettleFor = TimeSpan.FromMilliseconds(200);
+    private string _text = "";
+    private IReadOnlyList<FoundPlace>? _found;
+    private bool _open;
+    // The place the arrow keys have come to; none till they're pressed, and Enter takes the first.
+    private int _highlighted = -1;
+    private CancellationTokenSource? _search;
+
+    private static string Describe(FoundPlace place) => place.Context is { } context ? $"{Kind(place.Kind)} · {context}" : Kind(place.Kind);
+
+    private static string Kind(PlaceKind kind) => kind switch
+    {
+        PlaceKind.Suburb => "Suburb",
+        PlaceKind.Settlement => "Place",
+        PlaceKind.Park => "Park or common",
+        PlaceKind.Greenspace => "Green space",
+        PlaceKind.Landcover => "Open land",
+        PlaceKind.District => "Postcode district",
+        _ => kind.ToString(),
+    };
+
+    private async Task TypedAsync(ChangeEventArgs e)
+    {
+        _text = e.Value as string ?? "";
+        _search?.Cancel();
+        _search?.Dispose();
+        _search = null;
+        if (_text.Length == 0)
+        {
+            (_found, _open) = (null, false);
+            await OnCleared.InvokeAsync();
+            return;
+        }
+        if (_text.Trim().Length < PlaceSearch.FromCharacters)
+        {
+            (_found, _open) = (null, false);
+            return;
+        }
+        // Its token, kept: typing on disposes its source, perhaps while this search is still out.
+        var run = (_search = new CancellationTokenSource()).Token;
+        try
+        {
+            await Task.Delay(SettleFor, run);
+            var found = await Places.SearchAsync(_text, Middle, run);
+            run.ThrowIfCancellationRequested();
+            (_found, _open, _highlighted) = (found, true, -1);
+        }
+        catch (OperationCanceledException) when (run.IsCancellationRequested)
+        {
+            // Typed on: the later search answers.
+        }
+        catch (Exception e2) when (e2 is not OperationCanceledException)
+        {
+            Log.SearchFailed(Logger, e2);
+            (_found, _open) = ([], true);
+        }
+    }
+
+    private async Task KeyAsync(KeyboardEventArgs e)
+    {
+        if (e.Key == "Escape")
+        {
+            // A search still running would open the list again when it answered.
+            _search?.Cancel();
+            _search?.Dispose();
+            _search = null;
+            _open = false;
+            return;
+        }
+        if (_found is not { Count: > 0 } found || !_open) return;
+        if (e.Key == "ArrowDown") _highlighted = (_highlighted + 1) % found.Count;
+        else if (e.Key == "ArrowUp") _highlighted = _highlighted <= 0 ? found.Count - 1 : _highlighted - 1;
+        else if (e.Key == "Enter") await ChooseAsync(found[Math.Max(_highlighted, 0)]);
+    }
+
+    /// <summary>Shows <paramref name="text"/> in the box, a start clicked on the map's postcode, and drops any search.</summary>
+    public void Show(string text)
+    {
+        _search?.Cancel();
+        _search?.Dispose();
+        _search = null;
+        (_text, _found, _open) = (text, null, false);
+    }
+
+    private async Task ChooseAsync(FoundPlace place)
+    {
+        (_text, _open) = (place.Name, false);
+        await OnChosen.InvokeAsync(place);
+    }
+
+    public void Dispose()
+    {
+        _search?.Cancel();
+        _search?.Dispose();
+    }
+}

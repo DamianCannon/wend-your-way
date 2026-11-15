@@ -1,0 +1,114 @@
+@* The map's update (T128, STORY-047; user: "a single click way to update the application so that it
+   has the latest OSM maps"): how a running update is getting on, how the last one ended, whether
+   Geofabrik has a newer map, and a button to update to it, off while another job runs (T132). Looked at again every
+   half minute. *@
+@using WendYourWay.Web.Planning
+@inject IMapUpdater Updater
+@inject ILogger<MapUpdateLine> Logger
+@implements IDisposable
+
+<div class="map-update">
+    @switch (_state.Kind)
+    {
+        case MapUpdateKind.Running:
+            <p>Updating the map: @_state.Stage@Since(_state.StartedAt)</p>
+            break;
+        case MapUpdateKind.Stopped:
+            <p>The update@Since(_state.StartedAt) stopped part-way, @_state.Stage.</p>
+            break;
+        case MapUpdateKind.Failed:
+            <p>The last update failed: @_state.Message</p>
+            break;
+        case MapUpdateKind.Finished or MapUpdateKind.UpToDate:
+            <p>@_state.Message</p>
+            break;
+    }
+    @if (_state.Kind is not (MapUpdateKind.Running or MapUpdateKind.Stopped or MapUpdateKind.Failed))
+    {
+        @if (_state.Newer)
+        {
+            <p>Geofabrik has a map of @Day(_state.SourceAt!.Value).</p>
+        }
+        else if (_state.SourceAt is not null)
+        {
+            <p>Up to date with Geofabrik.</p>
+        }
+    }
+    @if (_state.Kind is MapUpdateKind.Stopped or MapUpdateKind.Failed)
+    {
+        <button type="button" class="update" disabled="@(_starting || _state.Busy)" title="@BusyTitle" @onclick="StartAsync">Try again</button>
+    }
+    else if (_state.Kind is not MapUpdateKind.Running && _state.Newer)
+    {
+        <button type="button" class="update" disabled="@(_starting || _state.Busy)" title="@(BusyTitle ?? "Download Geofabrik's newer map and build from it: about 3½ hours, the map in use kept till it's done")" @onclick="StartAsync">Update the map</button>
+    }
+    @if (_refused is { } refused)
+    {
+        <p class="problem" role="alert">@refused</p>
+    }
+</div>
+
+@code {
+    private static readonly TimeSpan LookEvery = TimeSpan.FromSeconds(30);
+
+    private MapUpdateState _state = MapUpdateState.Unknown;
+    private string? _refused;
+    private bool _starting;
+    private Timer? _looking;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LookAsync();
+        _looking = new Timer(_ => _ = InvokeAsync(async () =>
+        {
+            // Every half minute, running or not: another job may have begun (T132).
+            await LookAsync();
+            StateHasChanged();
+        }), null, LookEvery, LookEvery);
+    }
+
+    private async Task LookAsync()
+    {
+        try
+        {
+            _state = await Updater.StateAsync();
+        }
+        catch (Exception e) when (e is not OperationCanceledException)
+        {
+            // Not knowing how the update is going is no reason not to plan.
+            Log.MapUpdateFailed(Logger, e);
+        }
+    }
+
+    private async Task StartAsync()
+    {
+        (_starting, _refused) = (true, null);
+        try
+        {
+            _refused = await Updater.StartAsync();
+        }
+        catch (Exception e) when (e is not OperationCanceledException)
+        {
+            Log.MapUpdateFailed(Logger, e);
+            _refused = "Couldn't start the update. The app's log says why.";
+        }
+        finally
+        {
+            _starting = false;
+        }
+        await LookAsync();
+    }
+
+    // While another job runs (T132), why the buttons are off.
+    private string? BusyTitle => _state.Busy ? "Something else is running: try again when it's done" : null;
+
+    private static string Day(DateTimeOffset at) => at.UtcDateTime.ToString("d MMM yyyy", System.Globalization.CultureInfo.InvariantCulture);
+
+    // " · started 10:47", or " of 12 Nov 10:47" for one stopped: when, in the laptop's time.
+    private string Since(DateTimeOffset? at) => at is not { } started ? ""
+        : _state.Kind == MapUpdateKind.Running
+            ? " · started " + started.ToLocalTime().ToString("HH:mm", System.Globalization.CultureInfo.InvariantCulture)
+            : " of " + started.ToLocalTime().ToString("d MMM HH:mm", System.Globalization.CultureInfo.InvariantCulture);
+
+    public void Dispose() => _looking?.Dispose();
+}

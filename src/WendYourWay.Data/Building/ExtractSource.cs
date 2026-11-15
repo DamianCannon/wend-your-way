@@ -1,0 +1,115 @@
+using System.Globalization;
+using System.Security.Cryptography;
+
+namespace WendYourWay.Data.Building;
+
+/// <summary>A download of an extract that can't be used: it didn't arrive whole, or didn't match its checksum.</summary>
+public sealed class ExtractNotDownloadedException(string message, Exception? inner = null) : Exception(message, inner);
+
+/// <summary>
+/// Where extracts come from (T127): Geofabrik's, or one like it. An extract at `…/{name}-latest.osm.pbf`
+/// has its MD5 at the same address with `.md5` after it, and the date its data runs to in
+/// `…/{name}-updates/state.txt`.
+/// </summary>
+public sealed class ExtractSource
+{
+    /// <summary>Great Britain, from Geofabrik: the one Wend Your Way builds from.</summary>
+    public const string GreatBritain = "https://download.geofabrik.de/europe/great-britain-latest.osm.pbf";
+
+    private readonly HttpClient _http;
+    private readonly Uri _extract;
+
+    public ExtractSource(HttpClient http, string extractUrl)
+    {
+        ArgumentNullException.ThrowIfNull(extractUrl);
+        _http = http;
+        _extract = new Uri(extractUrl);
+        var at = extractUrl.LastIndexOf("-latest", StringComparison.Ordinal);
+        if (at < 0) throw new ArgumentException("An extract's address ends in -latest and its kind, as Geofabrik's do.", nameof(extractUrl));
+        State = new Uri(extractUrl[..at] + "-updates/state.txt");
+        FileName = Path.GetFileName(_extract.LocalPath);
+        PreviousFileName = FileName.Replace("-latest", "-prev", StringComparison.Ordinal);
+    }
+
+    /// <summary>Where the date its data runs to is said.</summary>
+    public Uri State { get; }
+
+    /// <summary>The extract's file name, as it's kept.</summary>
+    public string FileName { get; }
+
+    /// <summary>The name the one before is kept by, to build from again if a new map turns out bad.</summary>
+    public string PreviousFileName { get; }
+
+    /// <summary>When the source's data runs to: `state.txt`'s timestamp, its colons escaped (`21\:22\:47`).</summary>
+    public async Task<DateTimeOffset> DataAtAsync(CancellationToken cancellationToken = default)
+    {
+        var state = await _http.GetStringAsync(State, cancellationToken);
+        var line = state.Split('\n').Select(l => l.Trim()).FirstOrDefault(l => l.StartsWith("timestamp=", StringComparison.Ordinal))
+            ?? throw new InvalidOperationException($"{State} says no timestamp.");
+        return DateTimeOffset.Parse(line["timestamp=".Length..].Replace("\\:", ":", StringComparison.Ordinal), CultureInfo.InvariantCulture,
+            DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal);
+    }
+
+    /// <summary>
+    /// Downloads the extract into <paramref name="folder"/>: to a `.part` file first, checked against
+    /// its MD5, and only then put in place, the one before kept as <see cref="PreviousFileName"/>.
+    /// Anything wrong leaves what was there as it was. Returns where it's kept.
+    /// </summary>
+    /// <param name="stall">How long without a byte before it's given up (the laptop asleep, the line dead): 2 minutes by default.</param>
+    /// <exception cref="ExtractNotDownloadedException">It didn't arrive whole, stalled, or didn't match its MD5.</exception>
+    public async Task<string> DownloadAsync(string folder, TimeSpan? stall = null, CancellationToken cancellationToken = default)
+    {
+        var quiet = stall ?? TimeSpan.FromMinutes(2);
+        // Given up if nothing comes for that long, put back each time something does (T127).
+        using var stalled = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        stalled.CancelAfter(quiet);
+        Directory.CreateDirectory(folder);
+        var kept = Path.Combine(folder, FileName);
+        var part = kept + ".part";
+        try
+        {
+            var md5 = (await _http.GetStringAsync(new Uri(_extract + ".md5"), stalled.Token)).Split(' ', '\t', '\n')[0].Trim().ToLowerInvariant();
+            stalled.CancelAfter(quiet);
+            using var response = await _http.GetAsync(_extract, HttpCompletionOption.ResponseHeadersRead, stalled.Token);
+            response.EnsureSuccessStatusCode();
+            using var hash = IncrementalHash.CreateHash(HashAlgorithmName.MD5);
+            long written = 0;
+            await using (var from = await response.Content.ReadAsStreamAsync(stalled.Token))
+            await using (var to = File.Create(part))
+            {
+                var buffer = new byte[1 << 20];
+                int read;
+                while ((read = await from.ReadAsync(buffer, stalled.Token)) > 0)
+                {
+                    stalled.CancelAfter(quiet);
+                    hash.AppendData(buffer, 0, read);
+                    await to.WriteAsync(buffer.AsMemory(0, read), cancellationToken);
+                    written += read;
+                }
+            }
+            if (response.Content.Headers.ContentLength is { } length && written != length)
+                throw new ExtractNotDownloadedException($"The download stopped part-way ({written:N0} of {length:N0} bytes). Try again.");
+            if (Convert.ToHexStringLower(hash.GetHashAndReset()) != md5)
+                throw new ExtractNotDownloadedException(
+                    "The download didn't match its checksum. Geofabrik may be part-way through making today's map, so try again later.");
+        }
+        catch (Exception e) when (e is HttpRequestException or IOException)
+        {
+            File.Delete(part);
+            throw new ExtractNotDownloadedException($"The download failed: {e.Message} Try again.", e);
+        }
+        catch (OperationCanceledException e) when (!cancellationToken.IsCancellationRequested)
+        {
+            File.Delete(part);
+            throw new ExtractNotDownloadedException($"The download stalled: nothing came for {quiet.TotalMinutes:0.#} minutes. Try again.", e);
+        }
+        catch (ExtractNotDownloadedException)
+        {
+            File.Delete(part);
+            throw;
+        }
+        if (File.Exists(kept)) File.Move(kept, Path.Combine(folder, PreviousFileName), overwrite: true);
+        File.Move(part, kept);
+        return kept;
+    }
+}

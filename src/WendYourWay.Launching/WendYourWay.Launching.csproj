@@ -1,0 +1,9 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- What the launcher decides (#142, T138): a plain library, specced in Core.Specs; the launcher
+       itself (WendYourWay.Launcher) is Windows only. -->
+  <PropertyGroup>
+    <RootNamespace>WendYourWay.Launching</RootNamespace>
+  </PropertyGroup>
+
+</Project>

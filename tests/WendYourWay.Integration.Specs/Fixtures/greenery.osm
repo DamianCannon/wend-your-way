@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  T036 Greenery fixture, near Box Hill (the features are invented; only the place is real): a
+  footpath across a park (100), a footpath with nothing green near it (101), and a footpath across
+  a car park (102). osm2pgsql needs all nodes before all ways, each sorted by ID.
+  0.001° of latitude here is about 111 m; 0.001° of longitude about 70 m.
+-->
+<osm version="0.6" generator="hand">
+  <node id="1" lat="51.2600" lon="-0.3300"/>
+  <node id="2" lat="51.2600" lon="-0.3260"/>
+  <node id="3" lat="51.2700" lon="-0.3300"/>
+  <node id="4" lat="51.2700" lon="-0.3260"/>
+  <node id="5" lat="51.2800" lon="-0.3300"/>
+  <node id="6" lat="51.2800" lon="-0.3260"/>
+  <!-- The park round path 100, the car park round path 102. -->
+  <node id="10" lat="51.2590" lon="-0.3310"/>
+  <node id="11" lat="51.2590" lon="-0.3250"/>
+  <node id="12" lat="51.2610" lon="-0.3250"/>
+  <node id="13" lat="51.2610" lon="-0.3310"/>
+  <node id="14" lat="51.2790" lon="-0.3310"/>
+  <node id="15" lat="51.2790" lon="-0.3250"/>
+  <node id="16" lat="51.2810" lon="-0.3250"/>
+  <node id="17" lat="51.2810" lon="-0.3310"/>
+  <way id="100">
+    <nd ref="1"/><nd ref="2"/>
+    <tag k="highway" v="footway"/>
+  </way>
+  <way id="101">
+    <nd ref="3"/><nd ref="4"/>
+    <tag k="highway" v="footway"/>
+  </way>
+  <way id="102">
+    <nd ref="5"/><nd ref="6"/>
+    <tag k="highway" v="footway"/>
+  </way>
+  <way id="110">
+    <nd ref="10"/><nd ref="11"/><nd ref="12"/><nd ref="13"/><nd ref="10"/>
+    <tag k="leisure" v="park"/>
+  </way>
+  <way id="111">
+    <nd ref="14"/><nd ref="15"/><nd ref="16"/><nd ref="17"/><nd ref="14"/>
+    <tag k="amenity" v="parking"/>
+  </way>
+</osm>

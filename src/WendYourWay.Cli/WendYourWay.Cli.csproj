@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <ProjectReference Include="..\WendYourWay.Core\WendYourWay.Core.csproj" />
+    <ProjectReference Include="..\WendYourWay.Data\WendYourWay.Data.csproj" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <AssemblyName>wend</AssemblyName>
+    <RootNamespace>WendYourWay.Cli</RootNamespace>
+  </PropertyGroup>
+
+</Project>

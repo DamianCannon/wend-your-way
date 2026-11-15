@@ -1,0 +1,492 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- How Wend Your Way works: the page first published as an artifact (as How CutThrough Works), kept here. Open it in a browser. -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>How Wend Your Way Works</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+  :root {
+    --bg: #f4f6f1; --surface: #ffffff; --fg: #1d2420; --muted: #5b655f; --line: #cfd6cd;
+    --off-road: #2e7d32; --traffic-free: #1f78c8; --connector: #8a8f8c; --loop: #e8590c; --gap: #d62828; --moss: #a9c4a1;
+    --chip-done: #e3f0e3; --chip-now: #fdebd9; --chip-next: #e2eef9; --chip-later: #eceeec;
+    --display: "Barlow Condensed", "Arial Narrow", "Roboto Condensed", sans-serif;
+    --body: "Atkinson Hyperlegible", "Segoe UI", system-ui, sans-serif;
+    --mono: "JetBrains Mono", "Cascadia Mono", Consolas, monospace;
+    color-scheme: light;
+    padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #131815; --surface: #1b211d; --fg: #e4e9e4; --muted: #a2ada6; --line: #333d37;
+      --off-road: #5cb860; --traffic-free: #5aa6ea; --connector: #9aa09c; --loop: #ff8a3d; --gap: #ff6b6b; --moss: #3f5a3c;
+      --chip-done: #1f3321; --chip-now: #3a2716; --chip-next: #182b3d; --chip-later: #262b28;
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #131815; --surface: #1b211d; --fg: #e4e9e4; --muted: #a2ada6; --line: #333d37;
+    --off-road: #5cb860; --traffic-free: #5aa6ea; --connector: #9aa09c; --loop: #ff8a3d; --gap: #ff6b6b; --moss: #3f5a3c;
+    --chip-done: #1f3321; --chip-now: #3a2716; --chip-next: #182b3d; --chip-later: #262b28;
+    color-scheme: dark;
+  }
+  body { margin: 0; background: var(--bg); color: var(--fg); font: 16px/1.6 var(--body); }
+  .page {
+    max-width: 68rem; margin: 0 auto;
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px));
+    padding-block: 2.5rem 4rem;
+    display: grid; gap: 3rem;
+  }
+  .prose { max-width: 42rem; min-width: 0; }
+  h1, h2, h3 { font-family: var(--display); font-weight: 600; line-height: 1.1; text-wrap: balance; margin: 0; }
+  h1 { font-size: clamp(2.6rem, 6vw, 4rem); letter-spacing: 0.01em; }
+  h2 { font-size: 1.9rem; margin-bottom: 0.75rem; }
+  h3 { font-size: 1.35rem; }
+  p { margin: 0 0 0.9rem; }
+  .lede { font-size: 1.15rem; color: var(--muted); max-width: 40rem; }
+  .eyebrow { font: 600 0.8rem/1 var(--display); letter-spacing: 0.12em; text-transform: uppercase; color: var(--off-road); margin-bottom: 0.6rem; }
+  code { font: 0.88em var(--mono); background: var(--surface); border: 1px solid var(--line); border-radius: 4px; padding: 0.05em 0.3em; white-space: nowrap; }
+  a { color: var(--traffic-free); }
+  .key { display: flex; flex-wrap: wrap; gap: 0.5rem 1.25rem; margin-top: 1rem; font-size: 0.95rem; }
+  .key span { display: inline-flex; align-items: center; gap: 0.45rem; }
+  .key i { display: inline-block; width: 1.6rem; height: 5px; border-radius: 3px; }
+
+  .diagram { overflow-x: auto; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 1rem; margin: 0; }
+  .diagram svg { display: block; width: 100%; min-width: 820px; height: auto; }
+  .diagram figcaption { color: var(--muted); font-size: 0.9rem; margin-top: 0.75rem; max-width: 46rem; }
+  svg .box { fill: var(--bg); stroke: var(--line); stroke-width: 1.5; }
+  svg .db { fill: none; stroke: var(--fg); stroke-width: 1.5; }
+  svg .drawer-net { fill: var(--surface); stroke: var(--off-road); stroke-width: 2; }
+  svg .drawer-places { fill: var(--surface); stroke: var(--connector); stroke-width: 2; }
+  svg .drawer-app { fill: var(--surface); stroke: var(--traffic-free); stroke-width: 2; }
+  svg .t-title { font: 600 18px var(--display); fill: var(--fg); letter-spacing: 0.02em; }
+  svg .t-cmd { font: 500 13px var(--mono); fill: var(--fg); }
+  svg .t-body { font: 13px var(--body); fill: var(--muted); }
+  svg .t-label { font: 600 12px var(--display); fill: var(--muted); letter-spacing: 0.1em; text-transform: uppercase; }
+  svg .arrow { stroke: var(--fg); stroke-width: 1.6; fill: none; }
+  svg .head { fill: var(--fg); }
+  svg .loop { stroke: var(--loop); stroke-width: 3; fill: none; stroke-linecap: round; }
+
+  .roles { display: grid; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); gap: 1.25rem; }
+  .role { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 1.1rem 1.2rem; min-width: 0; display: grid; gap: 0.4rem; align-content: start; }
+  .role .who { font: 600 0.78rem/1 var(--display); letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); }
+  .role p { margin: 0; }
+  .role .fig { font: 500 0.85rem var(--mono); color: var(--fg); }
+
+  dl.terms { display: grid; grid-template-columns: max-content 1fr; gap: 0.55rem 1.25rem; margin: 0; }
+  dl.terms dt { font-weight: 700; }
+  dl.terms dd { margin: 0; }
+  @media (max-width: 520px) { dl.terms { grid-template-columns: 1fr; gap: 0.15rem; } dl.terms dd { margin-bottom: 0.6rem; } }
+
+  .table-wrap { overflow-x: auto; }
+  table { border-collapse: collapse; width: 100%; font-size: 0.95rem; }
+  th, td { text-align: left; padding: 0.55rem 0.75rem 0.55rem 0; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { font: 600 0.8rem var(--display); letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); }
+  td:first-child { font-weight: 700; }
+  td.num { font-variant-numeric: tabular-nums; white-space: nowrap; }
+  table.cmds td:first-child { white-space: nowrap; }
+  table.cmds td:first-child code { font-weight: 500; }
+
+  .hills { display: grid; grid-template-columns: repeat(auto-fit, minmax(19rem, 1fr)); gap: 1.25rem; align-items: start; }
+  .hills > * { min-width: 0; }
+  .card { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 1.1rem 1.2rem; }
+  .card h3 { margin-bottom: 0.5rem; }
+  .card p { color: var(--muted); font-size: 0.95rem; }
+  .slider { display: flex; align-items: center; gap: 0.6rem; font-size: 0.85rem; color: var(--muted); margin: 0.6rem 0 0.9rem; }
+  .slider .track { flex: 1; height: 4px; border-radius: 2px; background: var(--line); position: relative; }
+  .slider .track::after { content: ""; position: absolute; left: 50%; top: 50%; width: 14px; height: 14px; margin: -7px 0 0 -7px; border-radius: 50%; background: var(--loop); }
+  .profile-sketch svg { display: block; width: 100%; height: 72px; }
+  .profile-sketch .ground { fill: var(--moss); stroke: var(--off-road); stroke-width: 1; vector-effect: non-scaling-stroke; }
+  .profile-sketch .pointer { stroke: var(--loop); stroke-width: 2; vector-effect: non-scaling-stroke; }
+  .profile-sketch figcaption { margin-top: 0.3rem; font-size: 0.85rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .story { font-style: italic; font-size: 1.05rem; border-left: 3px solid var(--moss); padding: 0.1rem 0 0.1rem 1rem; color: var(--fg); }
+
+  .activities { display: grid; grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr)); gap: 1.25rem; }
+  .activity { border-top: 4px solid var(--off-road); background: var(--surface); border-radius: 0 0 10px 10px; padding: 0.9rem 1.1rem 1rem; min-width: 0; }
+  .activity.gravel { border-top-color: var(--traffic-free); }
+  .activity.trail { border-top-color: var(--loop); }
+  .activity p { margin: 0.4rem 0 0; color: var(--muted); font-size: 0.95rem; }
+
+  ol.road { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.15rem; }
+  ol.road li { display: grid; grid-template-columns: 6.2rem 1fr; gap: 1rem; padding: 0.7rem 0; border-bottom: 1px solid var(--line); align-items: baseline; }
+  ol.road strong { font-family: var(--display); font-size: 1.2rem; font-weight: 600; }
+  ol.road .what { color: var(--muted); }
+  .chip { justify-self: start; font: 600 0.72rem/1 var(--display); letter-spacing: 0.1em; text-transform: uppercase; padding: 0.35rem 0.55rem; border-radius: 999px; color: var(--fg); }
+  .chip.done { background: var(--chip-done); }
+  .chip.now { background: var(--chip-now); }
+  .chip.next { background: var(--chip-next); }
+  .chip.later { background: var(--chip-later); }
+  .note { border-left: 3px solid var(--loop); padding: 0.2rem 0 0.2rem 1rem; }
+  .credit { font-size: 0.8rem; color: var(--muted); }
+  :focus-visible { outline: 2px solid var(--traffic-free); outline-offset: 2px; }
+</style>
+</head>
+<body>
+<main class="page">
+  <header class="prose">
+    <div class="eyebrow">Wend Your Way · as built, 10 November 2026</div>
+    <h1>How Wend Your Way Works</h1>
+    <p class="lede">A personal planner for running, gravel and trail-bike routes in England and Wales that favours footpaths, alleys and cut-throughs over roads with traffic. It's measured against Trail Router: from the same starts, its Loops should be at least as good to your eye. Everything runs on one laptop; only the map pictures come from outside.</p>
+    <div class="key" aria-label="Ground classes, as coloured on the map">
+      <span><i style="background: var(--off-road)"></i>Off-road</span>
+      <span><i style="background: var(--traffic-free)"></i>Traffic-free</span>
+      <span><i style="background: var(--connector)"></i>Connector</span>
+      <span><i style="background: var(--loop)"></i>Your Loop</span>
+      <span><i style="background: var(--gap)"></i>Gap</span>
+    </div>
+  </header>
+
+  <figure class="diagram">
+    <svg viewBox="0 0 1100 560" role="img" aria-labelledby="d-title d-desc">
+      <title id="d-title">How the parts of Wend Your Way connect</title>
+      <desc id="d-desc">OpenStreetMap, OS Terrain 50 heights and the councils' Definitive Map byways go through wend network build into the network drawer of a PostgreSQL and PostGIS database. OS Open Names goes through wend places import into the places drawer. Your Strava archive goes through wend outings import-strava into the app drawer, which also keeps your stars, Saved Routes and Marks. The web app loads nearby Segments, finds, scores and describes Loops, and shows them in your browser; a QR code sends one to your phone over your Wi-Fi.</desc>
+      <defs>
+        <marker id="head" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path class="head" d="M0,0 L10,5 L0,10 z"/></marker>
+      </defs>
+
+      <text class="t-label" x="20" y="26">Comes in</text>
+      <text class="t-label" x="262" y="26">wend, the command line</text>
+      <text class="t-label" x="548" y="26">Kept</text>
+      <text class="t-label" x="808" y="26">You use</text>
+
+      <rect class="box" x="20" y="40" width="210" height="62" rx="8"/>
+      <text class="t-title" x="34" y="64">OpenStreetMap</text>
+      <text class="t-body" x="34" y="86">Great Britain, 2 GB, Geofabrik</text>
+      <rect class="box" x="20" y="112" width="210" height="62" rx="8"/>
+      <text class="t-title" x="34" y="136">OS Terrain 50</text>
+      <text class="t-body" x="34" y="158">heights on a 50 m grid</text>
+      <rect class="box" x="20" y="184" width="210" height="62" rx="8"/>
+      <text class="t-title" x="34" y="208">Definitive Map byways</text>
+      <text class="t-body" x="34" y="230">149 councils, via rowmaps.com</text>
+      <rect class="box" x="20" y="290" width="210" height="62" rx="8"/>
+      <text class="t-title" x="34" y="314">OS Open Names</text>
+      <text class="t-body" x="34" y="336">places and postcodes</text>
+      <rect class="box" x="20" y="400" width="210" height="80" rx="8"/>
+      <text class="t-title" x="34" y="424">Your Strava archive</text>
+      <text class="t-body" x="34" y="446">or GPX, TCX and FIT files;</text>
+      <text class="t-body" x="34" y="466">read in place, never copied</text>
+
+      <rect class="box" x="262" y="70" width="250" height="150" rx="8"/>
+      <text class="t-cmd" x="276" y="96">wend network build</text>
+      <text class="t-body" x="276" y="120">cuts ways into Segments; who may</text>
+      <text class="t-body" x="276" y="140">use each; greenery, water, Open</text>
+      <text class="t-body" x="276" y="160">ground, climbing, car parks;</text>
+      <text class="t-body" x="276" y="180">clips to England and Wales;</text>
+      <text class="t-body" x="276" y="200">then rescores your Outings</text>
+      <rect class="box" x="262" y="290" width="250" height="62" rx="8"/>
+      <text class="t-cmd" x="276" y="316">wend places import</text>
+      <text class="t-body" x="276" y="338">for the search box</text>
+      <rect class="box" x="262" y="400" width="250" height="80" rx="8"/>
+      <text class="t-cmd" x="276" y="426">wend outings import-strava</text>
+      <text class="t-body" x="276" y="448">what each run covered, its gaps,</text>
+      <text class="t-body" x="276" y="468">and the app's stars for it</text>
+
+      <rect class="db" x="548" y="40" width="226" height="490" rx="14"/>
+      <text class="t-title" x="564" y="68">PostgreSQL + PostGIS</text>
+      <rect class="drawer-net" x="564" y="86" width="194" height="130" rx="8"/>
+      <text class="t-cmd" x="578" y="112">network</text>
+      <text class="t-body" x="578" y="136">13.5 million Segments,</text>
+      <text class="t-body" x="578" y="156">rebuilt from the data,</text>
+      <text class="t-body" x="578" y="176">never edited by hand</text>
+      <rect class="drawer-places" x="564" y="280" width="194" height="80" rx="8"/>
+      <text class="t-cmd" x="578" y="306">places</text>
+      <text class="t-body" x="578" y="330">names and postcodes</text>
+      <rect class="drawer-app" x="564" y="388" width="194" height="126" rx="8"/>
+      <text class="t-cmd" x="578" y="414">app</text>
+      <text class="t-body" x="578" y="438">your Outings and stars,</text>
+      <text class="t-body" x="578" y="458">Saved Routes, Marks;</text>
+      <text class="t-body" x="578" y="478">a rebuild never</text>
+      <text class="t-body" x="578" y="498">touches them</text>
+
+      <rect class="box" x="808" y="70" width="270" height="150" rx="8"/>
+      <text class="t-title" x="822" y="98">Web app + route finder</text>
+      <text class="t-body" x="822" y="122">loads the Segments near your start,</text>
+      <text class="t-body" x="822" y="142">finds up to five Loops, judges each</text>
+      <text class="t-body" x="822" y="162">whole, describes it, marks its turns;</text>
+      <text class="t-body" x="822" y="182">lists car parks; matches GPX and</text>
+      <text class="t-body" x="822" y="202">your Outings onto the map</text>
+      <rect class="box" x="808" y="290" width="270" height="110" rx="8"/>
+      <text class="t-title" x="822" y="318">Your browser</text>
+      <text class="t-body" x="822" y="342">the map, the Loop, its profile,</text>
+      <text class="t-body" x="822" y="362">Breakdown and story; GPX, TCX</text>
+      <text class="t-body" x="822" y="382">for a watch, or a QR code</text>
+      <path class="loop" d="M1030,322 c18,-10 30,4 22,18 c-6,12 -24,10 -28,0 c-3,-8 0,-14 6,-18"/>
+      <rect class="box" x="808" y="440" width="270" height="74" rx="8"/>
+      <text class="t-title" x="822" y="466">Your phone</text>
+      <text class="t-body" x="822" y="490">scan the code on your Wi-Fi: the GPX,</text>
+      <text class="t-body" x="822" y="508">once, for ten minutes; into Footpath</text>
+
+      <line class="arrow" x1="230" y1="71" x2="260" y2="100" marker-end="url(#head)"/>
+      <line class="arrow" x1="230" y1="143" x2="260" y2="143" marker-end="url(#head)"/>
+      <line class="arrow" x1="230" y1="215" x2="260" y2="186" marker-end="url(#head)"/>
+      <line class="arrow" x1="230" y1="321" x2="260" y2="321" marker-end="url(#head)"/>
+      <line class="arrow" x1="230" y1="440" x2="260" y2="440" marker-end="url(#head)"/>
+      <line class="arrow" x1="512" y1="150" x2="562" y2="150" marker-end="url(#head)"/>
+      <line class="arrow" x1="512" y1="321" x2="562" y2="321" marker-end="url(#head)"/>
+      <line class="arrow" x1="512" y1="450" x2="562" y2="450" marker-end="url(#head)"/>
+      <line class="arrow" x1="758" y1="150" x2="806" y2="145" marker-end="url(#head)"/>
+      <path class="arrow" d="M758,320 H782 V190 H806" marker-end="url(#head)"/>
+      <path class="arrow" d="M758,450 H790 V205 H806" marker-end="url(#head)"/>
+      <line class="arrow" x1="930" y1="220" x2="930" y2="288" marker-end="url(#head)"/>
+      <line class="arrow" x1="960" y1="288" x2="960" y2="222" marker-end="url(#head)"/>
+      <text class="t-body" x="922" y="258" text-anchor="end" style="font-size:12px">Loops</text>
+      <text class="t-body" x="968" y="258" style="font-size:12px">your click</text>
+      <line class="arrow" x1="943" y1="400" x2="943" y2="438" marker-end="url(#head)"/>
+      <text class="t-body" x="660" y="250" text-anchor="middle" style="font-size:12px">linked by OSM's own ids,</text>
+      <text class="t-body" x="660" y="266" text-anchor="middle" style="font-size:12px">so a rebuild loses nothing</text>
+    </svg>
+    <figcaption>Three pipelines fill one database: the map from public data, the place names from Ordnance Survey, your history from Strava. The web app reads only the part of the map near where you start. Your phone is reached only when you ask, by a listener of its own that serves one file and stops.</figcaption>
+  </figure>
+
+  <section>
+    <div class="prose">
+      <h2>Six jobs, three drawers</h2>
+      <p>Each part does one job. The database keeps the map, the place names and your history in separate drawers, so rebuilding the map from fresh OpenStreetMap data never touches your runs, stars or Saved Routes.</p>
+    </div>
+    <div class="roles">
+      <div class="role">
+        <div class="who">The mapmaker</div>
+        <h3><code>wend network build</code></h3>
+        <p>Turns OpenStreetMap into Segments, the stretch of a way between two junctions. Labels each one's ground and who may use it (on foot, by bike, on a trail bike), spots pavements beside roads, marks greenery, water, Corridors, Crossings, gates and stiles, draws straight crossings over open land, gives every Segment its climbing, joins green ground into Off-road networks and finds the car parks beside them.</p>
+        <p class="fig">Great Britain: about 4 hours to rebuild</p>
+      </div>
+      <div class="role">
+        <div class="who">The archivist</div>
+        <h3><code>wend outings import-strava</code></h3>
+        <p>Reads your Strava export: runs, walks, hikes and rides; swims and trainer rides are skipped. Works out which Segments each Outing covered and where it left the map, then follows it onto the map and scores it as a Loop is, for the app's stars.</p>
+        <p class="fig">1,359 Outings; 41 too far off the map to rate</p>
+      </div>
+      <div class="role">
+        <div class="who">The gazetteer</div>
+        <h3><code>wend places import</code></h3>
+        <p>Loads Ordnance Survey's place names and postcodes, so the search box can take the map anywhere in England and Wales without asking any outside service.</p>
+        <p class="fig">under a minute</p>
+      </div>
+      <div class="role">
+        <div class="who">The route finder</div>
+        <h3>Core, plain C#</h3>
+        <p>Takes the nearby part of the map into memory and builds Loops out to the best green places within reach and through points round your start, joining them with its own A*. Cuts out spurs, judges each whole Loop as you would, leans to fewer or more hills as you ask, and offers up to five that head different ways.</p>
+        <p class="fig">10 km: a few seconds · 100 km: under 30 s</p>
+      </div>
+      <div class="role">
+        <div class="who">The shop window</div>
+        <h3>The web app</h3>
+        <p>Blazor in your browser, on this laptop only. Takes your start (a click, a car park, a place or postcode), Distance and Activity; shows each Loop with its Breakdown, profile and a sentence or two of what it's like; lets you nudge it, save it, and hand it on as GPX, TCX or a QR code.</p>
+        <p class="fig">http://127.0.0.1:5018</p>
+      </div>
+      <div class="role">
+        <div class="who">The courier</div>
+        <h3>To phone</h3>
+        <p>When you press QR, a listener of its own starts on your Wi-Fi and serves that one route, at a random link, once, for ten minutes. The app itself never leaves the laptop.</p>
+        <p class="fig">then Footpath, OS Maps or Komoot</p>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="prose">
+      <h2>Three Activities</h2>
+      <p>Each Loop is found for one Activity, which decides which ways it may use and how it's scored.</p>
+    </div>
+    <div class="activities">
+      <div class="activity"><h3>Run</h3><p>On foot: footpaths, alleys, cut-throughs, parks and open ground; roads only to join the good bits.</p></div>
+      <div class="activity gravel"><h3>Gravel Ride</h3><p>By bike: bridleways, byways, tracks and cycle paths; not footpaths or steps. A path with no word on bikes is used but flagged Unconfirmed. Gates and stiles counted.</p></div>
+      <div class="activity trail"><h3>Trail Ride</h3><p>On a road-legal trail bike: roads, and byways open to all traffic from the councils' Definitive Maps; never a footpath or bridleway. Green lanes the map can't confirm are flagged. Every one says to check for closures first.</p></div>
+    </div>
+  </section>
+
+  <section>
+    <div class="prose">
+      <h2>A Loop, described</h2>
+      <p>Open a Loop's card and it tells you what it's like before the numbers: its feel, where it goes, and where it climbs.</p>
+      <p class="story">A green, gently rolling 12.8 km by the water. It sets off beside the River Lee, through Walthamstow Wetlands, and finishes along traffic-free paths.</p>
+      <p>Its exported GPX and TCX mark each turn worth saying, at a junction with a choice where it turns 45° or more: "Left onto Bush Road", "Right onto the footpath". About 3½ a km.</p>
+    </div>
+  </section>
+
+  <section class="prose">
+    <h2>Words you'll see</h2>
+    <dl class="terms">
+      <dt>Segment</dt><dd>The stretch of one way between two junctions; the smallest piece a Loop is made of.</dd>
+      <dt>Off-road</dt><dd>Unsurfaced and free of traffic: field paths, bridleways, tracks, woodland trails.</dd>
+      <dt>Traffic-free</dt><dd>Paved but no cars: alleys, cut-throughs, park paths, towpaths.</dd>
+      <dt>Connector</dt><dd>Roads, and pavements beside them: the glue between the good bits.</dd>
+      <dt>Main Road</dt><dd>A busy road, or the pavement beside one: only ever a short link.</dd>
+      <dt>Open ground</dt><dd>Straight crossings of parks, commons and heath, never through a fence, wall, railway or stream.</dd>
+      <dt>Off-road network</dt><dd>Green ground joined up across short road links: how long a Loop can stay off roads there.</dd>
+      <dt>Trailhead</dt><dd>A public car park beside a large Off-road network: the car parks listed around here.</dd>
+      <dt>Unconfirmed</dt><dd>A way the map can't say this Activity may use: used, but flagged "check this".</dd>
+      <dt>Nudge</dt><dd>Dragging a Loop's line to where it should go, or avoiding a bit of it: only the stretch round it changes.</dd>
+      <dt>Outing</dt><dd>One of your own runs, walks or rides, imported from Strava or a GPX file.</dd>
+      <dt>Gap</dt><dd>Where an Outing went more than 25 m from any way on the map: open ground, GPS astray, or a path OSM is missing.</dd>
+      <dt>Route gap</dt><dd>Where a route made from a track couldn't be matched onto the map; the ways may be there.</dd>
+      <dt>Stars</dt><dd>The app's, from its score, each a fifth of your Outings; and yours, given with a click. Two or more apart, and it stands out.</dd>
+      <dt>Turn point</dt><dd>A junction with a choice where a route turns 45° or more, in words, in the GPX and the TCX.</dd>
+    </dl>
+  </section>
+
+  <section>
+    <div class="prose">
+      <h2>How a Loop is judged</h2>
+      <p>Your verdicts on Trail Router's Loops, and on Wend Your Way's from the same starts, set these. The route finder steers by stricter costs than the judge, so it keeps off Main Roads while a whole Loop isn't marked down for a short link to somewhere good.</p>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Counts for a Loop</th><th>Counts against it</th></tr></thead>
+        <tbody>
+          <tr><td>Off-road and Traffic-free ground</td><td class="num">Roads: 3× a path's cost a metre</td></tr>
+          <tr><td>Greenery: up to 30% off a metre beside parks and woods</td><td class="num">Each Knot: 15% off the score</td></tr>
+          <tr><td>Corridors: 20% off a metre more</td><td class="num">Ground covered again: 2× its cost</td></tr>
+          <tr><td>Flow: up to half as much again</td><td class="num">Crossings: 20 to 300 m each</td></tr>
+          <tr><td>Water: up to half as much again</td><td class="num">Main Roads, to the router: 15× a path</td></tr>
+          <tr><td>Hills, as you lean: climbing per km lifts the score, or lowers it</td><td class="num">Flat ground up to 2.5× (more hills); steep up to 2× (fewer)</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section>
+    <div class="prose">
+      <h2>Hills</h2>
+      <p>Every Segment knows how much it climbs, so you can ask for fewer hills or more, and see the Loop's ups and downs before you go.</p>
+    </div>
+    <div class="hills">
+      <div class="card">
+        <h3>The Hills slider</h3>
+        <div class="slider" aria-hidden="true"><span>Fewer</span><span class="track"></span><span>More</span></div>
+        <p>Leaning to more hills makes flat ground dearer; leaning to fewer makes steep ground dearer. Nothing ever gets cheaper, so Loops stay green.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Climbing per km</th><th>Fewer</th><th>Middle</th><th>More</th></tr></thead>
+            <tbody>
+              <tr><td>Box Hill, 20 km</td><td class="num">14 m</td><td class="num">26 m</td><td class="num">37 m</td></tr>
+              <tr><td>Box Hill, 10 km</td><td class="num">25 m</td><td class="num">43 m</td><td class="num">45 m</td></tr>
+              <tr><td>Kenwood House, 10 km</td><td class="num">12 m</td><td class="num">22 m</td><td class="num">23 m</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <figure class="card profile-sketch" style="margin: 0">
+        <h3>The elevation profile</h3>
+        <p>Open the Loop's card: the ground's height round the Loop. Point at it, and an orange dot marks that place on the map.</p>
+        <svg viewBox="0 0 300 60" preserveAspectRatio="none" role="img" aria-label="Sketch of an elevation profile: up to a hill a third of the way round, down, a smaller rise, and back">
+          <path class="ground" d="M0 60 L0 44 L20 42 L40 37 L60 30 L80 21 L100 12 L115 9 L130 14 L150 26 L170 35 L190 38 L210 31 L225 28 L240 33 L260 40 L280 43 L300 44 L300 60 Z"/>
+          <line class="pointer" x1="115" y1="0" x2="115" y2="60"/>
+        </svg>
+        <figcaption>143 m up · 141 m down · 98–131 m</figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <section>
+    <div class="prose">
+      <h2>The commands</h2>
+      <p><code>wend</code> is the command line: <code>dotnet run -c Release --project src/Wend Your Way.Cli -- &lt;command&gt;</code>. Every command takes <code>--database &lt;connection string&gt;</code>; without it, the app's own database on this laptop. Ctrl+C stops any of them cleanly: a build leaves the map as it was, an import or scoring keeps what it finished.</p>
+    </div>
+    <div class="table-wrap">
+      <table class="cmds">
+        <thead><tr><th>Command</th><th>What it does</th><th>Options</th></tr></thead>
+        <tbody>
+          <tr><td><code>network build &lt;extract&gt;</code></td><td>Loads an OpenStreetMap extract (.osm.pbf) and builds the whole Network from it, swapping it in when done; your Outings are covered and scored again.</td><td><code>--osm2pgsql</code> where osm2pgsql is (default: the copy in <code>tools/</code>); <code>--terrain</code> the OS Terrain 50 tiles (default <code>data/terrain50/asc</code>); <code>--rights-of-way</code> the byways (default <code>data/rights-of-way</code>)</td></tr>
+          <tr><td><code>network rebuild</code></td><td>The same, from the extract already loaded: after a rule changes, or new heights or byways.</td><td><code>--terrain</code>, <code>--rights-of-way</code></td></tr>
+          <tr><td><code>network offroad</code></td><td>Finds the Off-road networks, car parks, gates and stiles and Gravel hotspots again, in minutes.</td><td></td></tr>
+          <tr><td><code>outings import-strava &lt;zip&gt;</code></td><td>Your whole Strava history; a newer export adds only what's new.</td><td></td></tr>
+          <tr><td><code>outings import-gpx &lt;file or folder&gt;</code></td><td>Loose GPX, TCX or FIT files, the same way.</td><td></td></tr>
+          <tr><td><code>outings score</code></td><td>The app's stars for Outings not scored yet.</td><td><code>--all</code> every Outing again, after a scoring change</td></tr>
+          <tr><td><code>places import &lt;folder&gt;</code></td><td>OS Open Names' CSV, in place of what was there.</td><td></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="prose" style="margin-top: 1.25rem">
+      <h3 style="margin-bottom: 0.5rem">The web app's settings</h3>
+      <p><code>dotnet run -c Release --project src/Wend Your Way.Web</code> reads these from <code>dotnet user-secrets</code>, kept out of git, or from its own command line as <code>--Name=value</code>, which wins.</p>
+    </div>
+    <div class="table-wrap">
+      <table class="cmds">
+        <thead><tr><th>Setting</th><th>What it is</th></tr></thead>
+        <tbody>
+          <tr><td><code>Home:Latitude</code>, <code>Home:Longitude</code></td><td>Where Requests start until you click elsewhere; never committed.</td></tr>
+          <tr><td><code>Thunderforest:ApiKey</code></td><td>The Thunderforest map key: the Outdoors and OpenCycleMap pictures.</td></tr>
+          <tr><td><code>OsMaps:ApiKey</code></td><td>Optional: Ordnance Survey's key adds OS Outdoor to the map switcher.</td></tr>
+          <tr><td><code>Terrain:Folder</code></td><td>The OS Terrain 50 tiles for elevation profiles, if not in <code>data/terrain50/asc</code>.</td></tr>
+          <tr><td><code>ConnectionStrings:Wend Your Way</code></td><td>Another database, such as a London-only one.</td></tr>
+          <tr><td><code>--urls</code></td><td>Where it listens: <code>http://127.0.0.1:5018</code>, this laptop only.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section>
+    <div class="prose">
+      <h2>Keeping the data fresh</h2>
+      <p>Your own data lives apart from the map, linked by OpenStreetMap's own ids, so refreshing any of these never loses your Outings, stars, Saved Routes or Marks.</p>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Data</th><th>Changes</th><th>To refresh</th></tr></thead>
+        <tbody>
+          <tr><td>OpenStreetMap</td><td>Daily; monthly is plenty, or after you've fixed something in OSM</td><td>Download <code>great-britain-latest.osm.pbf</code> (about 2 GB) from download.geofabrik.de into <code>data/</code>, then <code>wend network build</code> it: about 30 minutes to load and 4 hours to build. Best overnight.</td></tr>
+          <tr><td>Definitive Map byways</td><td>A few times a year</td><td><code>scripts/get-rights-of-way.ps1</code> (fetches only what changed), then <code>wend network rebuild</code>.</td></tr>
+          <tr><td>OS Open Names</td><td>Quarterly</td><td>Download the CSV for Great Britain from osdatahub.os.uk, unzip it, then <code>wend places import</code>: under a minute.</td></tr>
+          <tr><td>OS Terrain 50</td><td>Yearly, in July</td><td>Unzip the new tiles into <code>data/terrain50/asc</code>, then <code>wend network rebuild</code>.</td></tr>
+          <tr><td>Your runs</td><td>Whenever you like</td><td>A new bulk export from Strava, then <code>wend outings import-strava</code>: only new Outings are added, covered and scored.</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="prose note" style="margin-top: 1rem">A rule changed, not the data? <code>wend network rebuild</code> is enough. Only how car parks or Off-road networks are found? <code>wend network offroad</code>. Only the scoring? <code>wend outings score --all</code>.</p>
+  </section>
+
+  <section>
+    <div class="prose"><h2>What it's built on</h2></div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Part</th><th>What</th><th>Why it's there</th></tr></thead>
+        <tbody>
+          <tr><td>C# on .NET 10</td><td>The whole app, command line and tests</td><td>One codebase from database to browser</td></tr>
+          <tr><td>Blazor Server</td><td>The web page</td><td>Interactive pages in C#, no separate JavaScript app</td></tr>
+          <tr><td>PostgreSQL 17 + PostGIS 3.6</td><td>The database that understands maps</td><td>Distances, overlaps and nearest-thing queries over millions of Segments</td></tr>
+          <tr><td>osm2pgsql 2.3</td><td>Loads OpenStreetMap files</td><td>A small Lua style keeps ways, green and open areas, points, walking routes, barriers, railways and waterways</td></tr>
+          <tr><td>OpenStreetMap via Geofabrik</td><td>The paths and roads</td><td>The only open map with footpaths, alleys and access tags in this detail</td></tr>
+          <tr><td>OS Terrain 50, OS Open Names</td><td>Heights; place names and postcodes</td><td>Open data from Ordnance Survey, kept on the laptop</td></tr>
+          <tr><td>Definitive Maps via rowmaps.com</td><td>Byways open to all traffic</td><td>The councils' legal record, under the Open Government Licence: what makes a Trail Ride legal</td></tr>
+          <tr><td>Garmin FIT SDK</td><td>Reads watch files from Strava</td><td>Garmin's own decoder for the format</td></tr>
+          <tr><td>Leaflet 1.9 + map tiles</td><td>Draws the map; the map pictures</td><td>Thunderforest, Ordnance Survey, CyclOSM or OpenTopoMap: the only online services, keys kept out of git</td></tr>
+          <tr><td>QRCoder</td><td>The QR code that sends a route to your phone</td><td>Drawn on the laptop; no outside service</td></tr>
+          <tr><td>NUnit, bUnit</td><td>Tests, including the screens</td><td>About 3,500 specs, each checked by breaking the rule it guards, and a benchmark of the Loops you've rated</td></tr>
+          <tr><td>Our own A* router</td><td>Finding Loops</td><td>Costs change with every Request, which precomputed routers can't follow</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section>
+    <div class="prose">
+      <h2>Where it's got to</h2>
+      <p>From the Trail Router starts you rated, Wend Your Way's Loops are good or better from most; you've called several better than Trail Router's.</p>
+    </div>
+    <ol class="road">
+      <li><span class="chip done">Done</span><div><strong>The map</strong><div class="what">Great Britain on the laptop, clipped to England and Wales, rebuilt and swapped in while the app keeps working; Open ground, greenery, water, Crossings, climbing.</div></div></li>
+      <li><span class="chip done">Done</span><div><strong>Beating Trail Router</strong><div class="what">A benchmark of your rated Loops; Loops built to destinations, spurs cut out; five Loops heading different ways, more added when few are good enough; Hills and Off-road sliders.</div></div></li>
+      <li><span class="chip done">Done</span><div><strong>Where to start</strong><div class="what">Off-road networks, car parks around here with their fees, toilets and cafés, compared; place and postcode search; point-to-point routes.</div></div></li>
+      <li><span class="chip done">Done</span><div><strong>Gravel and Trail Rides</strong><div class="what">Who may use each way, by bike and by trail bike; gates and stiles; Gravel hotspots; byways from the councils' Definitive Maps.</div></div></li>
+      <li><span class="chip done">Done</span><div><strong>Your own routes</strong><div class="what">Nudging, Saved Routes, Marks; GPX imported and Outings made routes; the app's stars beside yours.</div></div></li>
+      <li><span class="chip done">Done</span><div><strong>Taking it with you</strong><div class="what">GPX and TCX with turn points; a QR code to your phone; each Loop described in words.</div></div></li>
+      <li><span class="chip next">Next</span><div><strong>Keeping your data safe</strong><div class="what">Backing up and restoring your Outings, stars and Saved Routes; flagging a Saved Route whose map has changed.</div></div></li>
+      <li><span class="chip later">Later</span><div><strong>Others setting it up</strong><div class="what">Docker Compose, a region build and a guide.</div></div></li>
+      <li><span class="chip later">Later</span><div><strong>Busy roads</strong><div class="what">Traffic from DfT counts, so a quiet road and a busy one aren't priced alike.</div></div></li>
+    </ol>
+  </section>
+
+  <footer class="prose credit">Climbing, heights and place names contain OS data © Crown copyright and database right 2026. Byways from the highway authorities' Definitive Maps, open data under the Open Government Licence, via rowmaps.com. Map data © OpenStreetMap contributors.</footer>
+</main>
+</body>
+</html>

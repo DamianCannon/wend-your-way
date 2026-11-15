@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  T037 Corridors fixture, near Box Hill (the routes are invented; only the place is real). Each way
+  stands alone, 0.004° of longitude (about 280 m) long:
+    100 a footway on a walking route, the "Downs Way" (with 104)
+    101 a footway on a local cycle route
+    102 a residential road on the Downs Way's companion walk
+    103 a footway on a national cycle route with a ref and no name
+    104 a footway on the Downs Way and on a shorter "Hill Walk"
+    106 a footway on the Downs Way beside a road (105), about 6 m away: a pavement
+  osm2pgsql needs all nodes before all ways before all relations, each sorted by ID.
+-->
+<osm version="0.6" generator="hand">
+  <node id="1" lat="51.2500" lon="-0.3300"/>
+  <node id="2" lat="51.2500" lon="-0.3260"/>
+  <node id="3" lat="51.2550" lon="-0.3300"/>
+  <node id="4" lat="51.2550" lon="-0.3260"/>
+  <node id="5" lat="51.2600" lon="-0.3300"/>
+  <node id="6" lat="51.2600" lon="-0.3260"/>
+  <node id="7" lat="51.2650" lon="-0.3300"/>
+  <node id="8" lat="51.2650" lon="-0.3260"/>
+  <node id="9" lat="51.2700" lon="-0.3300"/>
+  <node id="10" lat="51.2700" lon="-0.3260"/>
+  <node id="11" lat="51.2750" lon="-0.3300"/>
+  <node id="12" lat="51.2750" lon="-0.3260"/>
+  <node id="13" lat="51.27505" lon="-0.3300"/>
+  <node id="14" lat="51.27505" lon="-0.3260"/>
+  <way id="100">
+    <nd ref="1"/><nd ref="2"/>
+    <tag k="highway" v="footway"/>
+  </way>
+  <way id="101">
+    <nd ref="3"/><nd ref="4"/>
+    <tag k="highway" v="footway"/>
+  </way>
+  <way id="102">
+    <nd ref="5"/><nd ref="6"/>
+    <tag k="highway" v="residential"/>
+  </way>
+  <way id="103">
+    <nd ref="7"/><nd ref="8"/>
+    <tag k="highway" v="footway"/>
+  </way>
+  <way id="104">
+    <nd ref="9"/><nd ref="10"/>
+    <tag k="highway" v="footway"/>
+  </way>
+  <way id="105">
+    <nd ref="11"/><nd ref="12"/>
+    <tag k="highway" v="residential"/>
+  </way>
+  <way id="106">
+    <nd ref="13"/><nd ref="14"/>
+    <tag k="highway" v="footway"/>
+  </way>
+  <relation id="900">
+    <member type="way" ref="100" role=""/>
+    <member type="way" ref="104" role=""/>
+    <member type="way" ref="106" role=""/>
+    <tag k="type" v="route"/>
+    <tag k="route" v="hiking"/>
+    <tag k="network" v="nwn"/>
+    <tag k="name" v="Downs Way"/>
+  </relation>
+  <relation id="901">
+    <member type="way" ref="101" role=""/>
+    <tag k="type" v="route"/>
+    <tag k="route" v="bicycle"/>
+    <tag k="network" v="lcn"/>
+    <tag k="name" v="Local Link"/>
+  </relation>
+  <relation id="902">
+    <member type="way" ref="102" role=""/>
+    <tag k="type" v="route"/>
+    <tag k="route" v="foot"/>
+    <tag k="name" v="Village Walk"/>
+  </relation>
+  <relation id="903">
+    <member type="way" ref="103" role=""/>
+    <tag k="type" v="route"/>
+    <tag k="route" v="bicycle"/>
+    <tag k="network" v="ncn"/>
+    <tag k="ref" v="22"/>
+  </relation>
+  <relation id="904">
+    <member type="way" ref="104" role=""/>
+    <tag k="type" v="route"/>
+    <tag k="route" v="hiking"/>
+    <tag k="name" v="Hill Walk"/>
+  </relation>
+</osm>

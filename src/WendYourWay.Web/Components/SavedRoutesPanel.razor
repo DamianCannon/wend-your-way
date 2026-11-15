@@ -1,0 +1,243 @@
+@* The Saved Routes panel (T080, STORY-015, R5.1): the user's Saved Routes, newest first. Each
+   opens on the map, and can be renamed or deleted in place; deleting asks first. *@
+@using Microsoft.AspNetCore.Components.Forms
+@inject ISavedRoutes SavedRoutes
+@inject ISavedRouteMoves Moves
+@inject ILogger<SavedRoutesPanel> Logger
+
+@* Import a GPX as a route (T083): read here, on the laptop; matched and shown by the planner, which
+   says if it can't be. *@
+<div class="import">
+    <label class="import-gpx @(_importing ? "busy" : null)" title="Show a GPX route on the map, to nudge and save">
+        <span>Import GPX</span>
+        <InputFile accept=".gpx" OnChange="ImportAsync" disabled="@_importing" />
+    </label>
+    @if (_importing)
+    {
+        <p class="later">Matching it to the map…</p>
+    }
+    else if (_importProblem is { } problem)
+    {
+        <p class="import-problem" role="alert">@problem</p>
+    }
+</div>
+@if (_problem is not null)
+{
+    <p class="later" role="alert"><strong>@_problem</strong></p>
+}
+@if (_routes is null)
+{
+    @if (_problem is null)
+    {
+        <p class="later">Loading your Saved Routes…</p>
+    }
+}
+else if (_routes.Count == 0)
+{
+    <p class="later">No Saved Routes yet. Save one with the bookmark on the Loop card.</p>
+}
+else
+{
+    <ul class="saved-routes">
+        @foreach (var route in _routes)
+        {
+            <li class="@(Stars.Disagree(route.UserStars, route.Stars) ? "disagree" : null)">
+                @if (_renaming == route.Id)
+                {
+                    <form @onsubmit="() => RenameAsync(route)">
+                        <input class="new-name" aria-label="New name" maxlength="100" @bind="_newName" @bind:event="oninput" />
+                        <button type="submit" class="rename">Rename</button>
+                        <button type="button" class="keep" @onclick="() => _renaming = null">Cancel</button>
+                    </form>
+                }
+                else
+                {
+                    @* Its name across the top, cut short if long and named in full on pointing; its km and
+                       date beneath, a line each; Rename and Delete beside them (user, 2026-11-08). *@
+                    <button type="button" class="open" title="Show it on the map" @onclick="() => OpenAsync(route)">
+                        <span class="name" title="@route.Name">@route.Name</span>
+                        <span class="km">@Km(route)</span>
+                        <span class="date">@Date(route)</span>
+                    </button>
+                    <AppStars Value="route.Stars" NotScored="@(route.Scored ? null : "Saved before the app's stars: wend outings score scores it")" Short="saved before the stars" />
+                    <MyStars Value="route.UserStars" OnRate="stars => RateAsync(route, stars)" />
+                    <StarsApart User="route.UserStars" App="route.Stars" />
+                    @* T103: a Segment of it gone from the Network since it was saved; its line kept as it was. *@
+                    @if (route.MapChanged)
+                    {
+                        <p class="map-changed" role="note">@SavedRouteSummary.MapChangedNote@(_kept.TryGetValue(route.Id, out var where) ? " " + where : "")</p>
+                        @* T136: moved onto the map as it is, if it follows the same line, to be nudged again. *@
+                        <button type="button" class="move" disabled="@(_moving == route.Id)" title="Match it onto the map as it is now: if it follows the same line, it can be nudged again" @onclick="() => MoveAsync(route)">Move to the new map</button>
+                    }
+                    <span class="actions">
+                        @if (_deleting == route.Id)
+                        {
+                            <span class="asking">Delete?</span>
+                            <button type="button" class="confirm-delete" @onclick="() => DeleteAsync(route)">Yes</button>
+                            <button type="button" class="keep" @onclick="() => _deleting = null">No</button>
+                        }
+                        else
+                        {
+                            <button type="button" class="rename" title="Rename it" @onclick="() => StartRenaming(route)">Rename</button>
+                            <button type="button" class="delete" title="Delete it" @onclick="() => _deleting = route.Id">Delete</button>
+                        }
+                    </span>
+                }
+            </li>
+        }
+    </ul>
+}
+
+@code {
+    /// <summary>Raised when the user opens a Saved Route, with it ready to show.</summary>
+    [Parameter] public EventCallback<SavedRoute> OnOpen { get; set; }
+
+    /// <summary>
+    /// Given a GPX route read from a file (T083), named by the file if not by itself: shows it,
+    /// or says why it can't.
+    /// </summary>
+    [Parameter] public Func<RouteGpx, Task<string?>>? OnImport { get; set; }
+
+    // A GPX of up to this; a long day's ride recorded every second is a few MB.
+    private const long MaxGpxBytes = 10 * 1024 * 1024;
+
+    private bool _importing;
+    private string? _importProblem;
+
+    private IReadOnlyList<SavedRouteSummary>? _routes;
+    private string? _problem;
+    private int? _renaming;
+    private int? _deleting;
+    private string _newName = "";
+
+    /// <summary>
+    /// How many routes have been saved from the Loop card: when it changes, the list is read again,
+    /// so a route saved with the panel open shows at once (T083).
+    /// </summary>
+    [Parameter] public int Saves { get; set; }
+
+    private int? _loadedAt;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (_loadedAt == Saves) return;
+        _loadedAt = Saves;
+        await LoadAsync();
+    }
+
+    // The user's own stars (T097): kept, then shown in the list as given.
+    private async Task RateAsync(SavedRouteSummary route, int? stars)
+    {
+        _problem = null;
+        try
+        {
+            await SavedRoutes.RateAsync(route.Id, stars);
+        }
+        catch (Exception e) when (e is not OperationCanceledException)
+        {
+            Logger.LogError(e, "Couldn't keep the stars for a Saved Route");
+            _problem = "Couldn't keep your stars. The app's log says why.";
+            return;
+        }
+        _routes = [.. _routes!.Select(r => r.Id == route.Id ? r with { UserStars = stars } : r)];
+    }
+
+    // Those kept as they were when moved (T136), and where they part from the map.
+    private readonly Dictionary<int, string> _kept = [];
+    private int? _moving;
+
+    private async Task MoveAsync(SavedRouteSummary route)
+    {
+        _moving = route.Id;
+        try
+        {
+            var move = await Moves.MoveAsync(route.Id);
+            if (move is { Outcome: RouteMoveOutcome.Kept, Said: { } said }) _kept[route.Id] = said;
+        }
+        catch (Exception e) when (e is not OperationCanceledException)
+        {
+            Log.PlanningFailed(Logger, e);
+            _kept[route.Id] = "Couldn't move it. The app's log says why.";
+        }
+        finally
+        {
+            _moving = null;
+        }
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        try
+        {
+            _routes = await SavedRoutes.ListAsync();
+        }
+        catch (Exception e) when (e is not OperationCanceledException)
+        {
+            Logger.LogError(e, "Couldn't read the Saved Routes");
+            _problem = "Couldn't read your Saved Routes. The app's log says why.";
+        }
+    }
+
+    private async Task ImportAsync(InputFileChangeEventArgs e)
+    {
+        (_importing, _importProblem) = (true, null);
+        try
+        {
+            RouteGpx gpx;
+            // The browser's stream reads only asynchronously, and XML reads synchronously: copied first.
+            using (var memory = new MemoryStream())
+            {
+                await using (var stream = e.File.OpenReadStream(MaxGpxBytes)) await stream.CopyToAsync(memory);
+                memory.Position = 0;
+                gpx = RouteGpx.Read(memory);
+            }
+            var name = gpx.Name ?? Path.GetFileNameWithoutExtension(e.File.Name).Trim();
+            gpx = gpx with { Name = name.Length == 0 ? "Imported route" : name[..Math.Min(name.Length, 100)] };
+            if (OnImport is not null) _importProblem = await OnImport(gpx);
+        }
+        catch (InvalidDataException problem)
+        {
+            _importProblem = problem.Message;
+        }
+        catch (IOException)
+        {
+            _importProblem = "That file is too big: a GPX of up to 10 MB.";
+        }
+        finally
+        {
+            _importing = false;
+        }
+    }
+
+    private async Task OpenAsync(SavedRouteSummary summary)
+    {
+        if (await SavedRoutes.OpenAsync(summary.Id) is { } route) await OnOpen.InvokeAsync(route);
+    }
+
+    private void StartRenaming(SavedRouteSummary route)
+    {
+        (_renaming, _deleting, _newName) = (route.Id, null, route.Name);
+    }
+
+    private async Task RenameAsync(SavedRouteSummary route)
+    {
+        if (string.IsNullOrWhiteSpace(_newName)) return;
+        await SavedRoutes.RenameAsync(route.Id, _newName);
+        _renaming = null;
+        await LoadAsync();
+    }
+
+    private async Task DeleteAsync(SavedRouteSummary route)
+    {
+        await SavedRoutes.DeleteAsync(route.Id);
+        _deleting = null;
+        await LoadAsync();
+    }
+
+    private static string Km(SavedRouteSummary route) =>
+        string.Create(System.Globalization.CultureInfo.InvariantCulture, $"{route.LengthKm:0.0} km");
+
+    private static string Date(SavedRouteSummary route) =>
+        route.SavedAt.ToLocalTime().ToString("d MMM yyyy", System.Globalization.CultureInfo.InvariantCulture);
+}

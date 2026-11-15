@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  T014 same-ground fixture: paths beside a road, and paths that only come near one, by
+  Gospel Oak (the ways are invented; only the place is real).
+  osm2pgsql needs all nodes before all ways, each sorted by ID, as in real extracts.
+  0.00001° of latitude here is about 1.11 m; 0.00001° of longitude about 0.69 m.
+-->
+<osm version="0.6" generator="hand">
+  <node id="1" lat="51.5550" lon="-0.1650"/>
+  <node id="2" lat="51.5550" lon="-0.1630"/>
+  <node id="3" lat="51.5550" lon="-0.1610"/>
+  <node id="4" lat="51.5570" lon="-0.1630"/>
+  <node id="10" lat="51.55505" lon="-0.1650"/>
+  <node id="11" lat="51.55505" lon="-0.1635"/>
+  <node id="12" lat="51.55495" lon="-0.1650"/>
+  <node id="13" lat="51.55495" lon="-0.1635"/>
+  <node id="14" lat="51.5552" lon="-0.16314"/>
+  <node id="15" lat="51.5568" lon="-0.16314"/>
+  <node id="16" lat="51.5546" lon="-0.1650"/>
+  <node id="17" lat="51.5546" lon="-0.1610"/>
+  <node id="18" lat="51.55494" lon="-0.1642"/>
+  <node id="19" lat="51.55506" lon="-0.1642"/>
+  <node id="20" lat="51.55505" lon="-0.1625"/>
+  <node id="21" lat="51.55505" lon="-0.1620"/>
+  <node id="22" lat="51.5562" lon="-0.1608"/>
+  <node id="23" lat="51.55494" lon="-0.1635"/>
+  <node id="24" lat="51.55494" lon="-0.1612"/>
+  <node id="25" lat="51.55455" lon="-0.1650"/>
+  <node id="26" lat="51.55455" lon="-0.1610"/>
+  <node id="27" lat="51.5540" lon="-0.1650"/>
+  <node id="28" lat="51.5540" lon="-0.1630"/>
+  <node id="29" lat="51.55395" lon="-0.1650"/>
+  <node id="30" lat="51.55395" lon="-0.1630"/>
+  <node id="31" lat="51.55507" lon="-0.1617"/>
+  <node id="32" lat="51.55507" lon="-0.1611"/>
+
+  <!-- A road 200 (1-2-3) running east, with a side street 201 (2-4) going north from it -->
+  <way id="200"><nd ref="1"/><nd ref="2"/><nd ref="3"/><tag k="highway" v="residential"/></way>
+  <way id="201"><nd ref="2"/><nd ref="4"/><tag k="highway" v="residential"/></way>
+
+  <!-- Its two pavements, about 6 m either side, drawn as plain footways (no sidewalk tag) -->
+  <way id="210"><nd ref="10"/><nd ref="11"/><tag k="highway" v="footway"/></way>
+  <way id="211"><nd ref="12"/><nd ref="13"/><tag k="highway" v="footway"/></way>
+
+  <!-- A one-way cycle track 212 (14-15) about 10 m beside the side street -->
+  <way id="212"><nd ref="14"/><nd ref="15"/><tag k="highway" v="cycleway"/><tag k="oneway" v="yes"/></way>
+
+  <!-- A footway 220 (16-17) parallel to the road but 45 m from it -->
+  <way id="220"><nd ref="16"/><nd ref="17"/><tag k="highway" v="footway"/></way>
+
+  <!-- A pavement 221 (25-26) about 6 m beside footway 220, its road not drawn -->
+  <way id="221"><nd ref="25"/><nd ref="26"/><tag k="highway" v="footway"/><tag k="footway" v="sidewalk"/></way>
+
+  <!-- A dirt path 230 (23-24) about 7 m beside the road: 35 m of it beside its west
+       Segment (1-2), 125 m beside its east one (2-3) -->
+  <way id="230"><nd ref="23"/><nd ref="24"/><tag k="highway" v="path"/><tag k="surface" v="dirt"/></way>
+
+  <!-- A path 231 (31-32) with no surface tag, about 8 m beside the road's east Segment for 41 m -->
+  <way id="231"><nd ref="31"/><nd ref="32"/><tag k="highway" v="path"/></way>
+
+  <!-- A footway 240 (18-19) crossing the road at right angles: 13 m long, all of it near the road -->
+  <way id="240"><nd ref="18"/><nd ref="19"/><tag k="highway" v="footway"/></way>
+
+  <!-- A footway 250 (20-21-22) beside the road for 35 m, then off across a park for 150 m -->
+  <way id="250"><nd ref="20"/><nd ref="21"/><nd ref="22"/><tag k="highway" v="footway"/></way>
+
+  <!-- An alley 260 (27-28) and a footway 261 (29-30) about 6 m beside it -->
+  <way id="260"><nd ref="27"/><nd ref="28"/><tag k="highway" v="service"/><tag k="service" v="alley"/></way>
+  <way id="261"><nd ref="29"/><nd ref="30"/><tag k="highway" v="footway"/></way>
+</osm>

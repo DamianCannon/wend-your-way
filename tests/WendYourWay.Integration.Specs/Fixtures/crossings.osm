@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  T044 Crossings fixture, near Box Hill (the features are invented; only the place is real). A
+  primary road (way 200) and a residential road (201), each about 700 m long, running east; short
+  ways about 33 m long across them, north to south, each through a node of its road, so the road
+  cuts each into two Segments:
+    300 a crossing way across the primary road, crossing=traffic_signals
+    301 a crossing way across the primary road, crossing=zebra
+    302 a crossing way across the primary road, crossing=unmarked
+    303 a crossing way across the residential road, no crossing tag
+    304 a crossing way across the residential road, crossing=traffic_signals
+    305 an ordinary footway across the residential road, not a crossing way
+  osm2pgsql needs all nodes before all ways, each sorted by ID.
+-->
+<osm version="0.6" generator="hand">
+  <node id="1" lat="51.2200" lon="-0.3400"/>
+  <node id="2" lat="51.2200" lon="-0.3380"/>
+  <node id="3" lat="51.2200" lon="-0.3360"/>
+  <node id="4" lat="51.2200" lon="-0.3340"/>
+  <node id="5" lat="51.2200" lon="-0.3300"/>
+  <node id="11" lat="51.2300" lon="-0.3400"/>
+  <node id="12" lat="51.2300" lon="-0.3380"/>
+  <node id="13" lat="51.2300" lon="-0.3360"/>
+  <node id="14" lat="51.2300" lon="-0.3340"/>
+  <node id="15" lat="51.2300" lon="-0.3300"/>
+  <node id="20" lat="51.22015" lon="-0.3380"/>
+  <node id="21" lat="51.21985" lon="-0.3380"/>
+  <node id="22" lat="51.22015" lon="-0.3360"/>
+  <node id="23" lat="51.21985" lon="-0.3360"/>
+  <node id="24" lat="51.22015" lon="-0.3340"/>
+  <node id="25" lat="51.21985" lon="-0.3340"/>
+  <node id="30" lat="51.23015" lon="-0.3380"/>
+  <node id="31" lat="51.22985" lon="-0.3380"/>
+  <node id="32" lat="51.23015" lon="-0.3360"/>
+  <node id="33" lat="51.22985" lon="-0.3360"/>
+  <node id="34" lat="51.23015" lon="-0.3340"/>
+  <node id="35" lat="51.22985" lon="-0.3340"/>
+  <way id="200">
+    <nd ref="1"/><nd ref="2"/><nd ref="3"/><nd ref="4"/><nd ref="5"/>
+    <tag k="highway" v="primary"/>
+  </way>
+  <way id="201">
+    <nd ref="11"/><nd ref="12"/><nd ref="13"/><nd ref="14"/><nd ref="15"/>
+    <tag k="highway" v="residential"/>
+  </way>
+  <way id="300">
+    <nd ref="20"/><nd ref="2"/><nd ref="21"/>
+    <tag k="highway" v="footway"/>
+    <tag k="footway" v="crossing"/>
+    <tag k="crossing" v="traffic_signals"/>
+  </way>
+  <way id="301">
+    <nd ref="22"/><nd ref="3"/><nd ref="23"/>
+    <tag k="highway" v="footway"/>
+    <tag k="footway" v="crossing"/>
+    <tag k="crossing" v="zebra"/>
+  </way>
+  <way id="302">
+    <nd ref="24"/><nd ref="4"/><nd ref="25"/>
+    <tag k="highway" v="footway"/>
+    <tag k="footway" v="crossing"/>
+    <tag k="crossing" v="unmarked"/>
+  </way>
+  <way id="303">
+    <nd ref="30"/><nd ref="12"/><nd ref="31"/>
+    <tag k="highway" v="footway"/>
+    <tag k="footway" v="crossing"/>
+  </way>
+  <way id="304">
+    <nd ref="32"/><nd ref="13"/><nd ref="33"/>
+    <tag k="highway" v="footway"/>
+    <tag k="footway" v="crossing"/>
+    <tag k="crossing" v="traffic_signals"/>
+  </way>
+  <way id="305">
+    <nd ref="34"/><nd ref="14"/><nd ref="35"/>
+    <tag k="highway" v="footway"/>
+  </way>
+</osm>

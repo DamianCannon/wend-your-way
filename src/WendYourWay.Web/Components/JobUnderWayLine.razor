@@ -1,0 +1,57 @@
+@* A long job shown wherever you are in the planner (#142, T138, STORY-049 AC8; user: "when something
+   long running is happening like a map update so that I know not to close the application"): what
+   it's doing, how long so far, about how long the last of its kind took, and what's safe. Looked at
+   again every quarter minute. *@
+@using WendYourWay.Web.Planning
+@inject IAdmin Admin
+@inject TimeProvider Time
+@inject ILogger<JobUnderWayLine> Logger
+@implements IDisposable
+
+@if (_underWay is { } underWay)
+{
+    <div class="job-under-way" role="status">
+        <span class="spinner" aria-hidden="true"></span>
+        <span>@Said(underWay)</span>
+    </div>
+}
+
+@code {
+    private static readonly TimeSpan LookEvery = TimeSpan.FromSeconds(15);
+
+    private UnderWay? _underWay;
+    private Timer? _looking;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LookAsync();
+        _looking = new Timer(_ => _ = InvokeAsync(async () =>
+        {
+            await LookAsync();
+            StateHasChanged();
+        }), null, LookEvery, LookEvery);
+    }
+
+    private async Task LookAsync()
+    {
+        try
+        {
+            _underWay = await Admin.UnderWayAsync();
+        }
+        catch (Exception e) when (e is not OperationCanceledException)
+        {
+            // Not knowing is no reason not to plan.
+            Log.AdminFailed(Logger, e);
+        }
+    }
+
+    private string Said(UnderWay underWay)
+    {
+        var soFar = Time.GetUtcNow() - underWay.Job.StartedAt;
+        var last = underWay.TookLast is { } took ? $", {JobWords.About(took)} last time" : "";
+        return $"{JobWords.What(underWay.Job.Kind)}: {underWay.Job.Stage} · {JobWords.Took(soFar)} so far{last}. "
+            + "You can close Wend Your Way: it carries on. Keep the laptop on till it's done (a closed lid may still put it to sleep).";
+    }
+
+    public void Dispose() => _looking?.Dispose();
+}

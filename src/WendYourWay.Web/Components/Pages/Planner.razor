@@ -1,0 +1,204 @@
+@page "/"
+@using WendYourWay.Core.Places
+@inject IMarks Marks
+@inject IRouteTurns Turns
+@inject WendYourWay.Web.Phone.IPhoneShare PhoneShare
+@inject ISavedRoutes Store
+@inject PlannerSettings Settings
+@inject ILoopPlanner LoopPlanner
+@inject ILastRequest LastRequest
+@inject ICarParks CarParks
+@inject ILoopPreviews Previews
+@inject IPlaceSearch Places
+@inject INetworkDate NetworkDate
+@inject IJSRuntime JS
+@inject ILogger<PlannerSession> SessionLogger
+@implements IAsyncDisposable
+
+<PageTitle>Wend Your Way</PageTitle>
+
+<div class="planner">
+    <JobUnderWayLine />
+    <MapView @ref="_map" Centre="Settings.Home" OnClick="Session.StartChosenOnMapAsync" OnPageKey="Session.PageAsync" OnStartClicked="Session.StartClickedAsync" OnViewChanged="Session.ViewChangedAsync" OnRouteDragged="Session.NudgeAsync" OnAvoid="Session.NudgeAsync" OnStopRemoved="Session.NudgeAsync" OnAvoidRemoved="Session.NudgeAsync" OnUndoKey="Session.UndoAsync" OnRedoKey="Session.RedoAsync" OnBlock="Session.BlockAsync" OnUnblock="Session.UnblockAsync" OnStartDragged="Session.StartDraggedAsync" OnFinishDragged="Session.FinishDraggedAsync" OnFinishRemoved="Session.FinishAtStartAsync" />
+    <SidePanel OnOpen="Session.PanelOpenedAsync">
+        <Request>
+            @* A Run or a Gravel Ride (T068): choosing one finds its Loops, as a start chosen does. *@
+            <div class="activity" role="group" aria-label="Activity">
+                @foreach (var (activity, name) in Activities)
+                {
+                    <button type="button" class="@(activity == Session.Activity ? "chosen" : null)" aria-pressed="@(activity == Session.Activity ? "true" : "false")"
+                            @onclick="() => Session.ChooseActivityAsync(activity)">@name</button>
+                }
+            </div>
+            @* Start and Finish, each searched or set by a map click into whichever was last clicked
+               (T093); an empty Finish is a Loop back to the start. *@
+            <div class="field ends">
+                <span class="label">Start</span>
+                <PlaceSearchBox @ref="_startSearch" Class="start-search" Label="Start: search for a place or postcode" Shown="@Session.StartLabel" Active="!Session.FillFinish"
+                                Middle="@(Session.View?.Middle ?? CentralLondon)" OnChosen="GoToPlaceAsync" OnFocused="() => Session.FillFinish = false" />
+                <span class="label">Finish
+                    @if (Session.EndElsewhere && Session.Finish is not null)
+                    {
+                        @* Swapped (T094): the routes found the other way. *@
+                        <button type="button" class="swap-ends" title="Swap the start and finish" aria-label="Swap the start and finish"
+                                @onclick="Session.SwapEndsAsync">⇅ Swap</button>
+                    }
+                </span>
+                <PlaceSearchBox Class="finish-search" Label="Finish: search for a place or postcode, or leave empty for a Loop" Placeholder="Empty: back to the start"
+                                Shown="@Session.FinishLabel" Active="Session.FillFinish" Middle="@(Session.View?.Middle ?? CentralLondon)" OnChosen="Session.FinishPlaceChosenAsync"
+                                OnFocused="() => Session.FillFinish = true" OnCleared="Session.FinishAtStartAsync" />
+            </div>
+            @* Go beside the Distance, the one thing that doesn't find Loops by itself: a start chosen
+               does, and the sliders re-rank ("you could just put the go button after the distance
+               selector", user, 2026-11-03). *@
+            <div class="distance-go">
+                <label class="field">
+                    <span class="label">Distance</span>
+                    <span class="distance-input">
+                        @if (Session.EndElsewhere)
+                        {
+                            <input class="distance" type="number" min="1" max="100" step="0.5" placeholder="any" @bind="Session.FinishDistanceKm" />
+                        }
+                        else
+                        {
+                            <input class="distance" type="number" min="1" max="100" step="0.5" @bind="Session.DistanceKm" @bind:after="Session.LookAroundAsync" />
+                        }
+                        <span>km</span>
+                    </span>
+                    @if (Session.EndElsewhere)
+                    {
+                        <span class="hint distance-hint">blank: shortest to greenest</span>
+                    }
+                </label>
+                <button type="button" class="go" disabled="@(Session.Start is null || Session.Finding)" @onclick="Session.GoAsync">Go</button>
+            </div>
+            <label class="field">
+                <span class="label">Hills</span>
+                <span class="lean-input">
+                    <span>Fewer</span>
+                    <input class="hills" type="range" min="-1" max="1" step="0.5" @bind="Session.HillsLean" @bind:event="oninput" @bind:after="Session.ReRankAsync" />
+                    <span>More</span>
+                </span>
+            </label>
+            <label class="field">
+                <span class="label">Off-road</span>
+                <span class="lean-input">
+                    <span>Tarmac</span>
+                    <input class="off-road" type="range" min="-1" max="1" step="0.5" @bind="Session.OffRoadLean" @bind:event="oninput" @bind:after="Session.ReRankAsync" />
+                    <span>Trails</span>
+                </span>
+            </label>
+            <div class="field where">
+                <span class="around">
+                    <span class="heading">Car parks around here</span>
+                </span>
+                @if (Session.Listed is { } starts)
+                {
+                    <div class="starts">
+                        @if (starts.Count == 0)
+                        {
+                            <p class="none">@(Session.Zoom < StartsAround.CarParkZoom ? "Zoom in to see car parks." : "No car parks beside paths in view.")</p>
+                        }
+                        @foreach (var found in starts)
+                        {
+                            <button type="button" class="@(found == Session.Chosen ? "chosen" : null)" @onclick="() => Session.CarParkChosenAsync(found)">
+                                <strong>@found.Name</strong><span>@Describe(found)</span>
+                                @if (found.Details?.Says is { Length: > 0 } details)
+                                {
+                                    <span class="details">@details</span>
+                                }
+                                @if (Session.PreviewOf(found) is { } preview)
+                                {
+                                    <span class="preview">@preview</span>
+                                }
+                            </button>
+                        }
+                    </div>
+                }
+            </div>
+            @* How recent the Network's paths are (T117): the tiles behind can be newer, and show a path
+               the Loops can't use yet ("that's a bit annoying and confusing", user, 2026-11-11). *@
+            @if (Session.OsmDataAt is { } dataAt)
+            {
+                <p class="hint paths-as-of">Paths as of @dataAt.UtcDateTime.ToString("d MMM yyyy", System.Globalization.CultureInfo.InvariantCulture), from OpenStreetMap.</p>
+            }
+            @* The map brought up to date from here (T128). *@
+            <MapUpdateLine />
+        </Request>
+        <Outings>
+            <OutingsPanel OnShow="Session.ShowOutingAsync" OnMakeRoute="Session.MakeRouteAsync" OnGone="Session.OutingGoneAsync" />
+        </Outings>
+        <Admin>
+            <AdminPanel />
+        </Admin>
+        <SavedRoutes>
+            <SavedRoutesPanel OnOpen="Session.OpenSavedAsync" OnImport="Session.ImportAsync" Saves="Session.Saves" />
+        </SavedRoutes>
+    </SidePanel>
+    @if (!Session.OutingShown)
+    {
+        <PagerCard View="Session.Pager" OnPage="Session.PageAsync" OnExport="ExportAsync" OnExportTcx="ExportTcxAsync" OnPhone="Session.PhoneAsync" OnPhoneClosed="() => Session.PhoneAsked = false" OnPlace="Session.MarkPlaceAsync" OnToggleRoute="Session.ToggleRouteAsync" OnUndo="Session.UndoAsync" OnRedo="Session.RedoAsync" OnSave="Session.SaveAsync" />
+    }
+</div>
+
+@code {
+    // The planner's state and what the user does to it (T124c): the page shows it.
+    private PlannerSession Session { get; set; } = null!;
+    private MapView _map = null!;
+    private PlaceSearchBox _startSearch = null!;
+    private IJSObjectReference? _download;
+
+    private static readonly (Activity Activity, string Name)[] Activities = [(Activity.Run, "Run"), (Activity.GravelRide, "Gravel Ride"), (Activity.TrailRide, "Trail Ride")];
+
+    private static string Describe(FoundStart found) => FormattableString.Invariant($" {found.NetworkM / 1000:0} km of paths");
+
+    // Where the map is before it says where it is: never home, as search ranks by it (T064).
+    private static readonly LatLon CentralLondon = new(51.5074, -0.1278);
+
+    protected override async Task OnInitializedAsync()
+    {
+        Session = new PlannerSession(LoopPlanner, Store, Marks, Settings, LastRequest, CarParks, Previews, Places, Turns, PhoneShare, NetworkDate, SessionLogger);
+        Session.Changed += () => _ = InvokeAsync(StateHasChanged);
+        await Session.InitializeAsync();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender) await Session.MapReadyAsync(_map);
+    }
+
+    // A place chosen in the Start box; one that doesn't move the start, the box shows the start again.
+    private async Task GoToPlaceAsync(FoundPlace place)
+    {
+        if (await Session.GoToPlaceAsync(place)) _startSearch.Show(Session.StartLabel);
+    }
+
+    /// <summary>Hands the browser the Loop shown as a GPX file, to save and open in OS Maps.</summary>
+    private async Task ExportAsync()
+    {
+        if (await Session.GpxAsync() is not { } gpx) return;
+        _download ??= await JS.InvokeAsync<IJSObjectReference>("import", "./js/download.js");
+        await _download.InvokeVoidAsync("saveFile", gpx.FileName, "application/gpx+xml", gpx.Content);
+    }
+
+    /// <summary>Hands the browser the Loop shown as a TCX course, its turns as course points, for a watch (T100).</summary>
+    private async Task ExportTcxAsync()
+    {
+        if (await Session.TcxAsync() is not { } tcx) return;
+        _download ??= await JS.InvokeAsync<IJSObjectReference>("import", "./js/download.js");
+        await _download.InvokeVoidAsync("saveFile", tcx.FileName, "application/vnd.garmin.tcx+xml", tcx.Content);
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        Session?.Dispose();
+        try
+        {
+            if (_download is not null) await _download.DisposeAsync();
+        }
+        catch (JSDisconnectedException)
+        {
+            // The browser has gone, and the module with it.
+        }
+    }
+}
