@@ -1,0 +1,96 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  T145 Main Road crossings fixture, near Box Hill (the features are invented; only the place is real).
+  Roads running east, each about 300 m long, 300 m apart north to south:
+    500 a primary road with crossing points mapped on it, at nodes not shared with any other way:
+        102 crossing=zebra, 103 crossing=traffic_signals, 104 crossing=unmarked
+    501 a primary road with traffic lights for vehicles only (122: traffic_signals, crossing=no) and
+        junction lights (123: traffic_signals, no crossing tag)
+    502 a trunk road
+    503 a primary road with lanes=4
+    504 a primary road, oneway=yes (one carriageway of a dual carriageway)
+    505 a secondary road, lanes=2, with a crossing point that says there's no crossing (139)
+    510 a residential road with a crossing point (152: highway=crossing), not a Main Road
+    520 a pavement 5 m north of 500, beside it all the way
+  osm2pgsql needs all nodes before all ways, each sorted by ID.
+-->
+<osm version="0.6" generator="hand">
+  <node id="101" lat="51.2400" lon="-0.3400"/>
+  <node id="102" lat="51.2400" lon="-0.3390">
+    <tag k="highway" v="crossing"/>
+    <tag k="crossing" v="zebra"/>
+  </node>
+  <node id="103" lat="51.2400" lon="-0.3380">
+    <tag k="highway" v="crossing"/>
+    <tag k="crossing" v="traffic_signals"/>
+  </node>
+  <node id="104" lat="51.2400" lon="-0.3370">
+    <tag k="highway" v="crossing"/>
+    <tag k="crossing" v="unmarked"/>
+  </node>
+  <node id="105" lat="51.2400" lon="-0.3360"/>
+  <node id="121" lat="51.2430" lon="-0.3400"/>
+  <node id="122" lat="51.2430" lon="-0.3385">
+    <tag k="highway" v="traffic_signals"/>
+    <tag k="crossing" v="no"/>
+  </node>
+  <node id="123" lat="51.2430" lon="-0.3375">
+    <tag k="highway" v="traffic_signals"/>
+  </node>
+  <node id="124" lat="51.2430" lon="-0.3360"/>
+  <node id="131" lat="51.2460" lon="-0.3400"/>
+  <node id="132" lat="51.2460" lon="-0.3360"/>
+  <node id="133" lat="51.2490" lon="-0.3400"/>
+  <node id="134" lat="51.2490" lon="-0.3360"/>
+  <node id="135" lat="51.2520" lon="-0.3400"/>
+  <node id="136" lat="51.2520" lon="-0.3360"/>
+  <node id="137" lat="51.2550" lon="-0.3400"/>
+  <node id="138" lat="51.2550" lon="-0.3360"/>
+  <node id="139" lat="51.2550" lon="-0.3380">
+    <tag k="highway" v="crossing"/>
+    <tag k="crossing" v="no"/>
+  </node>
+  <node id="151" lat="51.2580" lon="-0.3400"/>
+  <node id="152" lat="51.2580" lon="-0.3380">
+    <tag k="highway" v="crossing"/>
+  </node>
+  <node id="153" lat="51.2580" lon="-0.3360"/>
+  <node id="161" lat="51.24005" lon="-0.3400"/>
+  <node id="162" lat="51.24005" lon="-0.3360"/>
+  <way id="500">
+    <nd ref="101"/><nd ref="102"/><nd ref="103"/><nd ref="104"/><nd ref="105"/>
+    <tag k="highway" v="primary"/>
+  </way>
+  <way id="501">
+    <nd ref="121"/><nd ref="122"/><nd ref="123"/><nd ref="124"/>
+    <tag k="highway" v="primary"/>
+  </way>
+  <way id="502">
+    <nd ref="131"/><nd ref="132"/>
+    <tag k="highway" v="trunk"/>
+  </way>
+  <way id="503">
+    <nd ref="133"/><nd ref="134"/>
+    <tag k="highway" v="primary"/>
+    <tag k="lanes" v="4"/>
+  </way>
+  <way id="504">
+    <nd ref="135"/><nd ref="136"/>
+    <tag k="highway" v="primary"/>
+    <tag k="oneway" v="yes"/>
+  </way>
+  <way id="505">
+    <nd ref="137"/><nd ref="139"/><nd ref="138"/>
+    <tag k="highway" v="secondary"/>
+    <tag k="lanes" v="2"/>
+  </way>
+  <way id="510">
+    <nd ref="151"/><nd ref="152"/><nd ref="153"/>
+    <tag k="highway" v="residential"/>
+  </way>
+  <way id="520">
+    <nd ref="161"/><nd ref="162"/>
+    <tag k="highway" v="footway"/>
+    <tag k="footway" v="sidewalk"/>
+  </way>
+</osm>

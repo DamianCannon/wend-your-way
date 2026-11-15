@@ -65,12 +65,36 @@ begin
    where ST_NPoints(w.geom) = cardinality(w.nodes);
   analyze tmp_vertices;
 
+  -- Crossing points mapped on a Main Road itself (#149, T145a), and their kind: each is a place to
+  -- cross, so the road is cut there and a crossing can be charged at it. Lights for vehicles only
+  -- (crossing=no) aren't one; junction lights with no crossing tag have a green man, as a rule.
+  create temporary table tmp_main_crossings on commit drop as
+  select distinct on (p.node_id) p.node_id, p.kind
+    from (select node_id,
+                 case when tags->>'crossing' = 'no' then null
+                      when tags->>'crossing' in ('traffic_signals', 'pelican', 'puffin', 'toucan') then 'signals'
+                      when tags->>'highway' = 'traffic_signals' and tags->>'crossing' is null then 'signals'
+                      when tags->>'highway' = 'traffic_signals' then null
+                      when tags->>'crossing' is null or tags->>'crossing' in ('zebra', 'marked', 'uncontrolled', 'zebra;dots') then 'marked'
+                      else 'unmarked' end as kind
+            from osm.points
+           where tags->>'highway' in ('crossing', 'traffic_signals')) p
+    join tmp_vertices v on v.node_id = p.node_id
+    join osm.ways w on w.way_id = v.way_id
+   where p.kind is not null
+     and w.tags->>'highway' in ('motorway', 'motorway_link', 'trunk', 'trunk_link',
+                                'primary', 'primary_link', 'secondary', 'secondary_link')
+   order by p.node_id, p.kind desc;
+  create unique index on tmp_main_crossings (node_id);
+  analyze tmp_main_crossings;
+
   -- A junction is a node used more than once among routable ways (forbidden ones included:
   -- they still connect the Network). Buildings and other non-routable ways never count. A way
   -- that comes back to one of its own nodes makes that node a junction too.
   create temporary table tmp_cuts on commit drop as
   select v.*,
-         (v.idx = 1 or v.idx = v.n or count(*) over (partition by v.node_id) > 1) as is_cut
+         (v.idx = 1 or v.idx = v.n or count(*) over (partition by v.node_id) > 1
+          or exists (select 1 from tmp_main_crossings m where m.node_id = v.node_id)) as is_cut
     from tmp_vertices v;
   analyze tmp_cuts;
 
@@ -233,7 +257,7 @@ begin
   -- follow the ground: a slice then reads neighbouring pages, not pages from all over Great
   -- Britain (T018).
   insert into network_next.segments (osm_way_id, from_node_id, to_node_id, geom, ground, access_run, access_ride, greenery, waterside, corridor, main_road,
-                                     crossing, crossing_main_road, crossing_share, bridge_over_water, access_trail, closed_months)
+                                     crossing, crossing_main_road, crossing_share, bridge_over_water, access_trail, closed_months, busy, carriageway)
   select f.way_id, f.from_node_id, f.to_node_id, f.geom, k.ground, run_access(w.tags), ride_access(w.tags), coalesce(g.greenery, 0), coalesce(g.waterside, 0),
          -- A Corridor is green ground: a road on a walking route is just a road.
          case when k.ground <> 'connector' then c.corridor end,
@@ -249,7 +273,15 @@ begin
                       case when w.tags->>'designation' ~ '^(byway_open_to_all_traffic|public_byway)'
                            then not exists (select 1 from rights_of_way.without_data u where ST_Intersects(u.geom, f.geom))
                            else true end),
-         motor_closed_months(w.tags)::smallint
+         motor_closed_months(w.tags)::smallint,
+         -- Busy (T145a): crossing it with no crossing point is never chosen. A trunk road, four lanes
+         -- or more, or a primary road one way (a carriageway of a dual carriageway).
+         coalesce(w.tags->>'highway' in ('motorway', 'motorway_link', 'trunk', 'trunk_link')
+                  or (w.tags->>'highway' in ('primary', 'secondary') and w.tags->>'lanes' ~ '^[0-9]+$' and (w.tags->>'lanes')::int >= 4)
+                  or (w.tags->>'highway' = 'primary' and w.tags->>'oneway' in ('yes', '1', '-1')), false),
+         -- A Main Road's carriageway itself (T145a), whose sides are what's crossed.
+         coalesce(w.tags->>'highway' in ('motorway', 'motorway_link', 'trunk', 'trunk_link',
+                                         'primary', 'primary_link', 'secondary', 'secondary_link'), false)
     from tmp_first f
     join osm.ways w on w.way_id = f.way_id
    cross join lateral (select classify_ground(w.tags) as ground) k
@@ -260,6 +292,13 @@ begin
    where f.kept
    order by f.geom;
   get diagnostics v_result.segments_written = row_count;
+
+  -- The crossing points on Main Roads that made it into the Network, now junctions (T145a).
+  insert into network_next.crossing_nodes (node_id, kind)
+  select m.node_id, m.kind
+    from tmp_main_crossings m
+   where exists (select 1 from network_next.segments s where s.main_road and s.from_node_id = m.node_id)
+      or exists (select 1 from network_next.segments s where s.main_road and s.to_node_id = m.node_id);
 
   select count(*) - (select count(*) from tmp_first) - v_result.zero_length
     into v_result.identity_clashes
