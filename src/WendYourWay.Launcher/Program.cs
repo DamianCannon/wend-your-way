@@ -158,7 +158,7 @@ internal sealed class Opening : ApplicationContext
     {
         if (_started && _app is not null)
         {
-            _starting.Step("Stopping Wend Your Way… (a backup under way is finished first)");
+            _starting.Step("Stopping Wend Your Way… If a backup is running, it finishes first.");
             _starting.Show();
             await _app.StopAsync();
             _log("Stopped.");
