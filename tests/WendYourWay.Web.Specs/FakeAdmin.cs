@@ -33,6 +33,11 @@ internal sealed class FakeAdmin : IAdmin
 
     public Task<UnderWay?> UnderWayAsync(CancellationToken cancellationToken = default) => Task.FromResult(UnderWay);
 
+    /// <summary>The database changes held back as the app started, as the spec sets it (T149).</summary>
+    public HeldBack? HeldBack { get; set; }
+
+    public Task<HeldBack?> HeldBackAsync(CancellationToken cancellationToken = default) => Task.FromResult(HeldBack);
+
     public Task<AdminStatus> StatusAsync(CancellationToken cancellationToken = default)
     {
         if (_pending is { } pending && ShowsAfterLooks-- <= 0) (Status, _pending) = (pending, null);

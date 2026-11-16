@@ -63,7 +63,9 @@ builder.Services.AddSingleton<WendYourWay.Web.Planning.IAdmin>(services => new W
     services.GetRequiredService<TimeProvider>(),
     new WendYourWay.Web.Planning.WendLauncher(builder.Environment.ContentRootPath, ConnectionString(services.GetRequiredService<IConfiguration>()), services.GetRequiredService<TimeProvider>()),
     services.GetRequiredService<IConfiguration>()["Import:Folder"],
-    services.GetRequiredService<WendYourWay.Web.Planning.WorkUnderWay>()));
+    services.GetRequiredService<WendYourWay.Web.Planning.WorkUnderWay>(),
+    services.GetRequiredService<WendYourWay.Web.Planning.HeldBackAtStart>()));
+builder.Services.AddSingleton<WendYourWay.Web.Planning.HeldBackAtStart>();
 // The map brought up to date from the app (T128): `wend update` started in a process of its own.
 builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddSingleton<WendYourWay.Web.Planning.IMapUpdater>(services => new WendYourWay.Web.Planning.ProcessMapUpdater(
@@ -80,14 +82,19 @@ builder.Services.AddSingleton<WendYourWay.Data.Places.IPlaceSearch, WendYourWay.
 
 var app = builder.Build();
 
-// Migrated as it starts, so a new table never stops it until a `wend` command runs (T056).
-if (Migrations.Apply(ConnectionString(app.Configuration)) is { Count: > 0 } applied) Log.Migrated(app.Logger, applied);
+// Migrated as it starts, so a new table never stops it until a `wend` command runs (T056); but not
+// while a map update, a build or another job runs, which the changes would be made under (#153, T149).
+var started = await StartUp.PrepareAsync(ConnectionString(app.Configuration));
+if (started.Migrated is { Count: > 0 } applied) Log.Migrated(app.Logger, applied);
+if (started.JobRunning) Log.HeldBack(app.Logger, started.HeldBack);
+app.Services.GetRequiredService<WendYourWay.Web.Planning.HeldBackAtStart>().Migrations = started.HeldBack;
 
 // The user's own data backed up as the app starts, when the last backup is a day old (T102): in
 // the background, so the map isn't kept waiting; Backup:Folder, else Wend Your Way Backups in OneDrive.
-// Finished before the app stops, not cut off by it (T138).
+// Finished before the app stops, not cut off by it (T138). Not while a job runs (#153, T149): an update
+// is moving Saved Routes and rescoring, and backs up as it ends; the next start after does it, if still due.
 var backups = UserDataBackups.Folder(app.Configuration["Backup:Folder"]);
-if (UserDataBackups.FolderOf(backups, ConnectionString(app.Configuration)) is { } ours && UserDataBackups.IsDue(ours, DateTimeOffset.Now))
+if (!started.JobRunning && UserDataBackups.FolderOf(backups, ConnectionString(app.Configuration)) is { } ours && UserDataBackups.IsDue(ours, DateTimeOffset.Now))
     _ = app.Services.GetRequiredService<WendYourWay.Web.Planning.WorkUnderWay>().Run(() =>
         UserDataBackups.AutomaticallyAsync(ConnectionString(app.Configuration), backups, line => Log.BackedUp(app.Logger, line), CancellationToken.None));
 

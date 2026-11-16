@@ -8,11 +8,25 @@
 @inject ILogger<JobUnderWayLine> Logger
 @implements IDisposable
 
-@if (_underWay is { } underWay)
+@if (_underWay is not null || _heldBack is not null)
 {
-    <div class="job-under-way" role="status">
-        <span class="spinner" aria-hidden="true"></span>
-        <span>@Said(underWay)</span>
+    <div class="job-lines">
+        @if (_underWay is { } underWay)
+        {
+            <div class="job-under-way" role="status">
+                <span class="spinner" aria-hidden="true"></span>
+                <span>@Said(underWay)</span>
+            </div>
+        }
+        @* The app's database changes held back for a job (#153, T149): what that means, and what to do once it's done. *@
+        @if (_heldBack is { } heldBack)
+        {
+            <div class="held-back" role="status">
+                @(heldBack.StillRunning
+                    ? "A map update or build is running, so Wend Your Way opened without its latest changes to the database. Some things may not work till it's done and you've closed Wend Your Way and opened it again."
+                    : "The map update or build is done: close Wend Your Way and open it again to finish bringing it up to date.")
+            </div>
+        }
     </div>
 }
 
@@ -20,6 +34,7 @@
     private static readonly TimeSpan LookEvery = TimeSpan.FromSeconds(15);
 
     private UnderWay? _underWay;
+    private HeldBack? _heldBack;
     private Timer? _looking;
 
     protected override async Task OnInitializedAsync()
@@ -37,6 +52,7 @@
         try
         {
             _underWay = await Admin.UnderWayAsync();
+            _heldBack = await Admin.HeldBackAsync();
         }
         catch (Exception e) when (e is not OperationCanceledException)
         {

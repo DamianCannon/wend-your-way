@@ -28,6 +28,18 @@ public sealed record AdminStatus(
 /// <summary>A job under way (T138): it, and how long the last of its kind that ended well took, if one has.</summary>
 public sealed record UnderWay(Job Job, TimeSpan? TookLast);
 
+/// <summary>
+/// The app's database changes held back as it started, for a job running (#153, T149): whether it still is,
+/// or it's done and the app needs opening again to make them.
+/// </summary>
+public sealed record HeldBack(bool StillRunning);
+
+/// <summary>The migrations held back as the app started (#153, T149), set once it's readied its database.</summary>
+public sealed class HeldBackAtStart
+{
+    public IReadOnlyList<string> Migrations { get; set; } = [];
+}
+
 /// <summary>A backup in the folder (T132): its file's name, when it was taken, and how many Outings it holds.</summary>
 public sealed record BackupListed(string Name, DateTimeOffset TakenAt, long Outings);
 
@@ -49,6 +61,9 @@ public interface IAdmin
     /// <summary>The job under way, if one is (T138): any kind, not stopped.</summary>
     Task<UnderWay?> UnderWayAsync(CancellationToken cancellationToken = default);
 
+    /// <summary>The database changes held back as the app started, if any were (#153, T149).</summary>
+    Task<HeldBack?> HeldBackAsync(CancellationToken cancellationToken = default);
+
     /// <summary>Backs up now, in the app: no lock, no job (T132). Where it went, or why it failed.</summary>
     Task<string> BackUpAsync(CancellationToken cancellationToken = default);
 }
@@ -57,7 +72,7 @@ public interface IAdmin
 /// <param name="backupFolder">This database's own backup folder; none for a test database.</param>
 /// <param name="importFolder">Where runs are imported from (`Import:Folder`); the user's Downloads, as wend finds it, by default.</param>
 public sealed class AdminView(
-    NpgsqlDataSource dataSource, string connectionString, string? backupFolder, string dataFolder, TimeProvider time, WendLauncher launcher, string? importFolder = null, WorkUnderWay? underWay = null) : IAdmin
+    NpgsqlDataSource dataSource, string connectionString, string? backupFolder, string dataFolder, TimeProvider time, WendLauncher launcher, string? importFolder = null, WorkUnderWay? underWay = null, HeldBackAtStart? heldBack = null) : IAdmin
 {
     private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
 
@@ -82,6 +97,9 @@ public sealed class AdminView(
         var last = await jobs.LastEndedWellAsync(job.Kind, cancellationToken);
         return new UnderWay(job, last is { FinishedAt: { } finished } ? finished - last.StartedAt : null);
     }
+
+    public async Task<HeldBack?> HeldBackAsync(CancellationToken cancellationToken = default) =>
+        heldBack is not { Migrations.Count: > 0 } ? null : new HeldBack(await UpdateLock.IsHeldAsync(connectionString, cancellationToken));
 
     public async Task<string?> StartAsync(string kind, string? backup = null, CancellationToken cancellationToken = default)
     {

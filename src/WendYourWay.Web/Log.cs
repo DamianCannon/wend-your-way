@@ -32,6 +32,9 @@ internal static partial class Log
     [LoggerMessage(Level = LogLevel.Information, Message = "Migrated the database: {Scripts}.")]
     public static partial void Migrated(ILogger logger, IReadOnlyList<string> scripts);
 
+    [LoggerMessage(Level = LogLevel.Warning, Message = "A map update, build or other job is running: the database's changes ({Scripts}) and the start-up backup wait till the app next starts after it.")]
+    public static partial void HeldBack(ILogger logger, IReadOnlyList<string> scripts);
+
     [LoggerMessage(Level = LogLevel.Information, Message = "Couldn't ask Geofabrik how new its map is.")]
     public static partial void MapUpdateUnasked(ILogger logger, Exception exception);
 

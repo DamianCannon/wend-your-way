@@ -17,7 +17,21 @@ public static class Migrations
     /// <exception cref="InvalidOperationException">A migration failed; nothing after it was applied.</exception>
     public static IReadOnlyList<string> Apply(string connectionString)
     {
-        var upgrader = DeployChanges.To
+        var upgrader = Upgrader(connectionString);
+        var result = upgrader.PerformUpgrade();
+        if (!result.Successful)
+            throw new InvalidOperationException(
+                $"Migration {result.ErrorScript?.Name ?? "(unknown)"} failed: {result.Error.Message}", result.Error);
+
+        return [.. result.Scripts.Where(script => script.SqlScriptOptions.ScriptType == ScriptType.RunOnce).Select(script => script.Name)];
+    }
+
+    /// <summary>The migrations not yet applied, by name, without applying them (#153, T149).</summary>
+    public static IReadOnlyList<string> Pending(string connectionString) =>
+        [.. Upgrader(connectionString).GetScriptsToExecute().Where(script => script.SqlScriptOptions.ScriptType == ScriptType.RunOnce).Select(script => script.Name)];
+
+    private static UpgradeEngine Upgrader(string connectionString) =>
+        DeployChanges.To
             .PostgresqlDatabase(connectionString)
             .WithScriptsEmbeddedInAssembly(typeof(Migrations).Assembly, IsIn(".Migrations."),
                 new SqlScriptOptions { ScriptType = ScriptType.RunOnce, RunGroupOrder = 1 })
@@ -26,14 +40,6 @@ public static class Migrations
             .WithTransactionPerScript()
             .LogTo(new NoOpUpgradeLog())
             .Build();
-
-        var result = upgrader.PerformUpgrade();
-        if (!result.Successful)
-            throw new InvalidOperationException(
-                $"Migration {result.ErrorScript?.Name ?? "(unknown)"} failed: {result.Error.Message}", result.Error);
-
-        return [.. result.Scripts.Where(script => script.SqlScriptOptions.ScriptType == ScriptType.RunOnce).Select(script => script.Name)];
-    }
 
     /// <summary>
     /// The last migration this build of Wend Your Way has, by name (they apply in name order): what a
