@@ -18,6 +18,7 @@ internal sealed class TheApp(string root, IReadOnlyList<string> appArguments, Ac
     private static readonly TimeSpan StopWithin = TimeSpan.FromMinutes(3.5);
 
     private Process? _process;
+    private bool _ready;
 
     public Uri Address { get; } = Launch.Address(appArguments);
 
@@ -112,7 +113,7 @@ internal sealed class TheApp(string root, IReadOnlyList<string> appArguments, Ac
         {
             if (_process is { HasExited: true }) return false;
             // Its own, still running: not another one that happens to answer (found by hand).
-            if (await AnsweringAsync() == App.Ours) return _process is { HasExited: false };
+            if (await AnsweringAsync() == App.Ours) return _ready = _process is { HasExited: false };
             await Task.Delay(500);
         }
         return false;
@@ -122,12 +123,20 @@ internal sealed class TheApp(string root, IReadOnlyList<string> appArguments, Ac
     public async Task StopAsync()
     {
         if (_process is not { HasExited: false } process) return;
-        NativeMethods.FreeConsole();
-        if (NativeMethods.AttachConsole((uint)process.Id))
+        // Ready, it's asked once. Still starting (#151, T147), its console or its Ctrl+C handler may not
+        // be there yet, so it's asked each second for a little while.
+        for (var tries = 0; tries < (_ready ? 1 : 10) && !process.HasExited; tries++)
         {
-            NativeMethods.SetConsoleCtrlHandler(IntPtr.Zero, true);
-            NativeMethods.GenerateConsoleCtrlEvent(NativeMethods.CtrlC, 0);
-            NativeMethods.FreeConsole();
+            if (!SendCtrlC(process.Id)) log($"Couldn't reach the app's console to ask it to stop (try {tries + 1}).");
+            if (_ready) break;
+            try
+            {
+                await process.WaitForExitAsync().WaitAsync(TimeSpan.FromSeconds(1));
+            }
+            catch (TimeoutException)
+            {
+                // Asked again.
+            }
         }
         try
         {
@@ -142,6 +151,17 @@ internal sealed class TheApp(string root, IReadOnlyList<string> appArguments, Ac
         {
             NativeMethods.SetConsoleCtrlHandler(IntPtr.Zero, false);
         }
+    }
+
+    /// <summary>Ctrl+C to the app's hidden console, the launcher ignoring it itself; false if the console couldn't be reached.</summary>
+    private static bool SendCtrlC(int processId)
+    {
+        NativeMethods.FreeConsole();
+        if (!NativeMethods.AttachConsole((uint)processId)) return false;
+        NativeMethods.SetConsoleCtrlHandler(IntPtr.Zero, true);
+        NativeMethods.GenerateConsoleCtrlEvent(NativeMethods.CtrlC, 0);
+        NativeMethods.FreeConsole();
+        return true;
     }
 
     private async Task<(int Code, string Output)> RunAsync(string file, IEnumerable<string> arguments)

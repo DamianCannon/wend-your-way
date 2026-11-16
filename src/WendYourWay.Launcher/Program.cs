@@ -74,14 +74,31 @@ internal sealed class Opening : ApplicationContext
     private readonly RegisteredWaitHandle _forward;
     private PlannerWindow? _planner;
     private bool _started;
+    private bool _closingDown;
 
     public Opening(string? root, IReadOnlyList<string> appArguments, string folder, string logs, Icon icon, EventWaitHandle bringForward, Action<string> log)
     {
         (_root, _folder, _logs, _icon, _log) = (root, folder, logs, icon, log);
         _starting = new StartingWindow(icon);
+        // Closed while the app it started is still starting (#151, T147): the app stopped too, not left
+        // running with no window, where every later click would open onto it and never stop it.
+        _starting.FormClosing += async (_, e) =>
+        {
+            if (_planner is not null || _closingDown || !_started || _app is null) return;
+            e.Cancel = true;
+            _closingDown = true;
+            _starting.Step("Stopping Wend Your Way…");
+            await _app.StopAsync();
+            ExitThread();
+        };
         _starting.FormClosed += (_, _) => { if (_planner is null) ExitThread(); };
         _app = root is null ? null : new TheApp(root, appArguments, log);
-        _forward = ThreadPool.RegisterWaitForSingleObject(bringForward, (_, _) => _starting.BeginInvoke(() => (_planner as Form ?? _starting).Activate()), null, -1, false);
+        // Brought back up if minimised (#151, T147): Activate alone leaves it minimised.
+        _forward = ThreadPool.RegisterWaitForSingleObject(bringForward, (_, _) => _starting.BeginInvoke(() =>
+        {
+            if (_planner is { Visible: true }) _planner.BringForward();
+            else _starting.Activate();
+        }), null, -1, false);
         _starting.Shown += async (_, _) => await OpenAsync();
         _starting.Show();
     }
@@ -120,7 +137,9 @@ internal sealed class Opening : ApplicationContext
                 return;
             }
             _started = true;
-            if (!await _app.ReadyAsync())
+            var ready = await _app.ReadyAsync();
+            if (_closingDown) return;
+            if (!ready)
             {
                 _starting.Stopped($"Wend Your Way didn't start. Its log in {_logs} says why.");
                 return;
