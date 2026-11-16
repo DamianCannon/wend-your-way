@@ -46,15 +46,9 @@ public sealed class LoopPlanner(INetworkSlices slices, MapGeometry geometry, Sco
         if (radiusM > FurthestM) throw new RouteNotMatchedException(RouteMatching.TooSpread);
         var slice = await slices.AroundAsync(centre, radiusM, activity, cancellationToken: cancellationToken);
 
-        // Its Segments by OSM identity: every one, or the map has changed under it.
-        var index = new Dictionary<SegmentKey, int>();
-        for (var s = 0; s < slice.Segments.Count; s++) index.TryAdd(slice.Segments[s].Key, s);
-        var kept = new List<Traversal>();
-        foreach (var (key, forward) in traversals)
-        {
-            if (!index.TryGetValue(key, out var segment)) throw new RouteNotMatchedException(MapChanged);
-            kept.Add(new Traversal(segment, forward));
-        }
+        // Its Segments by OSM identity: every one, or the map has changed under it. Of a Main Road's
+        // sides, those that join up, and its crossings put back (T145c).
+        var kept = Corners.Rejoin(slice, traversals) ?? throw new RouteNotMatchedException(MapChanged);
         int StartOf(Traversal t) => t.Forward ? slice.Segments[t.Segment].From : slice.Segments[t.Segment].To;
         int EndOf(Traversal t) => t.Forward ? slice.Segments[t.Segment].To : slice.Segments[t.Segment].From;
 
@@ -72,6 +66,7 @@ public sealed class LoopPlanner(INetworkSlices slices, MapGeometry geometry, Sco
             var (best, bestM) = (-1, double.MaxValue);
             for (var s = 0; s < slice.Segments.Count; s++)
             {
+                if (slice.Segments[s].IsCrossingLink) continue;
                 var (a, b) = (slice.Node(slice.Segments[s].From), slice.Node(slice.Segments[s].To));
                 var m = new NodePoint((a.X + b.X) / 2, (a.Y + b.Y) / 2).DistanceTo(avoid);
                 if (m < bestM) (best, bestM) = (s, m);
@@ -317,10 +312,10 @@ public sealed class LoopPlanner(INetworkSlices slices, MapGeometry geometry, Sco
             {
                 var joins = Reaching(gpx.Grid, slice.Node(StartOf(run[0])), at);
                 Follow(at, joins);
-                var (runLine, runWays) = await planner.Geometry.TraceWithWaysAsync([.. run.Select(t => (slice.Segments[t.Segment].Key, t.Forward))], cancellationToken);
+                var (runLine, runWays) = await planner.Geometry.TraceWithWaysAsync([.. Corners.OnTheMap(slice, run)], cancellationToken);
                 line.AddRange(runLine);
                 ways.AddRange(runWays.Count == runLine.Count ? runWays : runLine.Select(_ => 0L));
-                var gone = along[joins] + (RunAtLeast * run.Sum(t => slice.Segments[t.Segment].LengthM));
+                var gone = along[joins] + (RunAtLeast * LengthOf(run));
                 var from = Array.FindIndex(along, joins, m => m >= gone);
                 at = Reaching(gpx.Grid, slice.Node(EndOf(run[^1])), from < 0 ? along.Length - 1 : from);
             }
@@ -441,13 +436,17 @@ public sealed class LoopPlanner(INetworkSlices slices, MapGeometry geometry, Sco
                     if (grabbed is null) return null;
                     var kept = avoided.ToHashSet();
                     // Dropped on a path (T126): along it, or at its end's junction if near one; with no
-                    // path near, the nearest junction, as before.
+                    // path near, the nearest junction, as before. A drop doesn't say which side of a Main
+                    // Road it means (T145c): each side's tried, and the cheapest kept.
                     if (await DroppedOnAsync(to, cancellationToken) is { } on)
-                        nudged = await Task.Run(() => on.Along
-                            ? Nudges.Through(slice, loop, grabbed.Value, on.Segment, on.Stop, weights, kept)
-                            : Nudges.Via(slice, loop, grabbed.Value, on.Stop, weights, kept), cancellationToken);
+                        nudged = await Task.Run(() => Cheapest(on.Along
+                            ? on.Sides.Select(s => (Func<Loop?>)(() => Nudges.Through(slice, loop, grabbed.Value, s,
+                                on.AtFrom ? slice.Segments[s].From : slice.Segments[s].To, weights, kept)))
+                            : on.Sides.SelectMany(s => Corners.Of(slice, on.AtFrom ? slice.Segments[s].From : slice.Segments[s].To)).Distinct()
+                                .Select(c => (Func<Loop?>)(() => Nudges.Via(slice, loop, grabbed.Value, c, weights, kept))), weights), cancellationToken);
                     else if (NearestJunction(to) is { } junction)
-                        nudged = await Task.Run(() => Nudges.Via(slice, loop, grabbed.Value, junction, weights, kept), cancellationToken);
+                        nudged = await Task.Run(() => Cheapest(Corners.Of(slice, junction)
+                            .Select(c => (Func<Loop?>)(() => Nudges.Via(slice, loop, grabbed.Value, c, weights, kept))), weights), cancellationToken);
                     else
                         return null;
                     break;
@@ -479,12 +478,12 @@ public sealed class LoopPlanner(INetworkSlices slices, MapGeometry geometry, Sco
             _behind[traced] = (nudged, avoided);
             // An imported route asked for no length: no window to be outside.
             if (request is null) return new NudgedLoop(traced, 0);
-            var km = nudged.Traversals.Sum(t => slice.Segments[t.Segment].LengthM) / 1000;
+            var km = LengthOf(nudged.Traversals) / 1000;
             return new NudgedLoop(traced, km > request.LongestKm ? km - request.LongestKm : km < request.ShortestKm ? km - request.ShortestKm : 0);
         }
 
         public IReadOnlyList<(SegmentKey Key, bool Forward)>? TraversalsOf(PlannedLoop planned) =>
-            _behind.TryGetValue(planned, out var behind) ? [.. behind.Loop.Traversals.Select(t => (slice.Segments[t.Segment].Key, t.Forward))] : null;
+            _behind.TryGetValue(planned, out var behind) ? [.. Corners.OnTheMap(slice, behind.Loop.Traversals)] : null;
 
         // On the map, all of it; an imported route, all but its gaps (T083).
         public RouteScore? ScoreOf(PlannedLoop planned)
@@ -520,6 +519,7 @@ public sealed class LoopPlanner(INetworkSlices slices, MapGeometry geometry, Sco
             for (var t = 0; t < loop.Traversals.Count; t++)
             {
                 var segment = slice.Segments[loop.Traversals[t].Segment];
+                if (segment.IsCrossingLink) continue;
                 var m = FromChord(point, slice.Node(segment.From), slice.Node(segment.To));
                 if (m < bestM) (best, bestM) = (t, m);
             }
@@ -533,11 +533,24 @@ public sealed class LoopPlanner(INetworkSlices slices, MapGeometry geometry, Sco
             for (var t = 0; t < loop.Traversals.Count; t++)
             {
                 var segment = slice.Segments[loop.Traversals[t].Segment];
+                if (segment.IsCrossingLink) continue;
                 var m = FromChord(point, slice.Node(segment.From), slice.Node(segment.To));
                 if (m < bestM) (best, bestM) = (t, m);
             }
             return bestM <= NearM ? best : null;
         }
+
+        // Of the Loops a Nudge may make, the one that costs least, as a Path does; none if none can be made.
+        private Loop? Cheapest(IEnumerable<Func<Loop?>> tries, ScoringWeights weights)
+        {
+            var cost = new RunCostModel(weights);
+            return tries.Select(t => t()).OfType<Loop>()
+                .MinBy(l => l.Traversals.Sum(t => cost.CostOf(slice.Segments[t.Segment], t.Forward)));
+        }
+
+        // How long a stretch of a Loop is, as the map draws it: crossing a Main Road at a junction adds nothing (T145c).
+        private double LengthOf(IEnumerable<Traversal> traversals) =>
+            traversals.Select(t => slice.Segments[t.Segment]).Where(s => !s.IsCrossingLink).Sum(s => s.LengthM);
 
         // The junction a bike or a Run may reach nearest a point, if one is within NearM of it.
         // A drop this near a Segment's end is at the junction there, as a drop always was (T126).
@@ -546,24 +559,23 @@ public sealed class LoopPlanner(INetworkSlices slices, MapGeometry geometry, Sco
         // How many Segments near a drop are looked at for one of this slice's that may be used.
         private const int SegmentsLookedAt = 10;
 
-        private Dictionary<SegmentKey, int>? _indexOf;
+        private Dictionary<SegmentKey, int[]>? _indexOf;
 
         /// <summary>
         /// The Segment a route was dropped on (T126): the nearest of the slice's, by its line, that may
         /// be used, within <see cref="NearM"/>; its stop at its end nearer the drop, and whether the
         /// drop is along it (more than <see cref="AtEndM"/> from both ends) or at that end's junction.
         /// </summary>
-        private async Task<(int Segment, int Stop, bool Along)?> DroppedOnAsync(NodePoint at, CancellationToken cancellationToken)
+        private async Task<(int[] Sides, bool AtFrom, bool Along)?> DroppedOnAsync(NodePoint at, CancellationToken cancellationToken)
         {
-            _indexOf ??= slice.Segments.Select((s, i) => (s.Key, i)).GroupBy(p => p.Key).ToDictionary(g => g.Key, g => g.First().i);
+            _indexOf ??= slice.Segments.Select((s, i) => (s.Key, i)).GroupBy(p => p.Key).ToDictionary(g => g.Key, g => g.Select(p => p.i).ToArray());
             foreach (var near in await planner.Geometry.SegmentsNearAsync(at, NearM, SegmentsLookedAt, cancellationToken))
             {
-                if (!_indexOf.TryGetValue(near.Key, out var index) || slice.Segments[index].Access == AccessKind.Forbidden) continue;
-                var segment = slice.Segments[index];
+                // A Main Road's carriageway is two Segments in a Run's slice, one each side (T145c).
+                if (!_indexOf.TryGetValue(near.Key, out var sides) || slice.Segments[sides[0]].Access == AccessKind.Forbidden) continue;
                 var fromStart = near.AlongM;
                 var fromEnd = near.LengthM - near.AlongM;
-                var stop = fromStart <= fromEnd ? segment.From : segment.To;
-                return (index, stop, Math.Min(fromStart, fromEnd) > AtEndM);
+                return (sides, fromStart <= fromEnd, Math.Min(fromStart, fromEnd) > AtEndM);
             }
             return null;
         }
@@ -629,7 +641,7 @@ public sealed class LoopPlanner(INetworkSlices slices, MapGeometry geometry, Sco
 
     private async Task<PlannedLoop> ForTheMapAsync(NetworkSlice slice, Loop loop, CancellationToken cancellationToken)
     {
-        (SegmentKey, bool)[] traversals = [.. loop.Traversals.Select(t => (slice.Segments[t.Segment].Key, t.Forward))];
+        (SegmentKey, bool)[] traversals = [.. Corners.OnTheMap(slice, loop.Traversals)];
         var (line, ways) = await geometry.TraceWithWaysAsync(traversals, cancellationToken);
         var points = await geometry.ToLatLonAsync([slice.Node(loop.Start), .. loop.Anchors.Select(slice.Node)], cancellationToken);
         return new PlannedLoop(line, points[0], [.. points.Skip(1)], Breakdown.Of(slice, loop), await ProfileAsync(traversals, cancellationToken)) { Ways = ways };

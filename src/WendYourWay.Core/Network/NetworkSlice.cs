@@ -57,7 +57,11 @@ public sealed class NetworkSlice
     // Less of a Segment than this left over beside its roads isn't worth a group of its own.
     private const double OwnGroundToleranceM = 0.5;
 
-    public static NetworkSlice Assemble(IEnumerable<StoredSegment> stored)
+    /// <param name="crossingPoints">
+    /// Given (a Run's, T145c), its junctions on Main Roads are split into corners (<see cref="Corners"/>),
+    /// crossed at these crossing points, by OSM node; not given, they aren't.
+    /// </param>
+    public static NetworkSlice Assemble(IEnumerable<StoredSegment> stored, IReadOnlyDictionary<long, CrossingKind>? crossingPoints = null)
     {
         ArgumentNullException.ThrowIfNull(stored);
         var rows = stored
@@ -90,9 +94,20 @@ public sealed class NetworkSlice
             segments.Add(new Segment(s.Key, index[s.Key.FromNodeId], index[s.Key.ToNodeId], s.LengthM, s.Ground, s.Access, shares, s.MainRoad, s.Greenery, s.Corridor, s.Waterside, s.Crossing, s.CrossesMainRoad, s.CrossingShare, s.BridgeOverWater, s.AscentM, s.DescentM)
             {
                 Obstacles = s.Obstacles,
+                Carriageway = s.Carriageway,
+                Busy = s.Busy,
+                FromBearing = s.FromBearing,
+                ToBearing = s.ToBearing,
             });
         }
-        return new NetworkSlice([.. nodeIds.Select(id => positions[id])], segments);
+        var slice = new NetworkSlice([.. nodeIds.Select(id => positions[id])], segments);
+        if (crossingPoints is null) return slice;
+        var points = new Dictionary<int, CrossingKind>();
+        foreach (var (node, kind) in crossingPoints)
+        {
+            if (index.TryGetValue(node, out var n)) points[n] = kind;
+        }
+        return Corners.Split(slice, points);
     }
 
     public int NodeCount => _nodes.Length;

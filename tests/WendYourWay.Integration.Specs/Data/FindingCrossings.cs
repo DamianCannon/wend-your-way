@@ -57,23 +57,41 @@ public class FindingCrossings
     public async Task Then_a_footway_that_isn_t_a_crossing_way_isn_t_one() =>
         Assert.That((await CrossingOf(305)).Kind, Is.Null);
 
-    //  The planner reads them with the slice.
+    //  The planner reads them with the slice: a Main Road's are charged where they cross it (T145c), below.
     [Test]
     public async Task Then_a_slice_carries_them()
+    {
+        var slice = await SliceAsync();
+        Assert.That(slice.Segments.Where(s => s.Crossing is not null && !s.IsCrossingLink).GroupBy(s => s.Key.OsmWayId)
+                .Select(g => (g.Key, g.First().Crossing, g.First().CrossesMainRoad, Math.Round(g.Sum(s => s.CrossingShare), 6))).Order(),
+            Is.EqualTo(new[]
+            {
+                (303L, (Core.Network.CrossingKind?)Core.Network.CrossingKind.Marked, false, 1.0),
+                (304L, Core.Network.CrossingKind.Signals, false, 1.0),
+            }));
+    }
+
+    //  A Run's slice splits a Main Road's junctions into corners (T145c): a crossing way over it is
+    //  charged once, as the crossing at the junction where it meets the road, not as itself too.
+    [TestCase(300, Core.Network.CrossingKind.Signals)]
+    [TestCase(301, Core.Network.CrossingKind.Marked)]
+    [TestCase(302, Core.Network.CrossingKind.Unmarked)]
+    public async Task Then_a_Main_Road_s_is_charged_at_the_junction_it_crosses_it(long way, Core.Network.CrossingKind kind)
+    {
+        var slice = await SliceAsync();
+        var pieces = slice.Segments.Where(s => s.Key.OsmWayId == way).ToList();
+        var junction = pieces.SelectMany(s => new[] { s.Key.FromNodeId, s.Key.ToNodeId }).GroupBy(n => n).Single(g => g.Count() > 1).Key;
+        Assert.That((
+                pieces.Select(s => s.Crossing).Distinct(),
+                slice.Segments.Where(s => s.IsCrossingLink && s.Key.FromNodeId == junction).Select(s => s.Crossing).Distinct()),
+            Is.EqualTo((new Core.Network.CrossingKind?[] { null }, new Core.Network.CrossingKind?[] { kind })));
+    }
+
+    private async Task<Core.Network.NetworkSlice> SliceAsync()
     {
         await using var centre = _dataSource.CreateCommand("select ST_X(p), ST_Y(p) from (select ST_Transform(ST_SetSRID(ST_MakePoint(-0.336, 51.225), 4326), 27700) p) t");
         await using var reader = await centre.ExecuteReaderAsync();
         await reader.ReadAsync();
-        var slice = await new PostgisNetworkSlices(_dataSource).AroundAsync(new Core.Network.NodePoint(reader.GetDouble(0), reader.GetDouble(1)), 2000);
-        Assert.That(slice.Segments.Where(s => s.Crossing is not null).GroupBy(s => s.Key.OsmWayId)
-                .Select(g => (g.Key, g.First().Crossing, g.First().CrossesMainRoad, Math.Round(g.Sum(s => s.CrossingShare), 6))).Order(),
-            Is.EqualTo(new[]
-            {
-                (300L, (Core.Network.CrossingKind?)Core.Network.CrossingKind.Signals, true, 1.0),
-                (301L, Core.Network.CrossingKind.Marked, true, 1.0),
-                (302L, Core.Network.CrossingKind.Unmarked, true, 1.0),
-                (303L, Core.Network.CrossingKind.Marked, false, 1.0),
-                (304L, Core.Network.CrossingKind.Signals, false, 1.0),
-            }));
+        return await new PostgisNetworkSlices(_dataSource).AroundAsync(new Core.Network.NodePoint(reader.GetDouble(0), reader.GetDouble(1)), 2000);
     }
 }

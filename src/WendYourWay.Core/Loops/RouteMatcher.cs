@@ -191,11 +191,14 @@ public static class RouteMatcher
 
     // Only the corridor, and dearer the further from the route. Every Segment the route went along
     // is allowed, whatever its Access: the match records what the route did, and scoring judges it.
+    // Crossing a Main Road at a junction (T145c) has no way of its own in the corridor: allowed at its
+    // length, wherever the route crossed.
     private sealed class CorridorCost(IReadOnlyDictionary<SegmentKey, double> corridor, double outside = double.PositiveInfinity) : ICostModel
     {
         public double FloorPerMetre => 1;
 
         public double CostOf(Segment segment, bool forward) =>
+            segment.IsCrossingLink ? segment.LengthM :
             corridor.TryGetValue(segment.Key, out var offset)
                 ? segment.LengthM * (1 + (offset / OffsetScaleM))
                 : segment.LengthM * outside;

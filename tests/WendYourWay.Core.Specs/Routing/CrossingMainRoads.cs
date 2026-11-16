@@ -97,6 +97,21 @@ public static class CrossingMainRoads
     }
 
     [TestFixture]
+    public class Given_a_road_no_one_may_walk_along_with_signals_on_it
+    {
+        //  foot=no, as on many dual carriageways: crossed only where a crossing is mapped.
+        [Test]
+        public void Then_it_s_crossed_only_at_the_signals() =>
+            Assert.That(Route("""
+                      S=====P
+                      #     #
+                W=xb==J=xb==X=xb==E
+                      #     #
+                      T=====Q
+                """, new() { ['X'] = CrossingKind.Signals }) is var r ? (r.Junctions, r.Crossings) : default, Is.EqualTo(("SPXQT", "Signals busy")));
+    }
+
+    [TestFixture]
     public class Given_a_busy_road_with_no_crossing_and_no_other_way
     {
         //  Charged heavily, never forbidden: with no other way, a route is still found, and says so.

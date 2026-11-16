@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  T145c crossing a busy road, near Box Hill (the features are invented; only the place is real).
+    700 a trunk road running east, through J (302) and lights for walkers (303) about 100 m east of it
+    710 a side road straight across the trunk road at J, from N (311) to S (312), with no crossing
+    711 a side road from N round to the lights; 712 one from S round to them
+    713 a side road leaving J north-east (313, a few metres in) before it bends back south to 314:
+        on the north side, though its far end is south of the road
+  osm2pgsql needs all nodes before all ways, each sorted by ID.
+-->
+<osm version="0.6" generator="hand">
+  <node id="301" lat="51.2700" lon="-0.3400"/>
+  <node id="302" lat="51.2700" lon="-0.3390"/>
+  <node id="303" lat="51.2700" lon="-0.3375">
+    <tag k="highway" v="crossing"/>
+    <tag k="crossing" v="traffic_signals"/>
+  </node>
+  <node id="304" lat="51.2700" lon="-0.3360"/>
+  <node id="311" lat="51.2710" lon="-0.3390"/>
+  <node id="312" lat="51.2690" lon="-0.3390"/>
+  <node id="313" lat="51.27003" lon="-0.33885"/>
+  <node id="314" lat="51.2690" lon="-0.3386"/>
+  <node id="321" lat="51.2710" lon="-0.3375"/>
+  <node id="322" lat="51.2690" lon="-0.3375"/>
+  <way id="700">
+    <nd ref="301"/><nd ref="302"/><nd ref="303"/><nd ref="304"/>
+    <tag k="highway" v="trunk"/>
+  </way>
+  <way id="710">
+    <nd ref="311"/><nd ref="302"/><nd ref="312"/>
+    <tag k="highway" v="residential"/>
+  </way>
+  <way id="711">
+    <nd ref="311"/><nd ref="321"/><nd ref="303"/>
+    <tag k="highway" v="residential"/>
+  </way>
+  <way id="712">
+    <nd ref="312"/><nd ref="322"/><nd ref="303"/>
+    <tag k="highway" v="residential"/>
+  </way>
+  <way id="713">
+    <nd ref="302"/><nd ref="313"/><nd ref="314"/>
+    <tag k="highway" v="residential"/>
+  </way>
+</osm>

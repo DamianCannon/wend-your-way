@@ -1,3 +1,5 @@
+using WendYourWay.Core.Routing;
+
 namespace WendYourWay.Core.Network;
 
 /// <summary>
@@ -100,7 +102,8 @@ public static class Corners
                     new SegmentKey(-Math.Abs(arm.Key.OsmWayId), nodeId, -(i + 1)),
                     corners[(i - 1 + arms.Count) % arms.Count], corners[i],
                     arm.Busy ? BusyLinkM : LinkM, GroundKind.Connector,
-                    arm.Access == AccessKind.Forbidden ? AccessKind.Forbidden : AccessKind.Allowed,
+                    // A road no one may walk along (foot=no, a motorway) is crossed only where a crossing is.
+                    arm.Access == AccessKind.Forbidden && kind is null ? AccessKind.Forbidden : AccessKind.Allowed,
                     nextGroup++, Crossing: kind ?? CrossingKind.Unmarked, CrossesMainRoad: true, CrossingShare: 1)
                 {
                     Busy = arm.Busy,
@@ -127,6 +130,148 @@ public static class Corners
         }
         split.AddRange(links);
         return new NetworkSlice(nodes, split);
+    }
+
+    /// <summary>
+    /// A junction's corners (T145c): <paramref name="node"/> and every other at its place joined to it by
+    /// crossing links, in order of their numbers; the node alone where nothing was split.
+    /// </summary>
+    public static IReadOnlyList<int> Of(NetworkSlice slice, int node)
+    {
+        ArgumentNullException.ThrowIfNull(slice);
+        var found = new SortedSet<int> { node };
+        var next = new Queue<int>([node]);
+        while (next.TryDequeue(out var at))
+        {
+            foreach (var s in slice.SegmentsAt(at))
+            {
+                var link = slice.Segments[s];
+                if (!link.IsCrossingLink) continue;
+                var other = link.From == at ? link.To : link.From;
+                if (found.Add(other)) next.Enqueue(other);
+            }
+        }
+        return [.. found];
+    }
+
+    /// <summary>
+    /// Traversals as the map has them (T145c), to draw or save: by OSM way, crossing links left out.
+    /// </summary>
+    public static IEnumerable<(SegmentKey Key, bool Forward)> OnTheMap(NetworkSlice slice, IEnumerable<Traversal> traversals)
+    {
+        ArgumentNullException.ThrowIfNull(slice);
+        ArgumentNullException.ThrowIfNull(traversals);
+        foreach (var t in traversals)
+        {
+            var segment = slice.Segments[t.Segment];
+            if (!segment.IsCrossingLink) yield return (segment.Key, t.Forward);
+        }
+    }
+
+    // A step between two Traversals that don't join, and couldn't by crossing: a gap in an imported route.
+    private const double GapCost = 1e9;
+
+    /// <summary>
+    /// A route saved by its OSM ways put back on the slice (T145c): of a carriageway's two sides, the
+    /// ones that join up crossing least, and the crossings between them put back; a closed route also
+    /// back to the corner it began at. None if a way isn't in the slice: the map has changed under it.
+    /// </summary>
+    public static IReadOnlyList<Traversal>? Rejoin(NetworkSlice slice, IReadOnlyList<(SegmentKey Key, bool Forward)> traversals)
+    {
+        ArgumentNullException.ThrowIfNull(slice);
+        ArgumentNullException.ThrowIfNull(traversals);
+        if (traversals.Count == 0) return [];
+        var copies = new Dictionary<SegmentKey, List<int>>();
+        for (var s = 0; s < slice.Segments.Count; s++)
+        {
+            var key = slice.Segments[s].Key;
+            if (!copies.TryGetValue(key, out var list)) copies[key] = list = [];
+            list.Add(s);
+        }
+        var options = new List<Traversal[]>(traversals.Count);
+        foreach (var (key, forward) in traversals)
+        {
+            if (!copies.TryGetValue(key, out var list)) return null;
+            options.Add([.. list.Select(s => new Traversal(s, forward))]);
+        }
+        int StartOf(Traversal t) => t.Forward ? slice.Segments[t.Segment].From : slice.Segments[t.Segment].To;
+        int EndOf(Traversal t) => t.Forward ? slice.Segments[t.Segment].To : slice.Segments[t.Segment].From;
+        var closed = slice.Node(StartOf(options[0][0])) == slice.Node(EndOf(options[^1][0]));
+
+        // For each choice of the first's side, the cheapest sides after it; the cheapest of those.
+        (double Cost, List<Traversal> Route)? best = null;
+        foreach (var first in options[0])
+        {
+            var cost = new double[options.Count][];
+            var from = new int[options.Count][];
+            cost[0] = [.. options[0].Select(o => o == first ? 0 : double.PositiveInfinity)];
+            from[0] = new int[options[0].Length];
+            for (var i = 1; i < options.Count; i++)
+            {
+                cost[i] = new double[options[i].Length];
+                from[i] = new int[options[i].Length];
+                for (var c = 0; c < options[i].Length; c++)
+                {
+                    (cost[i][c], from[i][c]) = (double.PositiveInfinity, 0);
+                    for (var p = 0; p < options[i - 1].Length; p++)
+                    {
+                        var step = cost[i - 1][p] + Hop(slice, EndOf(options[i - 1][p]), StartOf(options[i][c])).Cost;
+                        if (step < cost[i][c]) (cost[i][c], from[i][c]) = (step, p);
+                    }
+                }
+            }
+            var (endCost, end) = (double.PositiveInfinity, 0);
+            for (var c = 0; c < options[^1].Length; c++)
+            {
+                var total = cost[^1][c] + (closed ? Hop(slice, EndOf(options[^1][c]), StartOf(first)).Cost : 0);
+                if (total < endCost) (endCost, end) = (total, c);
+            }
+            if (best is { } kept && kept.Cost <= endCost) continue;
+
+            var chosen = new Traversal[options.Count];
+            for (int i = options.Count - 1, c = end; i >= 0; c = from[i][c], i--) chosen[i] = options[i][c];
+            var route = new List<Traversal> { chosen[0] };
+            for (var i = 1; i < chosen.Length; i++)
+            {
+                route.AddRange(Hop(slice, EndOf(chosen[i - 1]), StartOf(chosen[i])).Links);
+                route.Add(chosen[i]);
+            }
+            if (closed) route.AddRange(Hop(slice, EndOf(chosen[^1]), StartOf(chosen[0])).Links);
+            best = (endCost, route);
+        }
+        return best!.Value.Route;
+    }
+
+    // The cheapest crossing links from one corner of a junction to another, and what they cost; nothing
+    // between the same corner; a gap between corners no links join.
+    private static (double Cost, IReadOnlyList<Traversal> Links) Hop(NetworkSlice slice, int from, int to)
+    {
+        if (from == to) return (0, []);
+        var costs = new Dictionary<int, (double Cost, Traversal By, int Before)> { [from] = (0, default, -1) };
+        var open = new PriorityQueue<int, double>([(from, 0)]);
+        while (open.TryDequeue(out var at, out var atCost))
+        {
+            if (atCost > costs[at].Cost) continue;
+            if (at == to)
+            {
+                var links = new List<Traversal>();
+                for (var n = to; n != from; n = costs[n].Before) links.Add(costs[n].By);
+                links.Reverse();
+                return (atCost, links);
+            }
+            foreach (var s in slice.SegmentsAt(at))
+            {
+                var link = slice.Segments[s];
+                if (!link.IsCrossingLink) continue;
+                var forward = link.From == at;
+                var other = forward ? link.To : link.From;
+                var cost = atCost + link.LengthM + Scoring.CrossingCosts.Default.Of(link.Crossing ?? CrossingKind.Unmarked, mainRoad: true, link.Busy);
+                if (costs.TryGetValue(other, out var known) && known.Cost <= cost) continue;
+                costs[other] = (cost, new Traversal(s, forward), at);
+                open.Enqueue(other, cost);
+            }
+        }
+        return (GapCost, []);
     }
 
     // Degrees clockwise from one bearing round to another, 0 up to 360.

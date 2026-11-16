@@ -27,12 +27,13 @@ namespace WendYourWay.Core.Scoring;
 /// <param name="DescentM">The metres of descent going round (T051, R3.5).</param>
 /// <param name="UnconfirmedM">Its metres on Unconfirmed Access, which a Gravel Ride flags (T068).</param>
 /// <param name="Obstacles">The Obstacles on it (T069), by kind, most first: listed, as SPEC R9.1 asks.</param>
+/// <param name="UnmarkedMainRoadCrossings">How many of its Main Road crossings have no crossing point there (T145c).</param>
 public sealed record Breakdown(
     double LengthM, double OffRoadPercent, double TrafficFreePercent, double ConnectorLengthM, double RetraceLengthM,
     double FlowM = 0, double LongestGreenM = 0, double MainRoadLengthM = 0, double GreeneryPercent = 0,
     double CorridorLengthM = 0, string? MainCorridor = null, double MainCorridorM = 0, double OpenGroundM = 0, double WatersidePercent = 0,
     int Crossings = 0, int MainRoadCrossings = 0, double ClimbM = 0, double DescentM = 0, double UnconfirmedM = 0,
-    IReadOnlyList<ObstacleCount>? Obstacles = null)
+    IReadOnlyList<ObstacleCount>? Obstacles = null, int UnmarkedMainRoadCrossings = 0)
 {
     /// <summary>Its share off-road, 0 to 1 (T104).</summary>
     public double OffRoadShare => OffRoadPercent / 100;
@@ -56,7 +57,7 @@ public sealed record Breakdown(
         var descent = 0.0;
         var unconfirmed = 0.0;
         // A crossing way cut into Segments is one Crossing: counted as the Loop steps onto it.
-        int crossings = 0, mainRoadCrossings = 0;
+        int crossings = 0, mainRoadCrossings = 0, unmarked = 0;
         long? onCrossing = null;
         var byCorridor = new Dictionary<string, double>(StringComparer.Ordinal);
         // Shares add up: half a gate on each side of a junction passed through is one gate.
@@ -64,6 +65,15 @@ public sealed record Breakdown(
         foreach (var traversal in loop.Traversals)
         {
             var segment = slice.Segments[traversal.Segment];
+            // A Main Road crossed at a junction (T145): a crossing, but no length, as the map draws it.
+            if (segment.IsCrossingLink)
+            {
+                crossings++;
+                mainRoadCrossings++;
+                if (segment.Crossing == CrossingKind.Unmarked) unmarked++;
+                onCrossing = null;
+                continue;
+            }
             byGround[(int)segment.Ground] += segment.LengthM;
             retrace += segment.RetracedMetres(covered);
             if (segment.MainRoad) mainRoad += segment.LengthM;
@@ -109,7 +119,8 @@ public sealed record Breakdown(
             DescentM: descent,
             UnconfirmedM: unconfirmed,
             Obstacles: [.. obstacles.Select((share, kind) => new ObstacleCount((ObstacleKind)kind, (int)Math.Ceiling(share - 1e-9)))
-                .Where(o => o.Count > 0).OrderByDescending(o => o.Count).ThenBy(o => o.Kind)]);
+                .Where(o => o.Count > 0).OrderByDescending(o => o.Count).ThenBy(o => o.Kind)],
+            UnmarkedMainRoadCrossings: unmarked);
     }
 }
 

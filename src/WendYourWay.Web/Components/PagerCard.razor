@@ -43,7 +43,10 @@
                 <tr title="Busy roads, used only for short links"><th>Main Road</th><td>@Km(loop.Breakdown.MainRoadLengthM, "0.00")</td></tr>
                 <tr title="How much of it runs beside parks, woods, commons and water"><th>Greenery</th><td>@Percent(loop.Breakdown.GreeneryPercent)</td></tr>
                 <tr title="How much of it runs beside rivers, canals and lakes"><th>Waterside</th><td>@Percent(loop.Breakdown.WatersidePercent)</td></tr>
-                <tr title="Roads it crosses by a crossing, and how many of them are Main Roads"><th>Crossings</th><td>@loop.Breakdown.Crossings · @loop.Breakdown.MainRoadCrossings of Main Roads</td></tr>
+                <tr title="Roads it crosses, how many of them are Main Roads, and of those how many where no crossing is mapped: check them before you go"><th>Crossings</th><td>@loop.Breakdown.Crossings · @($"{loop.Breakdown.MainRoadCrossings} of Main Roads")@if (loop.Breakdown.UnmarkedMainRoadCrossings > 0)
+                    {
+                        <span class="unmarked"> · @loop.Breakdown.UnmarkedMainRoadCrossings with no crossing</span>
+                    }</td></tr>
                 @if (loop.Breakdown.UnconfirmedM > 0)
                 {
                     <tr class="unconfirmed" title="@(Activity == Activity.TrailRide ? "Green lanes and byways the Definitive Map can't confirm, or with a closure the map can't read: check before you ride" : "Paths where the map can't tell whether a bike may go: check before you ride")"><th>Unconfirmed access</th><td>@Km(loop.Breakdown.UnconfirmedM, "0.00")</td></tr>

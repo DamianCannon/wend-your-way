@@ -121,6 +121,17 @@ public class AskingForALoop : PlannerPageSpecs
         screen.WaitForAssertion(() => Assert.That(screen.Find(".pager .summary").TextContent, Is.EqualTo("1 of 1 · 9.7 km")));
     }
 
+    //  T145c: a Main Road crossed with no crossing point there is said, to look at before going.
+    [Test]
+    public void The_Breakdown_says_how_many_Main_Roads_it_crosses_with_no_crossing()
+    {
+        _planner.Answer = Planned with { Breakdown = Planned.Breakdown with { UnmarkedMainRoadCrossings = 1 } };
+        var screen = Open(KenwoodHouse);
+        PressGo(screen);
+        screen.WaitForElement(".pager .expand").Click();
+        Assert.That(screen.FindAll(".breakdown tr")[^1].TextContent.Trim(), Is.EqualTo("Crossings7 · 2 of Main Roads · 1 with no crossing"));
+    }
+
     [Test]
     public void The_pager_card_opens_into_the_Breakdown()   // AC4, R10.6
     {

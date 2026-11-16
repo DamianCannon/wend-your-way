@@ -40,6 +40,10 @@ public sealed class PostgisNetworkSlices(NpgsqlDataSource dataSource, TimeProvid
         // The Segments the user has Blocked (T082): forbidden to every Activity, at once.
         var blocking = BlockedAsync(cancellationToken);
 
+        // A Run's Main Road junctions are split into corners, crossed at these (T145c): a bike turns
+        // across a Main Road in its traffic, so a ride's aren't (user, 2026-11-16).
+        var crossingAt = activity == WendYourWay.Core.Loops.Activity.Run ? CrossingPointsAsync(cancellationToken) : Task.FromResult<Dictionary<long, CrossingKind>?>(null);
+
         // The Activity's access, and only what it may use (AccessOf).
         await using var query = dataSource.CreateCommand($"""
             select s.id, s.osm_way_id, s.from_node_id, s.to_node_id,
@@ -47,7 +51,8 @@ public sealed class PostgisNetworkSlices(NpgsqlDataSource dataSource, TimeProvid
                    ST_X(ST_EndPoint(s.geom)), ST_Y(ST_EndPoint(s.geom)),
                    s.length_m, s.ground::text, {access}::text,
                    s.main_road, s.greenery, s.corridor, s.waterside,
-                   s.crossing, s.crossing_main_road, s.crossing_share, s.bridge_over_water, s.ascent_m, s.descent_m
+                   s.crossing, s.crossing_main_road, s.crossing_share, s.bridge_over_water, s.ascent_m, s.descent_m,
+                   coalesce(s.carriageway, false), coalesce(s.busy, false), s.from_bearing, s.to_bearing
               from network.segments s
              where ST_DWithin(s.geom, ST_SetSRID(ST_MakePoint(@x, @y), 27700), @radius)
                {usable}
@@ -84,7 +89,13 @@ public sealed class PostgisNetworkSlices(NpgsqlDataSource dataSource, TimeProvid
                     reader.GetFloat(17),
                     reader.GetBoolean(18),
                     reader.GetFloat(19),
-                    reader.GetFloat(20)));
+                    reader.GetFloat(20))
+                {
+                    Carriageway = reader.GetBoolean(21),
+                    Busy = reader.GetBoolean(22),
+                    FromBearing = reader.IsDBNull(23) ? null : reader.GetFloat(23),
+                    ToBearing = reader.IsDBNull(24) ? null : reader.GetFloat(24),
+                });
             }
         }
         Beside(stored, rowOf, await pairing);
@@ -97,7 +108,7 @@ public sealed class PostgisNetworkSlices(NpgsqlDataSource dataSource, TimeProvid
         }
         await counting;
         progress.Read(stored.Count, done: true);
-        return NetworkSlice.Assemble(stored);
+        return NetworkSlice.Assemble(stored, await crossingAt);
 
         static CrossingKind Crossing(string kind) => kind switch
         {
@@ -179,6 +190,23 @@ public sealed class PostgisNetworkSlices(NpgsqlDataSource dataSource, TimeProvid
             metres.Add(reader.GetDouble(2));
         }
         return ([.. paths], [.. roads], [.. metres]);
+    }
+
+    // The crossing points mapped on Main Roads, by OSM node, in all the Network: none on one built
+    // before T145, which isn't split.
+    private async Task<Dictionary<long, CrossingKind>?> CrossingPointsAsync(CancellationToken cancellationToken)
+    {
+        await using var query = dataSource.CreateCommand("select node_id, kind from network.crossing_nodes");
+        var points = new Dictionary<long, CrossingKind>();
+        await using var reader = await query.ExecuteReaderAsync(cancellationToken);
+        while (await reader.ReadAsync(cancellationToken))
+            points[reader.GetInt64(0)] = reader.GetString(1) switch
+            {
+                "signals" => CrossingKind.Signals,
+                "marked" => CrossingKind.Marked,
+                _ => CrossingKind.Unmarked,
+            };
+        return points;
     }
 
     // The Segments the user has Blocked, by OSM identity; none on a database before Marks.

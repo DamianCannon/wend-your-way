@@ -198,6 +198,18 @@ public sealed record StoredSegment(
 {
     /// <summary>The Obstacles on it (T069), or none.</summary>
     public IReadOnlyList<ObstacleShare>? Obstacles { get; init; }
+
+    /// <summary>Whether it's a Main Road's carriageway itself (T145).</summary>
+    public bool Carriageway { get; init; }
+
+    /// <summary>Whether its road is busy (T145).</summary>
+    public bool Busy { get; init; }
+
+    /// <summary>Which way it leaves FromNodeId, and ToNodeId, in degrees clockwise from grid north (T145c); none if not known.</summary>
+    public double? FromBearing { get; init; }
+
+    /// <inheritdoc cref="FromBearing"/>
+    public double? ToBearing { get; init; }
 }
 
 /// <summary>Metres of a stored Segment that run beside a road Segment.</summary>

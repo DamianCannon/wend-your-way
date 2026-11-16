@@ -90,10 +90,15 @@ public class PlanningALoopEndToEnd
     public void Then_a_Loop_it_didnt_offer_has_no_score_from_it() =>
         Assert.That(_offered!.ScoreOf(_planned! with { Line = [] }), Is.Null);
 
-    //  T096: from Pembroke Lodge at 10 km, four Loops on the usual bar and one in another direction.
+    //  T096: from Pembroke Lodge at 8 km, four Loops on the usual bar and one in another direction (at
+    //  10 km, since Main Roads were crossed at real crossings, T145c, five on the bar).
     [Test]
-    public void Then_a_Loop_in_another_direction_is_marked_and_comes_after_those_on_the_usual_bar() =>
-        Assert.That(_offered!.Select(p => p.InAnotherDirection), Is.Ordered.And.Contains(false).And.Contains(true));
+    public async Task Then_a_Loop_in_another_direction_is_marked_and_comes_after_those_on_the_usual_bar()
+    {
+        var offered = await new LoopPlanner(new PostgisNetworkSlices(_dataSource), new MapGeometry(_dataSource), ScoringWeights.Default)
+            .PlanAsync(PembrokeLodge, distanceKm: 8);
+        Assert.That(offered.Select(p => p.InAnotherDirection), Is.Ordered.And.Contains(false).And.Contains(true));
+    }
 
     [Test]
     public void Then_its_length_is_between_9_and_11_km() =>

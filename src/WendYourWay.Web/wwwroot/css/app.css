@@ -515,6 +515,7 @@ html, body { margin: 0; height: 100%; background: var(--paper); }
 
 /* Unconfirmed access (T068): flagged in hi-vis, a thing to check before riding */
 .breakdown tr.unconfirmed th, .breakdown tr.unconfirmed td { color: var(--hi-vis); }
+.breakdown td .unmarked { color: var(--hi-vis); }
 
 /* Outings filtered by the user's stars and by name (T110): one row of choices, the one in force
    in forest green, then the name box the panel's width. */
