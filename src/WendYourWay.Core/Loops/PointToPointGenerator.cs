@@ -244,7 +244,7 @@ public static class PointToPointGenerator
         return sorted.Length % 2 == 1 ? sorted[sorted.Length / 2] : (sorted[(sorted.Length / 2) - 1] + sorted[sorted.Length / 2]) / 2;
     }
 
-    private static int Nearest(NetworkSlice slice, int[] junctions, NodePoint point) => junctions.MinBy(n => slice.Node(n).DistanceTo(point));
+    private static int Nearest(NetworkSlice slice, int[] junctions, NodePoint point) => LoopGenerator.Nearest(slice, junctions, point);
 
     // The shortest way on ways the Activity may use: length alone.
     private sealed class Shortest : ICostModel

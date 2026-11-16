@@ -43,6 +43,7 @@ public static class Corners
         var links = new List<Segment>();
         var cleared = new HashSet<int>();     // crossing ways whose charge a link takes
         var nextGroup = segments.SelectMany(s => s.SameGround).Select(g => g.Group).DefaultIfEmpty(-1).Max() + 1;
+        var sectors = new Dictionary<int, (double From, double Span)>();
 
         for (var n = 0; n < slice.NodeCount; n++)
         {
@@ -86,6 +87,11 @@ public static class Corners
                 beforeArm[(arms[i].Segment, arms[i].AtFrom)] = corners[(i - 1 + arms.Count) % arms.Count];
             }
             if (arms.Count < 2) continue;
+            for (var i = 0; i < arms.Count; i++)
+            {
+                var span = Clockwise(arms[i].Bearing, arms[(i + 1) % arms.Count].Bearing);
+                sectors[corners[i]] = (arms[i].Bearing, span == 0 ? 360 : span);
+            }
 
             // What crossing here is: a crossing point on the road, or a crossing way meeting it.
             CrossingKind? kind = crossingPoints.TryGetValue(n, out var point) ? point : null;
@@ -129,7 +135,7 @@ public static class Corners
             split.Add(segment with { From = beforeArm[(s, true)], To = afterArm[(s, false)] });
         }
         split.AddRange(links);
-        return new NetworkSlice(nodes, split);
+        return new NetworkSlice(nodes, split) { CornerSectors = sectors };
     }
 
     /// <summary>
@@ -152,6 +158,24 @@ public static class Corners
             }
         }
         return [.. found];
+    }
+
+    /// <summary>
+    /// Of <paramref name="node"/>'s corners, the one facing <paramref name="point"/> (T145c): a start beside a
+    /// Main Road junction is snapped to its own side, so starting costs no crossing. The node itself where
+    /// nothing was split, or the point is on it.
+    /// </summary>
+    public static int Toward(NetworkSlice slice, int node, NodePoint point)
+    {
+        ArgumentNullException.ThrowIfNull(slice);
+        var here = slice.Node(node);
+        if (slice.CornerSectors is not { Count: > 0 } sectors || point == here) return node;
+        var bearing = (Math.Atan2(point.X - here.X, point.Y - here.Y) * 180 / Math.PI + 360) % 360;
+        foreach (var corner in Of(slice, node))
+        {
+            if (sectors.TryGetValue(corner, out var sector) && Clockwise(sector.From, bearing) < sector.Span) return corner;
+        }
+        return node;
     }
 
     /// <summary>

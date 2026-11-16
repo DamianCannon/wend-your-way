@@ -110,6 +110,12 @@ public sealed class NetworkSlice
         return Corners.Split(slice, points);
     }
 
+    /// <summary>
+    /// Each corner of a split junction (T145c), by node: the bearing it starts at, clockwise from grid north,
+    /// and how many degrees it spans clockwise from there, between the carriageway arms either side.
+    /// </summary>
+    internal IReadOnlyDictionary<int, (double From, double Span)>? CornerSectors { get; init; }
+
     public int NodeCount => _nodes.Length;
 
     /// <summary>The slice's Off-road networks, worked out once, when first asked for (T047).</summary>

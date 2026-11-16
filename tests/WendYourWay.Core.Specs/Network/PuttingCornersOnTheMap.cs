@@ -90,6 +90,23 @@ public static class PuttingCornersOnTheMap
     }
 
     [TestFixture]
+    public class Given_a_start_beside_a_Main_Road_junction
+    {
+        //  The start is snapped to the corner on its own side: starting there costs no crossing.
+        [TestCase(30, 'S')]
+        [TestCase(-30, 'T')]
+        public void Then_it_s_the_corner_on_its_side(double north, char road)
+        {
+            var drawn = AsciiNetwork.Parse(Across);
+            var slice = Corners.Split(drawn.Slice);
+            var at = drawn.Slice.Node(drawn.Node('J'));
+            var corner = Corners.Toward(slice, Enumerable.Range(0, slice.NodeCount).First(n => slice.Node(n) == at), at with { Y = at.Y + north });
+            var sideRoad = drawn.Slice.Segments[drawn.Segment($"{road}-J")].Key;
+            Assert.That(slice.SegmentsAt(corner).ToArray().Select(s => slice.Segments[s].Key), Does.Contain(sideRoad));
+        }
+    }
+
+    [TestFixture]
     public class Given_a_junction_split_into_corners
     {
         [Test]

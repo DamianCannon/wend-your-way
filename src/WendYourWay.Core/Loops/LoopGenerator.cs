@@ -234,8 +234,13 @@ public static class LoopGenerator
         return usable;
     }
 
-    private static int Nearest(NetworkSlice slice, int[] junctions, NodePoint point) =>
-        junctions.MinBy(n => slice.Node(n).DistanceTo(point));
+    // The junction nearest a point; of a split junction's corners (T145c), the one on the point's side.
+    internal static int Nearest(NetworkSlice slice, int[] junctions, NodePoint point)
+    {
+        var nearest = junctions.MinBy(n => slice.Node(n).DistanceTo(point));
+        var corner = Corners.Toward(slice, nearest, point);
+        return Array.BinarySearch(junctions, corner) >= 0 ? corner : nearest;
+    }
 
     /// <summary>
     /// The junctions of the largest piece of the slice joined by Segments a Run may use, in

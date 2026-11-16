@@ -90,14 +90,16 @@ public class PlanningALoopEndToEnd
     public void Then_a_Loop_it_didnt_offer_has_no_score_from_it() =>
         Assert.That(_offered!.ScoreOf(_planned! with { Line = [] }), Is.Null);
 
-    //  T096: from Pembroke Lodge at 8 km, four Loops on the usual bar and one in another direction (at
-    //  10 km, since Main Roads were crossed at real crossings, T145c, five on the bar).
+    //  T096: from Pembroke Lodge, Loops in another direction come after those on the usual bar, at every
+    //  distance, and some distance has one. Which does moves with the costs (10 km had one till Main Roads
+    //  were crossed at real crossings, T145c; then 8 and 12 km did).
     [Test]
     public async Task Then_a_Loop_in_another_direction_is_marked_and_comes_after_those_on_the_usual_bar()
     {
-        var offered = await new LoopPlanner(new PostgisNetworkSlices(_dataSource), new MapGeometry(_dataSource), ScoringWeights.Default)
-            .PlanAsync(PembrokeLodge, distanceKm: 8);
-        Assert.That(offered.Select(p => p.InAnotherDirection), Is.Ordered.And.Contains(false).And.Contains(true));
+        var planner = new LoopPlanner(new PostgisNetworkSlices(_dataSource), new MapGeometry(_dataSource), ScoringWeights.Default);
+        var offers = new List<bool[]>();
+        foreach (var km in new[] { 8.0, 10, 12, 14 }) offers.Add([.. (await planner.PlanAsync(PembrokeLodge, distanceKm: km)).Select(p => p.InAnotherDirection)]);
+        Assert.That((offers.All(o => o.SequenceEqual(o.Order())), offers.Any(o => o.Contains(true) && o.Contains(false))), Is.EqualTo((true, true)));
     }
 
     [Test]
