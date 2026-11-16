@@ -23,7 +23,7 @@ public static class NetworkBuildCommand
     /// <param name="built">Told once the new Network is swapped in, before the Outings are scored (T127).</param>
     public static async Task<int> Run(
         string? extract, string connectionString, string? osm2pgsqlExe, string? terrain, string rightsOfWay, TextWriter output,
-        bool locked = false, Func<Task>? built = null, CancellationToken cancellationToken = default)
+        bool locked = false, Func<Task>? built = null, Action<string>? phaseDone = null, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(output);
         if (terrain is not null && !Directory.Exists(terrain))
@@ -72,6 +72,7 @@ public static class NetworkBuildCommand
                 await OsmImportMarker.ImportingAsync(dataSource, cancellationToken);
                 await Timed(output, "osm2pgsql", () => Task.FromResult(OsmImport.Run(osm2pgsqlExe!, connectionString, extract, cancellationToken: cancellationToken)),
                     _ => "loaded");
+                phaseDone?.Invoke("osm2pgsql");
                 await OsmImportMarker.ImportedAsync(dataSource, cancellationToken);
             }
             else if (await OsmImportMarker.UnfinishedAsync(dataSource, cancellationToken))
@@ -83,7 +84,7 @@ public static class NetworkBuildCommand
             var grid = terrain is null ? null : new TerrainGrid(terrain);
             if (grid is null) await output.WriteLineAsync("  no OS Terrain 50 tiles (data/terrain50/asc): Segments won't climb");
 
-            var report = await NetworkBuild.Build(dataSource, grid, (phase, took) => Phase(output, phase, phase switch
+            var report = await NetworkBuild.Build(dataSource, grid, (phase, took) => Done(phaseDone, phase, () => Phase(output, phase, phase switch
             {
                 "rights of way" => "loaded",
                 "segments" => "built",
@@ -96,7 +97,7 @@ public static class NetworkBuildCommand
                 "in order of place" => "sorted",
                 "climbing" => $"sampled ({grid!.Tiles:N0} tiles)",
                 _ => "covered again",
-            }, took), rightsOfWay, cancellationToken);
+            }, took)), rightsOfWay, cancellationToken);
             var (build, sameGround) = (report.Segments, report.SameGround);
 
             await output.WriteLineAsync();
@@ -219,6 +220,13 @@ public static class NetworkBuildCommand
         var result = await work();
         Phase(output, phase, describe(result), clock.Elapsed);
         return result;
+    }
+
+    // Told in the log, then to whoever asked to hear of each phase done (an update, counting its steps: T148).
+    private static void Done(Action<string>? phaseDone, string phase, Action log)
+    {
+        log();
+        phaseDone?.Invoke(phase);
     }
 
     private static void Phase(TextWriter output, string phase, string description, TimeSpan took) =>

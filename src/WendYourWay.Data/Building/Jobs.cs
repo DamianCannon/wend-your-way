@@ -25,10 +25,15 @@ public static class JobKind
 /// <param name="Message">A sentence saying how it ended, or why it failed.</param>
 /// <param name="Source">Where it took from: an update's extract, an import's folder.</param>
 /// <param name="SourceAt">For an update, when the source said its data runs to, once asked.</param>
+/// <param name="Step">For an update, which step it's on of how many (#152, T148): "step 12 of 17, working out the climbing".</param>
 public sealed record Job(
     int Id, DateTimeOffset StartedAt, DateTimeOffset HeartbeatAt, DateTimeOffset? FinishedAt,
-    string Stage, string Outcome, string? Message, string Source, DateTimeOffset? SourceAt, string Kind = JobKind.Update)
+    string Stage, string Outcome, string? Message, string Source, DateTimeOffset? SourceAt, string Kind = JobKind.Update,
+    string? Step = null)
 {
+    /// <summary>What it's doing, as said to the user: its step if it has one, else its stage.</summary>
+    public string Doing => Step ?? Stage;
+
     /// <summary>A run that hasn't said it's alive for this long has stopped.</summary>
     public static readonly TimeSpan Silence = TimeSpan.FromMinutes(5);
 
@@ -65,10 +70,11 @@ public sealed class Jobs(NpgsqlDataSource dataSource)
         await command.ExecuteNonQueryAsync(cancellationToken);
     }
 
-    /// <summary>Still alive.</summary>
-    public async Task HeartbeatAsync(int id, CancellationToken cancellationToken = default)
+    /// <summary>Still alive; and, for an update, the step it's on now, if it's said one (#152, T148).</summary>
+    public async Task HeartbeatAsync(int id, string? step = null, CancellationToken cancellationToken = default)
     {
-        await using var command = dataSource.CreateCommand("update app.map_updates set heartbeat_at = now() where id = @id");
+        await using var command = dataSource.CreateCommand("update app.map_updates set heartbeat_at = now(), step = coalesce(@step, step) where id = @id");
+        command.Parameters.Add(new NpgsqlParameter("step", NpgsqlTypes.NpgsqlDbType.Text) { Value = (object?)step ?? DBNull.Value });
         command.Parameters.Add(new NpgsqlParameter("id", id));
         await command.ExecuteNonQueryAsync(cancellationToken);
     }
@@ -118,7 +124,7 @@ public sealed class Jobs(NpgsqlDataSource dataSource)
     private async Task<IReadOnlyList<Job>> ReadAsync(string rest, int? before, string? kind, CancellationToken cancellationToken, IReadOnlyList<string>? kinds = null)
     {
         await using var query = dataSource.CreateCommand(
-            "select id, started_at, heartbeat_at, finished_at, stage, outcome, message, source, source_at, kind from app.map_updates " + rest);
+            "select id, started_at, heartbeat_at, finished_at, stage, outcome, message, source, source_at, kind, step from app.map_updates " + rest);
         if (before is { } id) query.Parameters.Add(new NpgsqlParameter("before", id));
         query.Parameters.Add(new NpgsqlParameter("kind", NpgsqlTypes.NpgsqlDbType.Text) { Value = (object?)kind ?? DBNull.Value });
         if (kinds is not null) query.Parameters.Add(new NpgsqlParameter("kinds", kinds.ToArray()));
@@ -128,7 +134,7 @@ public sealed class Jobs(NpgsqlDataSource dataSource)
         {
             runs.Add(new Job(reader.Get<int>("id"), reader.Get<DateTimeOffset>("started_at"), reader.Get<DateTimeOffset>("heartbeat_at"),
                 reader.Maybe<DateTimeOffset>("finished_at"), reader.Get<string>("stage"), reader.Get<string>("outcome"), reader.MaybeText("message"),
-                reader.Get<string>("source"), reader.Maybe<DateTimeOffset>("source_at"), reader.Get<string>("kind")));
+                reader.Get<string>("source"), reader.Maybe<DateTimeOffset>("source_at"), reader.Get<string>("kind"), reader.MaybeText("step")));
         }
         return runs;
     }

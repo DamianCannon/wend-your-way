@@ -89,7 +89,7 @@ public static class JobRuns
         using var every = new PeriodicTimer(HeartbeatEvery);
         try
         {
-            while (await every.WaitForNextTickAsync(stop)) await jobs.HeartbeatAsync(id, stop);
+            while (await every.WaitForNextTickAsync(stop)) await jobs.HeartbeatAsync(id, cancellationToken: stop);
         }
         catch (OperationCanceledException)
         {

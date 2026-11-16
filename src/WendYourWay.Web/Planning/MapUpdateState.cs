@@ -43,7 +43,7 @@ public sealed record MapUpdateState(
                 "finished" => MapUpdateKind.Finished,
                 "up to date" => MapUpdateKind.UpToDate,
                 _ => MapUpdateKind.Failed,
-            }, last.Stage, last.StartedAt, last.Message, sourceAt, mapAt);
+            }, last.Doing, last.StartedAt, last.Message, sourceAt, mapAt);
 }
 
 /// <summary>The map's update, as the planner sees it (T128): what it's doing, and starting one.</summary>

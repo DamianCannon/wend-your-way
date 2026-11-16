@@ -76,6 +76,14 @@ public class UpdatingTheMapFromTheCommandLine
         Assert.That((exitCode, await Segments() > 0, File.Exists(Extract), await LastOutcome()), Is.EqualTo((0, true, true, "finished")), output);
     }
 
+    //  #152, T148: its steps counted as it goes, the last of them its backup (no terrain here, so no climbing).
+    [Test]
+    public async Task Finished_it_was_on_the_last_of_its_steps()
+    {
+        await Updated();
+        Assert.That(await Scalar<string>("select coalesce(step, '') from app.map_updates order by id desc limit 1"), Is.EqualTo("step 16 of 16, backing up"));
+    }
+
     //  T136: after it builds, Saved Routes the map changed under are moved onto it (none here).
     [Test]
     public async Task Built_it_moves_the_Saved_Routes_onto_the_new_map()

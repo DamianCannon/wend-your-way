@@ -39,6 +39,13 @@ public class SeeingAJobUnderWay
     public void A_map_update_is_said_on_the_Request_panel_too() =>
         Assert.That(Said(new UnderWay(Running(JobKind.Update, "building"), null), TimeSpan.FromMinutes(72)), Does.StartWith("Updating the map: building"));
 
+    //  Which step of how many (#152, T148): the build's phases each a step, so it moves.
+    [Test]
+    public void A_map_update_says_which_step_it_s_on_of_how_many() =>
+        Assert.That(Said(new UnderWay(Running(JobKind.Update, "building") with { Step = "step 12 of 17, working out the climbing" }, TimeSpan.FromMinutes(200)),
+                TimeSpan.FromMinutes(188)),
+            Does.StartWith("Updating the map: step 12 of 17, working out the climbing · 3 h 8 min so far, about 3 h 20 min last time."));
+
     [Test]
     public void It_says_how_long_so_far() =>
         Assert.That(Said(new UnderWay(Running(JobKind.Update, "building"), null), TimeSpan.FromMinutes(72)), Does.Contain("1 h 12 min so far"));

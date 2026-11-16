@@ -209,6 +209,26 @@ public static class BuildingTheNetworkFromTheCommandLine
             Assert.That(_run.Output, Does.Match(@"Definitive Map byways\s+3\s+\(2 km, 1 authorities\)"));
     }
 
+    //  #152, T148: each phase told as it finishes, by the names an update counts its steps by, so a phase
+    //  renamed or added can't leave the count stuck.
+    [TestFixture]
+    public class A_build_for_an_update
+    {
+        [Test]
+        public async Task Then_each_phase_done_is_one_of_the_update_s_steps_in_order()
+        {
+            var phases = new List<string>();
+            using var output = new StringWriter();
+            var exitCode = await NetworkBuildCommand.Run(Fixtures.Path("topology.osm"), TestDatabase.ConnectionString, Tools.Osm2pgsql, terrain: null,
+                Fixtures.Path("rights-of-way"), output, phaseDone: phases.Add);
+            var steps = WendYourWay.Data.Building.UpdateSteps.For(climbing: false);
+            // From loading the map on, each phase is followed by the next: "downloading" comes before.
+            var expected = new List<string> { "osm2pgsql" };
+            while (expected.Count < phases.Count && steps.After(expected[^1]) is { } next) expected.Add(next);
+            Assert.That((exitCode, phases, phases.LastOrDefault()), Is.EqualTo((0, expected, "outings")), output.ToString());
+        }
+    }
+
     [TestFixture]
     public class An_unknown_command
     {

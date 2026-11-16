@@ -49,7 +49,7 @@
     {
         var soFar = Time.GetUtcNow() - underWay.Job.StartedAt;
         var last = underWay.TookLast is { } took ? $", {JobWords.About(took)} last time" : "";
-        return $"{JobWords.What(underWay.Job.Kind)}: {underWay.Job.Stage} · {JobWords.Took(soFar)} so far{last}. "
+        return $"{JobWords.What(underWay.Job.Kind)}: {underWay.Job.Doing} · {JobWords.Took(soFar)} so far{last}. "
             + "You can close Wend Your Way: it carries on. Keep the laptop on till it's done (a closed lid may still put it to sleep).";
     }
 

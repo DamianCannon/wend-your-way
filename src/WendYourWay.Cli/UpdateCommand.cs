@@ -57,10 +57,11 @@ public static class UpdateCommand
         var updates = new Jobs(dataSource);
         var id = await updates.StartAsync(JobKind.Update, source, cancellationToken);
         using var beating = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-        var heartbeat = BeatAsync(updates, id, beating.Token);
+        var steps = new Stepping(updates, id, UpdateSteps.For(climbing: terrain is not null));
+        var heartbeat = BeatAsync(updates, id, steps, beating.Token);
         try
         {
-            return await UpdateAsync(id, updates, dataSource, source, dataFolder, connectionString, osm2pgsqlExe, terrain, rightsOfWay, leastRoomGb, output, cancellationToken);
+            return await UpdateAsync(id, updates, steps, dataSource, source, dataFolder, connectionString, osm2pgsqlExe, terrain, rightsOfWay, leastRoomGb, output, cancellationToken);
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
@@ -85,7 +86,7 @@ public static class UpdateCommand
     }
 
     private static async Task<int> UpdateAsync(
-        int id, Jobs updates, NpgsqlDataSource dataSource, string source, string dataFolder, string connectionString,
+        int id, Jobs updates, Stepping steps, NpgsqlDataSource dataSource, string source, string dataFolder, string connectionString,
         string? osm2pgsqlExe, string? terrain, string rightsOfWay, double leastRoomGb, TextWriter output, CancellationToken cancellationToken)
     {
         // A run that died after its swap: what follows the build finished, and nothing downloaded.
@@ -93,7 +94,7 @@ public static class UpdateCommand
         {
             await output.WriteLineAsync($"The update of {stopped.StartedAt.ToLocalTime().ToString("d MMM HH:mm", Culture)} stopped after its map was built: finishing it.");
             await updates.StageAsync(id, "built", stopped.SourceAt, cancellationToken);
-            await FinishAsync(id, updates, dataSource, connectionString, terrain, output, cancellationToken);
+            await FinishAsync(id, updates, steps, dataSource, connectionString, terrain, output, cancellationToken);
             await updates.EndAsync(stopped.Id, "failed", $"Stopped after its map was built; finished by the update after it.", cancellationToken);
             await End(updates, id, "finished", "Finished the update that stopped after its map was built.", output);
             return 0;
@@ -101,6 +102,7 @@ public static class UpdateCommand
 
         var extract = new ExtractSource(Http, source);
         await updates.StageAsync(id, "checking", cancellationToken: cancellationToken);
+        await steps.AtAsync("checking", cancellationToken);
         var sourceAt = await extract.DataAtAsync(cancellationToken);
         await updates.StageAsync(id, "checking", sourceAt, cancellationToken);
         var newest = Latest(await updates.NewestSourceAtAsync(cancellationToken), await new PostgisNetworkDate(dataSource).OsmDataAtAsync(cancellationToken));
@@ -122,17 +124,19 @@ public static class UpdateCommand
         }
 
         await updates.StageAsync(id, "downloading", cancellationToken: cancellationToken);
+        await steps.AtAsync("downloading", cancellationToken);
         var kept = await extract.DownloadAsync(dataFolder, cancellationToken: cancellationToken);
         await output.WriteLineAsync($"  downloaded {new FileInfo(kept).Length:N0} bytes, matching its MD5");
 
         await updates.StageAsync(id, "building", cancellationToken: cancellationToken);
+        await steps.AtAsync("osm2pgsql", cancellationToken);
         var built = false;
         var code = await NetworkBuildCommand.Run(kept, connectionString, osm2pgsqlExe, terrain, rightsOfWay, output, locked: true,
             built: async () =>
             {
                 built = true;
                 await updates.StageAsync(id, "built", cancellationToken: cancellationToken);
-            }, cancellationToken: cancellationToken);
+            }, cancellationToken: cancellationToken, phaseDone: steps.Done);
         if (code != 0)
         {
             await End(updates, id, "failed", built
@@ -141,13 +145,17 @@ public static class UpdateCommand
             return 1;
         }
 
-        await FinishAsync(id, updates, dataSource, connectionString, terrain, output, cancellationToken);
+        await FinishAsync(id, updates, steps, dataSource, connectionString, terrain, output, cancellationToken);
         await End(updates, id, "finished", $"Updated: the map's paths are as of {Day(sourceAt)}.", output);
         return 0;
     }
 
-    private static Task FinishAsync(int id, Jobs updates, NpgsqlDataSource dataSource, string connectionString, string? terrain, TextWriter output, CancellationToken cancellationToken) =>
-        FinishAsync(stage => updates.StageAsync(id, stage, cancellationToken: cancellationToken), dataSource, connectionString, terrain, output, cancellationToken);
+    private static Task FinishAsync(int id, Jobs updates, Stepping steps, NpgsqlDataSource dataSource, string connectionString, string? terrain, TextWriter output, CancellationToken cancellationToken) =>
+        FinishAsync(async stage =>
+        {
+            await updates.StageAsync(id, stage, cancellationToken: cancellationToken);
+            await steps.AtAsync(stage, cancellationToken);
+        }, dataSource, connectionString, terrain, output, cancellationToken);
 
     /// <summary>
     /// What follows a new map swapped in, built or gone back to (T131): Saved Routes the map changed
@@ -182,12 +190,12 @@ public static class UpdateCommand
     }
 
     // Alive, said every minute while it runs, for the app to tell a running update from a stopped one.
-    private static async Task BeatAsync(Jobs updates, int id, CancellationToken stop)
+    private static async Task BeatAsync(Jobs updates, int id, Stepping steps, CancellationToken stop)
     {
         using var every = new PeriodicTimer(HeartbeatEvery);
         try
         {
-            while (await every.WaitForNextTickAsync(stop)) await updates.HeartbeatAsync(id, stop);
+            while (await every.WaitForNextTickAsync(stop)) await updates.HeartbeatAsync(id, steps.Next, stop);
         }
         catch (OperationCanceledException)
         {
@@ -251,5 +259,31 @@ internal sealed class Both(TextWriter first, TextWriter second) : TextWriter
     {
         first.Flush();
         second.Flush();
+    }
+}
+
+/// <summary>
+/// An update's step, written as it moves on (#152, T148): its own stages at once; the build's phases,
+/// told as each finishes while the build holds its transaction, with the next heartbeat (within a minute).
+/// </summary>
+internal sealed class Stepping(Jobs updates, int id, UpdateSteps steps)
+{
+    private volatile string? _now;
+
+    /// <summary>The step it's on, as said; none before the first.</summary>
+    public string? Next => _now;
+
+    /// <summary>On this step now, written at once.</summary>
+    public async Task AtAsync(string step, CancellationToken cancellationToken)
+    {
+        if (steps.Said(step) is not { } said) return;
+        _now = said;
+        await updates.HeartbeatAsync(id, said, cancellationToken);
+    }
+
+    /// <summary>A phase of the build done: on the step after it, written with the next heartbeat.</summary>
+    public void Done(string phase)
+    {
+        if (steps.After(phase) is { } next) _now = steps.Said(next);
     }
 }
