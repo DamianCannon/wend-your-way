@@ -8,16 +8,22 @@ namespace WendYourWay.Core.Scoring;
 /// </summary>
 public sealed record CrossingCosts(
     double QuietUnmarked, double QuietMarked, double QuietSignals,
-    double MainRoadUnmarked, double MainRoadMarked, double MainRoadSignals)
+    double MainRoadUnmarked, double MainRoadMarked, double MainRoadSignals, double BusyUnmarked = 5000)
 {
-    /// <summary>The user's (2026-10-23): waiting at lights costs, and an unmarked Main Road crossing most of all.</summary>
+    /// <summary>
+    /// The user's (2026-10-23): waiting at lights costs, and an unmarked Main Road crossing most of all; and
+    /// (2026-11-15, T145) "generally I don't like sprinting across main roads", and a busy one with no crossing
+    /// "I would NEVER choose": an unmarked Main Road crossing went from 300 to 600, a busy road's is 5,000,
+    /// finite so that with no other way there's still a route.
+    /// </summary>
     public static CrossingCosts Default { get; } = new(
         QuietUnmarked: 20, QuietMarked: 20, QuietSignals: 60,
-        MainRoadUnmarked: 300, MainRoadMarked: 80, MainRoadSignals: 100);
+        MainRoadUnmarked: 600, MainRoadMarked: 80, MainRoadSignals: 100, BusyUnmarked: 5000);
 
-    /// <summary>The metres a whole Crossing of this kind costs.</summary>
-    public double Of(CrossingKind kind, bool mainRoad) => (kind, mainRoad) switch
+    /// <summary>The metres a whole Crossing of this kind costs; of a busy Main Road, unmarked, the most.</summary>
+    public double Of(CrossingKind kind, bool mainRoad, bool busy = false) => (kind, mainRoad) switch
     {
+        (CrossingKind.Unmarked, true) when busy => BusyUnmarked,
         (CrossingKind.Signals, true) => MainRoadSignals,
         (CrossingKind.Marked, true) => MainRoadMarked,
         (_, true) => MainRoadUnmarked,

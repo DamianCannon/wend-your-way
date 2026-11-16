@@ -63,7 +63,7 @@ public sealed class RunCostModel(ScoringWeights weights, IReadOnlySet<int>? used
         // A Crossing costs a fixed amount, shared among its crossing way's Segments by length
         // (T044): as many metres of Off-road as the user would run to avoid it.
         if (segment.Crossing is { } crossing && weights.Crossings is { } crossings)
-            cost += weights.OffRoadPerMetre * crossings.Of(crossing, segment.CrossesMainRoad) * segment.CrossingShare;
+            cost += weights.OffRoadPerMetre * crossings.Of(crossing, segment.CrossesMainRoad, segment.Busy) * segment.CrossingShare;
         // An Obstacle the same way (T069), on the Activities that pay for them.
         if (segment.Obstacles is { } obstacles && weights.Obstacles is { } obstacleCosts)
         {

@@ -16,6 +16,8 @@ namespace WendYourWay.Core.Specs.Support;
 ///                    x      anywhere on a line: Access forbidden for a Run
 ///                    m      anywhere on a road (= or #): a Main Road
 ///                    s      anywhere on a line: a stile, an Obstacle (T069)
+///                    c      anywhere on a road: a Main Road's carriageway, whose sides are crossed (T145)
+///                    b      anywhere on a road: a busy Main Road's carriageway (T145)
 /// </code>
 ///
 /// Lines run only horizontally or vertically, between two junctions. One character across is
@@ -97,7 +99,7 @@ internal sealed class AsciiNetwork
             }
         }
 
-        var drawn = new List<(int From, int To, double Length, GroundKind Ground, bool Forbidden, bool MainRoad, bool Stile)>();
+        var drawn = new List<(int From, int To, double Length, GroundKind Ground, bool Forbidden, bool MainRoad, bool Stile, bool Carriageway, bool Busy)>();
         foreach (var (name, index) in nodes)
         {
             var (r, c) = Locate(rows, name);
@@ -144,18 +146,18 @@ internal sealed class AsciiNetwork
             Ground: d.Ground,
             Access: d.Forbidden ? AccessKind.Forbidden : AccessKind.Allowed,
             SameGroundGroup: groups[i],
-            MainRoad: d.MainRoad) { Obstacles = d.Stile ? [new ObstacleShare(ObstacleKind.Stile, 1)] : null }).ToList();
+            MainRoad: d.MainRoad) { Obstacles = d.Stile ? [new ObstacleShare(ObstacleKind.Stile, 1)] : null, Carriageway = d.Carriageway, Busy = d.Busy }).ToList();
 
         return new AsciiNetwork(new NetworkSlice(points, segments), nodes, segmentsByEnds);
     }
 
     private static bool IsJunction(char ch) => char.IsAsciiLetterUpper(ch) || char.IsAsciiDigit(ch);
 
-    private static bool IsLine(char ch) => ch is '.' or ':' or '-' or '|' or '=' or '#' or 'x' or 'm' or 's';
+    private static bool IsLine(char ch) => ch is '.' or ':' or '-' or '|' or '=' or '#' or 'x' or 'm' or 's' or 'c' or 'b';
 
-    private static (int, int, double, GroundKind, bool, bool, bool) Line(int from, int to, string run, int cells, double cellMetres, bool horizontal)
+    private static (int, int, double, GroundKind, bool, bool, bool, bool, bool) Line(int from, int to, string run, int cells, double cellMetres, bool horizontal)
     {
-        var kinds = run.Where(ch => ch is not ('x' or 'm' or 's')).Distinct().ToArray();
+        var kinds = run.Where(ch => ch is not ('x' or 'm' or 's' or 'c' or 'b')).Distinct().ToArray();
         if (kinds.Length > 1)
             throw new ArgumentException($"A line mixes '{string.Join("', '", kinds)}': draw one kind per Segment.");
         var ground = kinds.Length == 0 ? GroundKind.TrafficFree : kinds[0] switch
@@ -168,9 +170,11 @@ internal sealed class AsciiNetwork
             '#' when !horizontal => GroundKind.Connector,
             var other => throw new ArgumentException($"'{other}' can't be used on a {(horizontal ? "horizontal" : "vertical")} line."),
         };
-        var mainRoad = run.Contains('m', StringComparison.Ordinal);
+        var busy = run.Contains('b', StringComparison.Ordinal);
+        var carriageway = busy || run.Contains('c', StringComparison.Ordinal);
+        var mainRoad = carriageway || run.Contains('m', StringComparison.Ordinal);
         if (mainRoad && ground != GroundKind.Connector) throw new ArgumentException("Only a road (= or #) can be a Main Road.");
-        return (from, to, cells * cellMetres, ground, run.Contains('x', StringComparison.Ordinal), mainRoad, run.Contains('s', StringComparison.Ordinal));
+        return (from, to, cells * cellMetres, ground, run.Contains('x', StringComparison.Ordinal), mainRoad, run.Contains('s', StringComparison.Ordinal), carriageway, busy);
     }
 
     private static (int, int) Locate(string[] rows, char name)

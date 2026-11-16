@@ -112,6 +112,30 @@ public sealed record Segment(
     /// <summary>The Obstacles on it (T069), or none: most Segments have none.</summary>
     public IReadOnlyList<ObstacleShare>? Obstacles { get; init; }
 
+    /// <summary>Whether it's a Main Road's carriageway itself (T145), not a pavement beside one: its sides are what's crossed.</summary>
+    public bool Carriageway { get; init; }
+
+    /// <summary>
+    /// Whether its road is busy (T145): a trunk road, four lanes or more, or a dual carriageway, where a
+    /// crossing with no crossing point is never chosen while there's another way. On a crossing link, its road's.
+    /// </summary>
+    public bool Busy { get; init; }
+
+    /// <summary>
+    /// Its direction leaving <see cref="From"/>, and leaving <see cref="To"/>, in degrees clockwise from grid
+    /// north (T145), from its own line: what side of a Main Road it's on. None: the line between its ends.
+    /// </summary>
+    public double? FromBearing { get; init; }
+
+    /// <inheritdoc cref="FromBearing"/>
+    public double? ToBearing { get; init; }
+
+    /// <summary>
+    /// Whether it's a crossing of a Main Road at a junction (T145), from one of the junction's corners to
+    /// the next, made by <see cref="Corners"/>: no OSM way of its own.
+    /// </summary>
+    public bool IsCrossingLink => Key.OsmWayId < 0;
+
     /// <summary>Metres of this Segment on ground already <paramref name="covered"/>, by same-ground group.</summary>
     public double RetracedMetres(IReadOnlySet<int> covered)
     {

@@ -7,8 +7,9 @@ namespace WendYourWay.Core.Specs.Scoring;
 /// <summary>
 /// Crossings (CONTEXT.md; PLAN T044): crossing a road costs a fixed amount, by its kind, in metres
 /// of Off-road the user would run to avoid it (user, 2026-10-23): a quiet road unmarked 20, marked
-/// 20, signals 60; a Main Road signals 100, marked 80, unmarked 300. A crossing way cut into
-/// Segments shares its cost among them by length.
+/// 20, signals 60; a Main Road signals 100, marked 80, unmarked 600 (300 till 2026-11-15, T145: "generally I don't like
+/// sprinting across main roads"); a busy Main Road unmarked 5,000. A crossing way cut into Segments
+/// shares its cost among them by length.
 /// </summary>
 public class CostingCrossings
 {
@@ -22,7 +23,7 @@ public class CostingCrossings
     [TestCase(CrossingKind.Unmarked, false, 20)]
     [TestCase(CrossingKind.Marked, false, 20)]
     [TestCase(CrossingKind.Signals, false, 60)]
-    [TestCase(CrossingKind.Unmarked, true, 300)]
+    [TestCase(CrossingKind.Unmarked, true, 600)]
     [TestCase(CrossingKind.Marked, true, 80)]
     [TestCase(CrossingKind.Signals, true, 100)]
     public void A_Crossing_costs_its_ground_and_its_kind(CrossingKind kind, bool mainRoad, double metres) =>
@@ -30,7 +31,14 @@ public class CostingCrossings
 
     [Test]
     public void Half_a_crossing_way_costs_half_its_Crossing() =>
-        Assert.That(Cost(Crossing(CrossingKind.Unmarked, mainRoad: true, share: 0.5)), Is.EqualTo((20 * 1.1) + 150).Within(1e-9));
+        Assert.That(Cost(Crossing(CrossingKind.Unmarked, mainRoad: true, share: 0.5)), Is.EqualTo((20 * 1.1) + 300).Within(1e-9));
+
+    //  T145: a busy road crossed with no crossing point, the most; marked or signalled, as any Main Road.
+    [TestCase(CrossingKind.Unmarked, 5000)]
+    [TestCase(CrossingKind.Marked, 80)]
+    [TestCase(CrossingKind.Signals, 100)]
+    public void A_busy_Main_Road_s_Crossing_costs_most_unmarked(CrossingKind kind, double metres) =>
+        Assert.That(Cost(Crossing(kind, mainRoad: true) with { Busy = true }), Is.EqualTo((20 * 1.1) + metres).Within(1e-9));
 
     [Test]
     public void A_path_that_isn_t_a_crossing_way_costs_only_its_ground() =>
