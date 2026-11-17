@@ -54,7 +54,7 @@ public class TimingThePlanner
             await TestContext.Out.WriteLineAsync(FormattableString.Invariant($"SPLIT {name,-17} {km,3:0} km: loading {loaded:0.00} s, finding {finding.Elapsed.TotalSeconds:0.00} s, tracing {offered.Count} Loops {times[1] - loaded - finding.Elapsed.TotalSeconds:0.00} s"));
             await TestContext.Out.WriteLineAsync(FormattableString.Invariant($"TIME {name,-17} {km,3:0} km: {offered.Count} Loops, {times[0]:0.00} s cold, {times[1]:0.00} s warm: ") +
                 string.Join(" | ", offered.Select((o, i) => FormattableString.Invariant(
-                    $"{i + 1}: {o.Breakdown.LengthM / 1000:0.0} km green {o.Breakdown.OffRoadPercent + o.Breakdown.TrafficFreePercent:0}% Main Road {o.Breakdown.MainRoadLengthM:0} m"))));
+                    $"{i + 1}: {o.Breakdown.LengthM / 1000:0.0} km green {o.Breakdown.OffRoadPercent + o.Breakdown.TrafficFreePercent:0}% Main Road {o.Breakdown.MainRoadLengthM:0} m, crossed {o.Breakdown.MainRoadCrossings} ({o.Breakdown.UnmarkedMainRoadCrossings} unmarked)"))));
             if (Environment.GetEnvironmentVariable("WEND_LOOPS_OUT") is { Length: > 0 } output)
             {
                 for (var i = 0; i < offered.Count; i++)

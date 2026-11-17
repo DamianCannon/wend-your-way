@@ -347,6 +347,7 @@ public sealed class LoopPlanner(INetworkSlices slices, MapGeometry geometry, Sco
         private const double NearM = 500;
 
         private readonly ConcurrentDictionary<Loop, PlannedLoop> _traced = new(ReferenceEqualityComparer.Instance);
+        private readonly ConcurrentDictionary<Loop, PlannedLoop> _inAnotherDirection = new(ReferenceEqualityComparer.Instance);
 
         // Each Loop handed out, found or nudged, and the Segments its Nudges have avoided (T076).
         private readonly ConcurrentDictionary<PlannedLoop, (Loop Loop, IReadOnlyList<int> Avoided)> _behind = new(ReferenceEqualityComparer.Instance);
@@ -386,8 +387,9 @@ public sealed class LoopPlanner(INetworkSlices slices, MapGeometry geometry, Sco
                 var loop = loops[i];
                 if (!_traced.TryGetValue(loop, out var traced))
                     traced = _traced.GetOrAdd(loop, await planner.ForTheMapAsync(slice, loop, cancellationToken));
-                // The same Loop may be on the bar at one Lean and below it at another.
-                if (loops.InAnotherDirection(i)) traced = traced with { InAnotherDirection = true };
+                // The same Loop may be on the bar at one Lean and below it at another: marked once and
+                // kept, so re-ranked it's the same Loop, not a copy (#149, T145: seen on the real map).
+                if (loops.InAnotherDirection(i)) traced = _inAnotherDirection.GetOrAdd(loop, traced with { InAnotherDirection = true });
                 _behind.TryAdd(traced, (loop, []));
                 planned.Add(traced);
             }
