@@ -19,7 +19,7 @@
 
 <div class="planner">
     <JobUnderWayLine />
-    <MapView @ref="_map" Centre="Settings.Home" OnClick="Session.StartChosenOnMapAsync" OnPageKey="Session.PageAsync" OnStartClicked="Session.StartClickedAsync" OnViewChanged="Session.ViewChangedAsync" OnRouteDragged="Session.NudgeAsync" OnAvoid="Session.NudgeAsync" OnStopRemoved="Session.NudgeAsync" OnAvoidRemoved="Session.NudgeAsync" OnUndoKey="Session.UndoAsync" OnRedoKey="Session.RedoAsync" OnBlock="Session.BlockAsync" OnUnblock="Session.UnblockAsync" OnStartDragged="Session.StartDraggedAsync" OnFinishDragged="Session.FinishDraggedAsync" OnFinishRemoved="Session.FinishAtStartAsync" />
+    <MapView @ref="_map" Centre="Settings.Home" OnClick="Session.StartChosenOnMapAsync" OnPageKey="Session.PageAsync" OnStartClicked="Session.StartClickedAsync" OnViewChanged="Session.ViewChangedAsync" OnRouteDragged="Session.NudgeAsync" OnAvoid="Session.NudgeAsync" OnStopRemoved="Session.NudgeAsync" OnAvoidRemoved="Session.NudgeAsync" OnInclude="Session.NudgeAsync" OnUndoKey="Session.UndoAsync" OnRedoKey="Session.RedoAsync" OnBlock="Session.BlockAsync" OnUnblock="Session.UnblockAsync" OnStartDragged="Session.StartDraggedAsync" OnFinishDragged="Session.FinishDraggedAsync" OnFinishRemoved="Session.FinishAtStartAsync" />
     <SidePanel OnOpen="Session.PanelOpenedAsync">
         <Request>
             @* A Run or a Gravel Ride (T068): choosing one finds its Loops, as a start chosen does. *@

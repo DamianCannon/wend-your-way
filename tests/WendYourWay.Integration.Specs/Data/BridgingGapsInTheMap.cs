@@ -128,9 +128,9 @@ public class BridgingGapsInTheMap
     }
 
     //  A slice reads a joined gap as its path, to use; a possible gap as forbidden, used only when included.
-    [TestCase(1, GapKind.Joined, AccessKind.Allowed, TestName = "Then_a_slice_reads_a_joined_gap_as_one_to_use")]
-    [TestCase(3, GapKind.Possible, AccessKind.Forbidden, TestName = "Then_a_slice_reads_a_possible_gap_as_forbidden")]
-    public async Task Then_a_slice_reads_a_gap(int feature, GapKind kind, AccessKind access)
+    [TestCase(1, MapGapKind.Joined, AccessKind.Allowed, TestName = "Then_a_slice_reads_a_joined_gap_as_one_to_use")]
+    [TestCase(3, MapGapKind.Possible, AccessKind.Forbidden, TestName = "Then_a_slice_reads_a_possible_gap_as_forbidden")]
+    public async Task Then_a_slice_reads_a_gap(int feature, MapGapKind kind, AccessKind access)
     {
         var at = new NodePoint(0, 0);
         await using (var query = _dataSource.CreateCommand($"select ST_X(ST_StartPoint(geom)), ST_Y(ST_StartPoint(geom)) from network.segments where gap is not null and from_node_id = {feature}12"))
@@ -140,7 +140,7 @@ public class BridgingGapsInTheMap
             at = new NodePoint(reader.GetDouble(0), reader.GetDouble(1));
         }
         var slice = await new PostgisNetworkSlices(_dataSource).AroundAsync(at, 50);
-        Assert.That(slice.Segments.Where(s => s.Gap != GapKind.None).Select(s => (s.Gap, s.Access, s.Ground)), Is.EqualTo(new[] { (kind, access, GroundKind.TrafficFree) }));
+        Assert.That(slice.Segments.Where(s => s.MapGap != MapGapKind.None).Select(s => (s.MapGap, s.Access, s.Ground)), Is.EqualTo(new[] { (kind, access, GroundKind.TrafficFree) }));
     }
 
     [Test]

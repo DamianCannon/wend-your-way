@@ -95,10 +95,10 @@ public sealed class PostgisNetworkSlices(NpgsqlDataSource dataSource, TimeProvid
                     Busy = reader.GetBoolean(22),
                     FromBearing = reader.IsDBNull(23) ? null : reader.GetFloat(23),
                     ToBearing = reader.IsDBNull(24) ? null : reader.GetFloat(24),
-                    Gap = reader.IsDBNull(25) ? GapKind.None : reader.GetString(25) == "joined" ? GapKind.Joined : GapKind.Possible,
+                    MapGap = reader.IsDBNull(25) ? MapGapKind.None : reader.GetString(25) == "joined" ? MapGapKind.Joined : MapGapKind.Possible,
                 });
                 // A possible gap (T146) is used only when the user includes it: not by any search.
-                if (stored[^1].Gap == GapKind.Possible) stored[^1] = stored[^1] with { Access = AccessKind.Forbidden };
+                if (stored[^1].MapGap == MapGapKind.Possible) stored[^1] = stored[^1] with { Access = AccessKind.Forbidden };
             }
         }
         Beside(stored, rowOf, await pairing);

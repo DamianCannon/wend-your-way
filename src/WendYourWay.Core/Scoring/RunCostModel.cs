@@ -70,7 +70,7 @@ public sealed class RunCostModel(ScoringWeights weights, IReadOnlySet<int>? used
         // (T044): as many metres of Off-road as the user would run to avoid it.
         if (segment.Crossing is { } crossing && weights.Crossings is { } crossings)
             cost += weights.OffRoadPerMetre * crossings.Of(crossing, segment.CrossesMainRoad, segment.Busy) * segment.CrossingShare;
-        if (segment.Gap != GapKind.None) cost += weights.OffRoadPerMetre * GapM;
+        if (segment.MapGap != MapGapKind.None) cost += weights.OffRoadPerMetre * GapM;
         // An Obstacle the same way (T069), on the Activities that pay for them.
         if (segment.Obstacles is { } obstacles && weights.Obstacles is { } obstacleCosts)
         {

@@ -27,14 +27,14 @@ public static class Nudges
     /// <param name="weights">The Request's, for its Activity and at its Leans.</param>
     /// <param name="avoided">Segments an earlier Avoid took off the Loop, kept off.</param>
     public static Loop? Via(
-        NetworkSlice slice, Loop loop, int grabbed, int junction, ScoringWeights weights, IReadOnlySet<int>? avoided = null, Landmarks? landmarks = null)
+        NetworkSlice slice, Loop loop, int grabbed, int junction, ScoringWeights weights, IReadOnlySet<int>? avoided = null, Landmarks? landmarks = null, IReadOnlySet<int>? included = null)
     {
         ArgumentNullException.ThrowIfNull(slice);
         ArgumentNullException.ThrowIfNull(loop);
         if (grabbed < 0 || grabbed >= loop.Traversals.Count) throw new ArgumentOutOfRangeException(nameof(grabbed), grabbed, "No Traversal of the Loop.");
         var stretch = StretchRound(slice, loop, grabbed);
         if (junction == stretch.From || junction == stretch.To) return loop;
-        return Repaired(slice, loop, stretch, junction, weights, avoided ?? new HashSet<int>(), landmarks);
+        return Repaired(slice, loop, stretch, junction, weights, avoided ?? new HashSet<int>(), landmarks, included);
     }
 
     /// <summary>
@@ -45,7 +45,7 @@ public static class Nudges
     /// none if it's avoided, can't be used, or no Path reaches it.
     /// </summary>
     public static Loop? Through(
-        NetworkSlice slice, Loop loop, int grabbed, int segment, int stop, ScoringWeights weights, IReadOnlySet<int>? avoided = null, Landmarks? landmarks = null)
+        NetworkSlice slice, Loop loop, int grabbed, int segment, int stop, ScoringWeights weights, IReadOnlySet<int>? avoided = null, Landmarks? landmarks = null, IReadOnlySet<int>? included = null)
     {
         ArgumentNullException.ThrowIfNull(slice);
         ArgumentNullException.ThrowIfNull(loop);
@@ -67,7 +67,7 @@ public static class Nudges
             var (best, bestCost) = ((Loop?)null, double.PositiveInfinity);
             foreach (var forward in new[] { true, false })
             {
-                if (RepairedThrough(slice, loop, stretch, new Traversal(segment, forward), stop, weights, avoided, alongOnce, landmarks) is { } way && way.Cost < bestCost)
+                if (RepairedThrough(slice, loop, stretch, new Traversal(segment, forward), stop, weights, avoided, alongOnce, landmarks, included) is { } way && way.Cost < bestCost)
                     (best, bestCost) = (way.Loop, way.Cost);
             }
             if (best is not null) return best;
@@ -78,7 +78,7 @@ public static class Nudges
     // The stretch found again to the Segment's near end, along it, and on from its far end, with the
     // stop added; and what that costs. None if the Segment can't be used or a Path can't be found.
     private static (Loop Loop, double Cost)? RepairedThrough(
-        NetworkSlice slice, Loop loop, Stretch stretch, Traversal through, int stop, ScoringWeights weights, IReadOnlySet<int> avoided, bool alongOnce, Landmarks? landmarks)
+        NetworkSlice slice, Loop loop, Stretch stretch, Traversal through, int stop, ScoringWeights weights, IReadOnlySet<int> avoided, bool alongOnce, Landmarks? landmarks, IReadOnlySet<int>? included)
     {
         var used = new HashSet<int>();
         for (var t = 0; t < loop.Traversals.Count; t++)
@@ -86,10 +86,11 @@ public static class Nudges
             if (t < stretch.First || t >= stretch.End) slice.Segments[loop.Traversals[t].Segment].Cover(used);
         }
         var off = new HashSet<SegmentKey>(avoided.Select(s => slice.Segments[s].Key));
-        var cost = new Avoiding(new RunCostModel(weights, used), off);
+        var allowed = Allowed(slice, included);
+        var cost = new Avoiding(new RunCostModel(weights, used), off, allowed);
         var along = slice.Segments[through.Segment];
         // The ways to and from it, kept off it when it's to be gone along once.
-        var legCost = alongOnce ? new Avoiding(new RunCostModel(weights, used), [.. off, along.Key]) : cost;
+        var legCost = alongOnce ? new Avoiding(new RunCostModel(weights, used), [.. off, along.Key], allowed) : cost;
         var search = new PathSearch(slice);
         var (entry, exit) = through.Forward ? (along.From, along.To) : (along.To, along.From);
         var found = new List<Traversal>();
@@ -123,7 +124,7 @@ public static class Nudges
     /// The Loop with every Segment in <paramref name="avoided"/> off it, the stretch round each
     /// found again without them; the Loop itself if none is on it; none if a stretch can't go round.
     /// </summary>
-    public static Loop? Avoid(NetworkSlice slice, Loop loop, ScoringWeights weights, IReadOnlySet<int> avoided, Landmarks? landmarks = null)
+    public static Loop? Avoid(NetworkSlice slice, Loop loop, ScoringWeights weights, IReadOnlySet<int> avoided, Landmarks? landmarks = null, IReadOnlySet<int>? included = null)
     {
         ArgumentNullException.ThrowIfNull(slice);
         ArgumentNullException.ThrowIfNull(loop);
@@ -133,7 +134,7 @@ public static class Nudges
         {
             var on = loop.Traversals.ToList().FindIndex(t => avoided.Contains(t.Segment));
             if (on < 0) return loop;
-            if (Repaired(slice, loop, StretchRound(slice, loop, on), via: null, weights, avoided, landmarks) is not { } repaired) return null;
+            if (Repaired(slice, loop, StretchRound(slice, loop, on), via: null, weights, avoided, landmarks, included) is not { } repaired) return null;
             loop = repaired;
         }
         return loop;
@@ -144,27 +145,27 @@ public static class Nudges
     /// them), the stretch round it found again not through it (T079); none if there's no way.
     /// </summary>
     public static Loop? WithoutStop(
-        NetworkSlice slice, Loop loop, int stop, ScoringWeights weights, IReadOnlySet<int>? avoided = null, Landmarks? landmarks = null)
+        NetworkSlice slice, Loop loop, int stop, ScoringWeights weights, IReadOnlySet<int>? avoided = null, Landmarks? landmarks = null, IReadOnlySet<int>? included = null)
     {
         ArgumentNullException.ThrowIfNull(slice);
         ArgumentNullException.ThrowIfNull(loop);
         if (stop < 0 || stop >= loop.Anchors.Count) throw new ArgumentOutOfRangeException(nameof(stop), stop, "No such stop.");
         var at = Reaching(slice, loop, stop);
         var without = loop with { Anchors = [.. loop.Anchors.Where((_, i) => i != stop)] };
-        return at < 0 ? without : Repaired(slice, without, StretchRound(slice, without, at), via: null, weights, avoided ?? new HashSet<int>(), landmarks);
+        return at < 0 ? without : Repaired(slice, without, StretchRound(slice, without, at), via: null, weights, avoided ?? new HashSet<int>(), landmarks, included);
     }
 
     /// <summary>
     /// The stretch round Traversal <paramref name="at"/> found again with only
     /// <paramref name="avoided"/> avoided: an Avoid removed, its Segment usable again (T079).
     /// </summary>
-    public static Loop? Again(NetworkSlice slice, Loop loop, int at, ScoringWeights weights, IReadOnlySet<int> avoided, Landmarks? landmarks = null)
+    public static Loop? Again(NetworkSlice slice, Loop loop, int at, ScoringWeights weights, IReadOnlySet<int> avoided, Landmarks? landmarks = null, IReadOnlySet<int>? included = null)
     {
         ArgumentNullException.ThrowIfNull(slice);
         ArgumentNullException.ThrowIfNull(loop);
         ArgumentNullException.ThrowIfNull(avoided);
         if (at < 0 || at >= loop.Traversals.Count) throw new ArgumentOutOfRangeException(nameof(at), at, "No Traversal of the Loop.");
-        return Repaired(slice, loop, StretchRound(slice, loop, at), via: null, weights, avoided, landmarks);
+        return Repaired(slice, loop, StretchRound(slice, loop, at), via: null, weights, avoided, landmarks, included);
     }
 
     // The Traversal that reaches stop number `stop` in its turn, or −1.
@@ -214,7 +215,7 @@ public static class Nudges
 
     // The stretch found again, through the Via if there is one, the rest of the Loop kept and its
     // ground counted as used; the Via a stop among the Anchors.
-    private static Loop? Repaired(NetworkSlice slice, Loop loop, Stretch stretch, int? via, ScoringWeights weights, IReadOnlySet<int> avoided, Landmarks? landmarks)
+    private static Loop? Repaired(NetworkSlice slice, Loop loop, Stretch stretch, int? via, ScoringWeights weights, IReadOnlySet<int> avoided, Landmarks? landmarks, IReadOnlySet<int>? included = null)
     {
         var used = new HashSet<int>();
         for (var t = 0; t < loop.Traversals.Count; t++)
@@ -227,7 +228,7 @@ public static class Nudges
         int[] stops = via is { } v ? [stretch.From, v, stretch.To] : [stretch.From, stretch.To];
         for (var i = 0; i + 1 < stops.Length; i++)
         {
-            var path = search.Find(PathEnd.AtNode(stops[i]), PathEnd.AtNode(stops[i + 1]), new Avoiding(new RunCostModel(weights, used), off), landmarks);
+            var path = search.Find(PathEnd.AtNode(stops[i]), PathEnd.AtNode(stops[i + 1]), new Avoiding(new RunCostModel(weights, used), off, Allowed(slice, included)), landmarks);
             if (path is null) return null;
             found.AddRange(path.Traversals);
             foreach (var t in path.Traversals) slice.Segments[t.Segment].Cover(used);
@@ -238,12 +239,20 @@ public static class Nudges
             [.. loop.Traversals.Take(stretch.First), .. found, .. loop.Traversals.Skip(stretch.End)]);
     }
 
-    // A cost model with the Segments avoided impassable: costs only rise, so Landmarks still hold.
-    private sealed class Avoiding(ICostModel cost, HashSet<SegmentKey> avoided) : ICostModel
+    // The possible Map gaps the user included (T146c), by OSM identity.
+    private static HashSet<SegmentKey>? Allowed(NetworkSlice slice, IReadOnlySet<int>? included) =>
+        included is null || included.Count == 0 ? null : [.. included.Select(s => slice.Segments[s].Key)];
+
+    // A cost model with the Segments avoided impassable: costs only rise, so Landmarks still hold. A
+    // possible Map gap the user included (T146c) costs as a gap may, though forbidden to every search:
+    // its few metres are the one cost that falls, and a Nudge goes through it on purpose.
+    private sealed class Avoiding(ICostModel cost, HashSet<SegmentKey> avoided, HashSet<SegmentKey>? included = null) : ICostModel
     {
         public double FloorPerMetre => cost.FloorPerMetre;
 
         public double CostOf(Segment segment, bool forward) =>
-            avoided.Count > 0 && avoided.Contains(segment.Key) ? double.PositiveInfinity : cost.CostOf(segment, forward);
+            avoided.Count > 0 && avoided.Contains(segment.Key) ? double.PositiveInfinity
+            : included is not null && included.Contains(segment.Key) ? cost.CostOf(segment with { Access = AccessKind.Allowed }, forward)
+            : cost.CostOf(segment, forward);
     }
 }

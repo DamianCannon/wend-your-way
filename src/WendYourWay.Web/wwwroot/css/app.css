@@ -233,6 +233,9 @@ html, body { margin: 0; height: 100%; background: var(--paper); }
 .pager .gap-note { margin: 4px 0 0; text-align: center; font-size: 0.85rem; color: #1f2a24; }
 /* Drawn as the map draws a route's gaps (T088): ink dots on white. */
 .pager .gap-note::before { content: ""; display: inline-block; width: 22px; height: 0; margin-right: 6px; vertical-align: middle; border-top: 4px dotted #1f2a24; }
+/* A Map gap (#150, T146b): red and dashed, as the map draws it. */
+.pager .map-gap-note { margin: 4px 0 0; text-align: center; font-size: 0.85rem; color: #b01e1e; }
+.pager .map-gap-note::before { content: ""; display: inline-block; width: 22px; height: 0; margin-right: 6px; vertical-align: middle; border-top: 4px dashed #d62828; }
 .saved-routes { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
 /* The name across the top, cut short; km and date a line each beneath it, the buttons beside them */
 .saved-routes li {

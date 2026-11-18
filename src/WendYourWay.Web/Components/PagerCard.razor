@@ -187,6 +187,11 @@
         {
             <p class="gap-note">@GapNote(loop.Gaps)</p>
         }
+        @* The Map gaps it crosses (#150, T146b), drawn red and dashed: the user should check each is passable. *@
+        @if (loop.MapGaps.Count > 0)
+        {
+            <p class="map-gap-note">@MapGapNote(loop.MapGaps)</p>
+        }
         @if ((Finding || Searching) && Progress is { } progress)
         {
             @Progressing(progress)
@@ -372,6 +377,15 @@
     private static string GapNote(IReadOnlyList<RouteGap> gaps) =>
         string.Create(System.Globalization.CultureInfo.InvariantCulture,
             $"{gaps.Count} {(gaps.Count == 1 ? "gap" : "gaps")}, {gaps.Sum(g => g.LengthM) / 1000:0.0} km not on the map");
+
+    // Each gap to the metre, none under 1 m.
+    private static string MapGapNote(IReadOnlyList<MapGapCrossed> gaps)
+    {
+        var lengths = string.Join(", ", gaps.Select(g => string.Create(System.Globalization.CultureInfo.InvariantCulture, $"{Math.Max(1, Math.Round(g.LengthM)):0} m")));
+        return gaps.Count == 1
+            ? $"A gap in the map ({lengths}): check it's passable"
+            : $"{gaps.Count} gaps in the map ({lengths}): check they're passable";
+    }
 
     private bool _open;
 

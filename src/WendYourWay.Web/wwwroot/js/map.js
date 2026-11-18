@@ -291,6 +291,15 @@ export function showLoop(loop, fit = true) {
     loopLayer = L.layerGroup([
         L.polyline(line, { color: "#ffffff", weight: 12, opacity: 0.9, interactive: false }),
         L.polyline(line, { color: "#e8590c", weight: 8, opacity: 1, interactive: false }),
+        // The Map gaps it crosses (#150, T146b): red and dashed, so the user checks each is passable.
+        // Under the grab line, so Avoid this time and a Via work on a gap as on any way.
+        ...(loop.mapGaps ?? []).flatMap(gap => {
+            const gapLine = [point(gap.from), point(gap.to)];
+            return [
+                L.polyline(gapLine, { color: "#ffffff", weight: 10, opacity: 1, interactive: false }),
+                L.polyline(gapLine, { color: gapColour, weight: 6, opacity: 1, dashArray: "6 5", interactive: false }),
+            ];
+        }),
         // Wider than it looks, to grab (T076): dragged, a Via; clicked, Avoid this time. Never the map's
         // click beneath, which would move the start.
         nudgeable(L.polyline(line, { color: "#000", weight: 22, opacity: 0, bubblingMouseEvents: false, className: "loop-grab" })),
@@ -303,6 +312,19 @@ export function showLoop(loop, fit = true) {
                 L.polyline(gapLine, { color: "#ffffff", weight: 13, opacity: 1, interactive: false }),
                 L.polyline(gapLine, { color: routeGapInk, weight: 4, opacity: 1, dashArray: "1 8", lineCap: "round", bubblingMouseEvents: false })
                     .bindTooltip(`Not on the map · ${Math.round(gap.lengthM)} m`, { sticky: true }),
+            ];
+        }),
+        // The possible Map gaps near it (T146c), 5 m to 15 m, which no search uses: a straight red line, and
+        // clicked, "Include this time", the Loop through it. Over the grab line, so a click finds them.
+        ...(loop.possibleMapGaps ?? []).flatMap(gap => {
+            const gapLine = [point(gap.from), point(gap.to)];
+            const middle = [(gap.from.latitude + gap.to.latitude) / 2, (gap.from.longitude + gap.to.longitude) / 2];
+            return [
+                L.polyline(gapLine, { color: "#ffffff", weight: 7, opacity: 0.9, interactive: false }),
+                L.polyline(gapLine, { color: gapColour, weight: 3, opacity: 1, interactive: false }),
+                removable(L.polyline(gapLine, { color: "#000", weight: 18, opacity: 0, bubblingMouseEvents: false })
+                    .bindTooltip(`A possible gap in the map · ${Math.round(gap.lengthM)} m`, { sticky: true }),
+                    "Include this time", () => owner.invokeMethodAsync("GapIncluded", middle[0], middle[1])),
             ];
         }),
         // Its stops, numbered, and its Avoids, each "!": clicked, each can be removed (T079).

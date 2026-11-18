@@ -42,9 +42,12 @@ public static class LoopScorer
         {
             var segment = slice.Segments[traversal.Segment];
             // The router never takes a forbidden Segment, but a route the user ran or rated may: it
-            // costs what a Main Road does, rather than sinking the whole score to 0 (T037 review).
+            // costs what a Main Road does, rather than sinking the whole score to 0 (T037 review). A possible
+            // Map gap the user included (T146c) is forbidden only to searches: it costs as a gap does.
             cost += model.CostOf(
-                segment.Access == AccessKind.Forbidden ? segment with { Ground = GroundKind.Connector, MainRoad = true, Access = AccessKind.Allowed } : segment,
+                segment.Access != AccessKind.Forbidden ? segment
+                : segment.MapGap == MapGapKind.Possible ? segment with { Access = AccessKind.Allowed }
+                : segment with { Ground = GroundKind.Connector, MainRoad = true, Access = AccessKind.Allowed },
                 traversal.Forward);
             length += segment.LengthM;
             water += segment.Waterside * segment.LengthM;

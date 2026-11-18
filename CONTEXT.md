@@ -332,6 +332,15 @@ that couldn't be matched onto the Network, drawn along the track's own points.
 Not a **Gap**: the ways may be there.
 _Avoid_: gap on its own (that word is an Outing's).
 
+**Map gap**:
+A path that dead-ends within 15 m of another way, with nothing mapped across
+(a fence, wall, hedge, waterway or railway), joined to it as a Segment of its
+own: usually two ways that should meet in OSM but don't. **Joined** under
+5 m, used like its path at a little more cost; **possible** from 5 m to 15 m,
+used only when the user includes it. Drawn in red, and noted on the Loop card
+and in the GPX, as the user should check it's passable.
+_Avoid_: gap on its own (that word is an Outing's), link, bridge (a bridge is a way).
+
 **Chosen Outing**:
 An Outing whose route the user picked themselves, as opposed to a race, a club
 run following someone else, or a commute. Only Chosen Outings yield Way Choices.

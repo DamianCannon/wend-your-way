@@ -104,4 +104,26 @@ public class ExportingTurnPoints
         var course = System.Xml.Linq.XDocument.Parse(tcx.Content).Descendants(Tcx + "Course").Single();
         Assert.That((tcx.FileName, course.Element(Tcx + "Name")!.Value), Is.EqualTo(("kenwood-house-9.7km.tcx", "Kenwood House")));
     }
+
+    //  A Map gap ahead (#150, T146b): not a turn, somewhere to look before going on.
+    private static readonly RouteTurn[] WithAGap =
+    [
+        new(new LatLon(51.5597, -0.1607), 2100, TurnKind.MapGap, "A gap in the map (3 m): check it's passable"),
+    ];
+
+    [Test]
+    public void A_Map_gap_is_a_waypoint_marked_as_danger_in_the_GPX()
+    {
+        var waypoint = XDocument.Parse(LoopGpx.Of(Planned, WithAGap).Content).Root!.Elements(Gpx + "wpt").Single();
+        Assert.That((waypoint.Element(Gpx + "name")!.Value, waypoint.Element(Gpx + "sym")!.Value, waypoint.Element(Gpx + "type")!.Value),
+            Is.EqualTo(("A gap in the map (3 m): check it's passable", "Danger Area", "Map gap")));
+    }
+
+    [Test]
+    public void A_Map_gap_is_a_danger_course_point_in_the_TCX()
+    {
+        var point = XDocument.Parse(LoopTcx.Of(Planned, WithAGap).Content).Descendants(Tcx + "CoursePoint").Single();
+        Assert.That((point.Element(Tcx + "Name")!.Value, point.Element(Tcx + "PointType")!.Value, point.Element(Tcx + "Notes")!.Value),
+            Is.EqualTo(("Map gap", "Danger", "A gap in the map (3 m): check it's passable")));
+    }
 }

@@ -135,6 +135,12 @@
     [JSInvokable]
     public Task StopRemoved(int stop) => OnStopRemoved.InvokeAsync(new RemoveStopNudge(stop));
 
+    /// <summary>"Include this time" chosen on a possible Map gap near the Loop (#150, T146c), where it was clicked.</summary>
+    [Parameter] public EventCallback<IncludeNudge> OnInclude { get; set; }
+
+    [JSInvokable]
+    public Task GapIncluded(double latitude, double longitude) => OnInclude.InvokeAsync(new IncludeNudge(new LatLon(latitude, longitude)));
+
     /// <summary>"Remove" chosen on an Avoid's marker (T079): its place in the Loop's Avoids.</summary>
     [Parameter] public EventCallback<RemoveAvoidNudge> OnAvoidRemoved { get; set; }
 

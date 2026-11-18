@@ -429,6 +429,8 @@ public sealed class LoopPlanner(INetworkSlices slices, MapGeometry geometry, Sco
             if (!_behind.TryGetValue(planned, out var behind)) return null;
             var weights = leans.On(planner.Weights.For(activity));
             var (loop, avoided) = behind;
+            // The possible Map gaps it goes through (T146c) are the ones the user included: still usable.
+            var included = loop.Traversals.Select(t => t.Segment).Where(s => slice.Segments[s].MapGap == MapGapKind.Possible).ToHashSet();
             Loop? nudged;
             switch (nudge)
             {
@@ -443,12 +445,12 @@ public sealed class LoopPlanner(INetworkSlices slices, MapGeometry geometry, Sco
                     if (await DroppedOnAsync(to, cancellationToken) is { } on)
                         nudged = await Task.Run(() => Cheapest(on.Along
                             ? on.Sides.Select(s => (Func<Loop?>)(() => Nudges.Through(slice, loop, grabbed.Value, s,
-                                on.AtFrom ? slice.Segments[s].From : slice.Segments[s].To, weights, kept)))
+                                on.AtFrom ? slice.Segments[s].From : slice.Segments[s].To, weights, kept, included: included)))
                             : on.Sides.SelectMany(s => Corners.Of(slice, on.AtFrom ? slice.Segments[s].From : slice.Segments[s].To)).Distinct()
-                                .Select(c => (Func<Loop?>)(() => Nudges.Via(slice, loop, grabbed.Value, c, weights, kept))), weights), cancellationToken);
+                                .Select(c => (Func<Loop?>)(() => Nudges.Via(slice, loop, grabbed.Value, c, weights, kept, included: included))), weights), cancellationToken);
                     else if (NearestJunction(to) is { } junction)
                         nudged = await Task.Run(() => Cheapest(Corners.Of(slice, junction)
-                            .Select(c => (Func<Loop?>)(() => Nudges.Via(slice, loop, grabbed.Value, c, weights, kept))), weights), cancellationToken);
+                            .Select(c => (Func<Loop?>)(() => Nudges.Via(slice, loop, grabbed.Value, c, weights, kept, included: included))), weights), cancellationToken);
                     else
                         return null;
                     break;
@@ -456,23 +458,34 @@ public sealed class LoopPlanner(INetworkSlices slices, MapGeometry geometry, Sco
                     if (Nearest(loop, await planner.Geometry.ToGridAsync(avoid.At, cancellationToken)) is not { } at) return null;
                     avoided = [.. avoided, loop.Traversals[at].Segment];
                     var off = avoided.ToHashSet();
-                    nudged = await Task.Run(() => Nudges.Avoid(slice, loop, weights, off), cancellationToken);
+                    nudged = await Task.Run(() => Nudges.Avoid(slice, loop, weights, off, included: included), cancellationToken);
                     break;
                 case RemoveStopNudge stop when stop.Stop >= 0 && stop.Stop < loop.Anchors.Count:
                     var still = avoided.ToHashSet();
-                    nudged = await Task.Run(() => Nudges.WithoutStop(slice, loop, stop.Stop, weights, still), cancellationToken);
+                    nudged = await Task.Run(() => Nudges.WithoutStop(slice, loop, stop.Stop, weights, still, included: included), cancellationToken);
                     break;
                 case RemoveAvoidNudge removed when removed.Avoid >= 0 && removed.Avoid < avoided.Count:
                     // The stretch round where it was found again, the Segment usable again.
                     var near = NearestAnywhere(loop, MiddleOf(avoided[removed.Avoid]));
                     avoided = [.. avoided.Where((_, i) => i != removed.Avoid)];
                     var rest = avoided.ToHashSet();
-                    nudged = await Task.Run(() => Nudges.Again(slice, loop, near, weights, rest), cancellationToken);
+                    nudged = await Task.Run(() => Nudges.Again(slice, loop, near, weights, rest, included: included), cancellationToken);
+                    break;
+                case IncludeNudge include:
+                    // Through the possible gap clicked (T146c), from the end nearer the Loop, which stops there.
+                    if (PossibleMapGapAt(await planner.Geometry.ToGridAsync(include.At, cancellationToken)) is not { } gap) return null;
+                    var (gapFrom, gapTo) = (slice.Node(slice.Segments[gap].From), slice.Node(slice.Segments[gap].To));
+                    var (fromAt, toAt) = (NearestAnywhere(loop, gapFrom), NearestAnywhere(loop, gapTo));
+                    var meets = DistanceTo(loop, fromAt, gapFrom) <= DistanceTo(loop, toAt, gapTo);
+                    var allowed = included.Append(gap).ToHashSet();
+                    var notThese = avoided.ToHashSet();
+                    nudged = await Task.Run(() => Nudges.Through(slice, loop, meets ? fromAt : toAt, gap,
+                        meets ? slice.Segments[gap].From : slice.Segments[gap].To, weights, notThese, included: allowed), cancellationToken);
                     break;
                 case RemoveStopNudge or RemoveAvoidNudge:
                     return null;
                 default:
-                    throw new ArgumentOutOfRangeException(nameof(nudge), nudge, "A Via, an Avoid or a removal.");
+                    throw new ArgumentOutOfRangeException(nameof(nudge), nudge, "A Via, an Avoid, an Include or a removal.");
             }
             if (nudged is null) return null;
             var traced = await TracedAsync(nudged, cancellationToken);
@@ -526,6 +539,30 @@ public sealed class LoopPlanner(INetworkSlices slices, MapGeometry geometry, Sco
                 if (m < bestM) (best, bestM) = (t, m);
             }
             return best;
+        }
+
+        // How far a point is from a Traversal of the Loop.
+        private double DistanceTo(Loop loop, int traversal, NodePoint point)
+        {
+            var segment = slice.Segments[loop.Traversals[traversal].Segment];
+            return FromChord(point, slice.Node(segment.From), slice.Node(segment.To));
+        }
+
+        // How near a click a possible Map gap is to be the one clicked (T146c): its line is drawn thin.
+        private const double ClickedGapWithinM = 25;
+
+        // The possible Map gap clicked (T146c): the nearest to the point, if one is within ClickedGapWithinM of it.
+        private int? PossibleMapGapAt(NodePoint point)
+        {
+            var (best, bestM) = (-1, double.MaxValue);
+            for (var s = 0; s < slice.Segments.Count; s++)
+            {
+                var segment = slice.Segments[s];
+                if (segment.MapGap != MapGapKind.Possible) continue;
+                var m = FromChord(point, slice.Node(segment.From), slice.Node(segment.To));
+                if (m < bestM) (best, bestM) = (s, m);
+            }
+            return best >= 0 && bestM <= ClickedGapWithinM ? best : null;
         }
 
         // The Traversal of the Loop nearest a point, if any is within NearM of it.
@@ -646,7 +683,46 @@ public sealed class LoopPlanner(INetworkSlices slices, MapGeometry geometry, Sco
         (SegmentKey, bool)[] traversals = [.. Corners.OnTheMap(slice, loop.Traversals)];
         var (line, ways) = await geometry.TraceWithWaysAsync(traversals, cancellationToken);
         var points = await geometry.ToLatLonAsync([slice.Node(loop.Start), .. loop.Anchors.Select(slice.Node)], cancellationToken);
-        return new PlannedLoop(line, points[0], [.. points.Skip(1)], Breakdown.Of(slice, loop), await ProfileAsync(traversals, cancellationToken)) { Ways = ways };
+        // The Map gaps it crosses (T146b), each from where the Loop first meets it to where it leaves it: once,
+        // though the Loop may cross back over it.
+        var gaps = loop.Traversals.Where(t => slice.Segments[t.Segment].MapGap != MapGapKind.None).DistinctBy(t => t.Segment).ToArray();
+        var ends = gaps.Length == 0 ? [] : await geometry.ToLatLonAsync([.. gaps.SelectMany(t =>
+        {
+            var segment = slice.Segments[t.Segment];
+            return t.Forward ? new[] { slice.Node(segment.From), slice.Node(segment.To) } : [slice.Node(segment.To), slice.Node(segment.From)];
+        })], cancellationToken);
+        // The possible ones near it (T146c), from their end nearer the Loop, to include one this time.
+        var possible = PossibleMapGapsNear(slice, loop);
+        var possibleEnds = possible.Count == 0 ? [] : await geometry.ToLatLonAsync([.. possible.SelectMany(p => new[] { p.Near, p.Far })], cancellationToken);
+        return new PlannedLoop(line, points[0], [.. points.Skip(1)], Breakdown.Of(slice, loop), await ProfileAsync(traversals, cancellationToken))
+        {
+            Ways = ways,
+            MapGaps = [.. gaps.Select((t, i) => new MapGapCrossed(ends[2 * i], ends[(2 * i) + 1], slice.Segments[t.Segment].LengthM))],
+            PossibleMapGaps = [.. possible.Select((p, i) => new MapGapCrossed(possibleEnds[2 * i], possibleEnds[(2 * i) + 1], p.LengthM))],
+        };
+    }
+
+    /// <summary>How near a Loop's junctions a possible Map gap's end is to be drawn for it (T146c).</summary>
+    public const double PossibleMapGapNearM = 150;
+
+    // The possible Map gaps with an end within reach of a junction the Loop passes, and not on it.
+    private static List<(int Segment, NodePoint Near, NodePoint Far, double LengthM)> PossibleMapGapsNear(NetworkSlice slice, Loop loop)
+    {
+        var found = new List<(int, NodePoint, NodePoint, double)>();
+        if (loop.Traversals.Count == 0) return found;
+        var on = loop.Traversals.Select(t => t.Segment).ToHashSet();
+        NodePoint[]? junctions = null;
+        for (var s = 0; s < slice.Segments.Count; s++)
+        {
+            var segment = slice.Segments[s];
+            if (segment.MapGap != MapGapKind.Possible || on.Contains(s)) continue;
+            junctions ??= [.. loop.Traversals.Select(t => slice.Node(slice.Segments[t.Segment].From)).Concat(loop.Traversals.Select(t => slice.Node(slice.Segments[t.Segment].To))).Distinct()];
+            var (from, to) = (slice.Node(segment.From), slice.Node(segment.To));
+            var (fromM, toM) = (junctions.Min(j => j.DistanceTo(from)), junctions.Min(j => j.DistanceTo(to)));
+            if (Math.Min(fromM, toM) > PossibleMapGapNearM) continue;
+            found.Add(fromM <= toM ? (s, from, to, segment.LengthM) : (s, to, from, segment.LengthM));
+        }
+        return found;
     }
 
     private async Task<IReadOnlyList<ProfileSample>> ProfileAsync((SegmentKey, bool)[] traversals, CancellationToken cancellationToken)

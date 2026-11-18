@@ -46,7 +46,7 @@ public sealed class RouteTurns(NpgsqlDataSource dataSource) : IRouteTurns
                    array(select ST_Y(d.geom) from ST_DumpPoints(case when t.fwd then s.geom else ST_Reverse(s.geom) end) d order by d.path),
                    (select count(*) from network.segments s2
                      where s2.from_node_id = case when t.fwd then t.tt else t.f end or s2.to_node_id = case when t.fwd then t.tt else t.f end),
-                   w.tags->>'highway', w.tags->>'name'
+                   w.tags->>'highway', w.tags->>'name', s.gap is not null, s.length_m
               from t
               join network.segments s on s.osm_way_id = t.way and s.from_node_id = t.f and s.to_node_id = t.tt
               left join osm.ways w on w.way_id = t.way
@@ -61,10 +61,13 @@ public sealed class RouteTurns(NpgsqlDataSource dataSource) : IRouteTurns
         var line = new List<NodePoint>();
         var ends = new List<(int Point, int Ways)>();
         var onto = new List<string>();
+        // Where each Map gap starts on the line (T146b), and how long it is.
+        var gaps = new List<(int Point, double LengthM)>();
         await using (var reader = await query.ExecuteReaderAsync(cancellationToken))
         {
             while (await reader.ReadAsync(cancellationToken))
             {
+                if (reader.GetBoolean(6)) gaps.Add((line.Count == 0 ? 0 : line.Count - 1, reader.GetDouble(7)));
                 var (xs, ys) = (reader.GetFieldValue<double[]>(1), reader.GetFieldValue<double[]>(2));
                 for (var i = line.Count == 0 ? 0 : 1; i < xs.Length; i++) line.Add(new NodePoint(xs[i], ys[i]));
                 ends.Add((line.Count - 1, (int)reader.GetInt64(3)));
@@ -73,7 +76,13 @@ public sealed class RouteTurns(NpgsqlDataSource dataSource) : IRouteTurns
         }
         // A junction goes onto the next Segment's way.
         var junctions = ends.Take(ends.Count - 1).Select((end, i) => new RouteJunction(end.Point, end.Ways, onto[i + 1])).ToArray();
-        var turns = TurnPoints.Find(line, junctions);
+        var along = new double[line.Count];
+        for (var i = 1; i < line.Count; i++) along[i] = along[i - 1] + line[i].DistanceTo(line[i - 1]);
+        var turns = TurnPoints.Find(line, junctions)
+            .Concat(gaps.Select(g => new TurnPoint(line[g.Point], along[g.Point], TurnKind.MapGap,
+                $"A gap in the map ({Math.Max(1, Math.Round(g.LengthM)).ToString(System.Globalization.CultureInfo.InvariantCulture)} m): check it's passable")))
+            .OrderBy(t => t.AlongM)
+            .ToList();
         if (turns.Count == 0) return [];
         var at = await new MapGeometry(dataSource).ToLatLonAsync([.. turns.Select(t => t.At)], cancellationToken);
         return [.. turns.Select((t, i) => new RouteTurn(at[i], t.AlongM, t.Kind, t.Words))];

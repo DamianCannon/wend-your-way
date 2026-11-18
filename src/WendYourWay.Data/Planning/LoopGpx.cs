@@ -42,7 +42,7 @@ public static class LoopGpx
                     new XAttribute("lon", Degrees(turn.At.Longitude)),
                     new XElement(Gpx + "name", turn.Words),
                     new XElement(Gpx + "sym", Symbol(turn.Kind)),
-                    new XElement(Gpx + "type", "Turn"))),
+                    new XElement(Gpx + "type", turn.Kind == TurnKind.MapGap ? "Map gap" : "Turn"))),
                 new XElement(Gpx + "trk",
                     new XElement(Gpx + "name", name),
                     new XElement(Gpx + "trkseg",
@@ -65,6 +65,8 @@ public static class LoopGpx
     {
         TurnKind.Left or TurnKind.SharpLeft => "Left",
         TurnKind.Right or TurnKind.SharpRight => "Right",
+        // A Map gap (T146b): somewhere to look before going on.
+        TurnKind.MapGap => "Danger Area",
         _ => "Generic",
     };
 

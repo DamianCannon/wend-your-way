@@ -16,6 +16,9 @@ public enum TurnKind
     SharpLeft,
     SharpRight,
     TurnBack,
+
+    /// <summary>Not a turn but a Map gap ahead (#150, T146b): the user should check it's passable.</summary>
+    MapGap,
 }
 
 /// <summary>A turn point: where, how far along, which way, and in words.</summary>

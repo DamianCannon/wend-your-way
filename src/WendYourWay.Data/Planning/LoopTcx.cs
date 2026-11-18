@@ -84,6 +84,7 @@ public static class LoopTcx
         TurnKind.Right => "Right",
         TurnKind.SharpLeft => "Sharp L",
         TurnKind.SharpRight => "Sharp R",
+        TurnKind.MapGap => "Map gap",
         _ => "Turn back",
     };
 
@@ -91,6 +92,8 @@ public static class LoopTcx
     {
         TurnKind.Left or TurnKind.SharpLeft => "Left",
         TurnKind.Right or TurnKind.SharpRight => "Right",
+        // A Map gap (T146b): somewhere to look before going on.
+        TurnKind.MapGap => "Danger",
         _ => "Generic",
     };
 

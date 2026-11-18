@@ -29,6 +29,18 @@ public sealed record PlannedLoop(IReadOnlyList<LatLon> Line, LatLon Start, IRead
     public IReadOnlyList<RouteGap> Gaps { get; init; } = [];
 
     /// <summary>
+    /// The Map gaps it crosses (#150, T146b), in travel order: a path's dead end joined to a way it stops
+    /// short of, to draw in red and note on its card, as the user should check each is passable.
+    /// </summary>
+    public IReadOnlyList<MapGapCrossed> MapGaps { get; init; } = [];
+
+    /// <summary>
+    /// The possible Map gaps near it (T146c), 5 m to 15 m, which no search uses: drawn for the user to include
+    /// one this time. None it crosses: those are in <see cref="MapGaps"/>.
+    /// </summary>
+    public IReadOnlyList<MapGapCrossed> PossibleMapGaps { get; init; } = [];
+
+    /// <summary>
     /// Whether it was offered in another direction, below the usual bar, because few Loops were on it
     /// (T096, STORY-044). Of the Request that offered it, so not kept with a Saved Route.
     /// </summary>
@@ -55,6 +67,9 @@ public sealed record GpxPoints(IReadOnlyList<LatLon> Points, IReadOnlyList<NodeP
 
 /// <summary>A stretch of an imported route not on the Network (T083): its line, and how long it is.</summary>
 public sealed record RouteGap(IReadOnlyList<LatLon> Line, double LengthM);
+
+/// <summary>A Map gap a Loop crosses (T146b): from where, to where, in travel order, and how long it is.</summary>
+public sealed record MapGapCrossed(LatLon From, LatLon To, double LengthM);
 
 /// <summary>A point on a Loop's elevation profile: how far round, how high, and where on the map.</summary>
 public sealed record ProfileSample(double DistanceM, double HeightM, LatLon At);

@@ -9,6 +9,12 @@ public sealed record ViaNudge(LatLon Grabbed, LatLon To) : LoopNudge;
 /// <summary>"Avoid this time", clicked on the route at <paramref name="At"/>: not the Segment there.</summary>
 public sealed record AvoidNudge(LatLon At) : LoopNudge;
 
+/// <summary>
+/// "Include this time", clicked on a possible Map gap near the Loop (#150, T146c) at <paramref name="At"/>: the Loop
+/// through that gap, which the user will check is passable.
+/// </summary>
+public sealed record IncludeNudge(LatLon At) : LoopNudge;
+
 /// <summary>A stop removed (T079): <paramref name="Stop"/> is its place among the Loop's Anchors and Vias.</summary>
 public sealed record RemoveStopNudge(int Stop) : LoopNudge;
 
