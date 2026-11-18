@@ -20,6 +20,18 @@ public enum AccessKind
 }
 
 /// <summary>
+/// Whether a Segment is a gap in the map (#150, T146): no way of its own, but a path's dead end joined to
+/// another way it stops short of, with nothing mapped across. Joined, under 5 m: used like its path. Possible,
+/// 5 m to 15 m: used only when the user includes it, so a slice reads it as forbidden.
+/// </summary>
+public enum GapKind
+{
+    None,
+    Joined,
+    Possible,
+}
+
+/// <summary>
 /// How a Crossing is controlled (CONTEXT.md; T044), from its crossing way's tags: by traffic
 /// signals, by markings (a zebra), or not at all. A bridge or underpass is a path, not a Crossing.
 /// </summary>
@@ -136,6 +148,9 @@ public sealed record Segment(
     /// </summary>
     public bool IsCrossingLink => Key.OsmWayId < 0;
 
+    /// <summary>Whether it's a gap in the map (#150, T146), and which kind.</summary>
+    public GapKind Gap { get; init; }
+
     /// <summary>Metres of this Segment on ground already <paramref name="covered"/>, by same-ground group.</summary>
     public double RetracedMetres(IReadOnlySet<int> covered)
     {
@@ -210,6 +225,9 @@ public sealed record StoredSegment(
 
     /// <inheritdoc cref="FromBearing"/>
     public double? ToBearing { get; init; }
+
+    /// <summary>Whether it's a gap in the map (#150, T146), and which kind.</summary>
+    public GapKind Gap { get; init; }
 }
 
 /// <summary>Metres of a stored Segment that run beside a road Segment.</summary>

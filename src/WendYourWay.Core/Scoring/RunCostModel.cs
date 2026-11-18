@@ -16,6 +16,12 @@ public sealed class RunCostModel(ScoringWeights weights, IReadOnlySet<int>? used
     /// </summary>
     public const double SteepestRelief = 0.1;
 
+    /// <summary>
+    /// What a gap in the map costs (#150, T146a) on top of its ground: as many metres of Off-road, so a
+    /// Loop takes one only for a real gain, not to cut a corner.
+    /// </summary>
+    public const double GapM = 30;
+
     private readonly IReadOnlySet<int> _usedGround = usedGround ?? new HashSet<int>();
 
     // Every Segment at the lower of its fresh and its retraced cost (T068), for Landmarks.
@@ -64,6 +70,7 @@ public sealed class RunCostModel(ScoringWeights weights, IReadOnlySet<int>? used
         // (T044): as many metres of Off-road as the user would run to avoid it.
         if (segment.Crossing is { } crossing && weights.Crossings is { } crossings)
             cost += weights.OffRoadPerMetre * crossings.Of(crossing, segment.CrossesMainRoad, segment.Busy) * segment.CrossingShare;
+        if (segment.Gap != GapKind.None) cost += weights.OffRoadPerMetre * GapM;
         // An Obstacle the same way (T069), on the Activities that pay for them.
         if (segment.Obstacles is { } obstacles && weights.Obstacles is { } obstacleCosts)
         {

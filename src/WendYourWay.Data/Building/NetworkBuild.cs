@@ -24,6 +24,12 @@ public sealed record SegmentBuild(
 {
     /// <summary>Whether the Network was clipped to England and Wales.</summary>
     public bool Clipped => InScotland is not null;
+
+    /// <summary>Gaps under 5 m joined (#150, T146a): a path's dead end and another way it stops short of.</summary>
+    public long GapsJoined { get; init; }
+
+    /// <summary>Gaps of 5 m to 15 m kept as possible, used only when the user includes one.</summary>
+    public long GapsPossible { get; init; }
 }
 
 /// <summary>What finding same ground did.</summary>
@@ -91,13 +97,17 @@ public static class NetworkBuild
         }
 
         SegmentBuild segments;
-        await using (var command = Command("select ways_read, ways_misaligned, segments_written, identity_clashes, zero_length, countries_found, in_scotland, elsewhere from build_segments()"))
+        await using (var command = Command("select ways_read, ways_misaligned, segments_written, identity_clashes, zero_length, countries_found, in_scotland, elsewhere, gaps_joined, gaps_possible from build_segments()"))
         await using (var reader = await command.ExecuteReaderAsync(cancellationToken))
         {
             await reader.ReadAsync(cancellationToken);
             segments = new SegmentBuild(reader.GetInt64(0), reader.GetInt64(1), reader.GetInt64(2), reader.GetInt64(3), reader.GetInt64(4),
                 reader.IsDBNull(5) ? "" : reader.GetString(5),
-                reader.IsDBNull(6) ? null : reader.GetInt64(6), reader.IsDBNull(7) ? null : reader.GetInt64(7));
+                reader.IsDBNull(6) ? null : reader.GetInt64(6), reader.IsDBNull(7) ? null : reader.GetInt64(7))
+            {
+                GapsJoined = reader.IsDBNull(8) ? 0 : reader.GetInt64(8),
+                GapsPossible = reader.IsDBNull(9) ? 0 : reader.GetInt64(9),
+            };
         }
         phaseDone?.Invoke("segments", clock.Elapsed);
 

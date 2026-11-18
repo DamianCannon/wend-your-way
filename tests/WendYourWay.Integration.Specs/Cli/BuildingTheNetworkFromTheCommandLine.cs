@@ -45,6 +45,11 @@ public static class BuildingTheNetworkFromTheCommandLine
         public void Then_it_reports_the_Open_ground_it_crossed() =>
             Assert.That(_run.Output, Does.Match(@"Open ground crossings\s+\d+\s+\(\d+ km\)"));
 
+        //  #150, T146a: the gaps in the map joined, and kept as possible.
+        [Test]
+        public void Then_it_reports_the_gaps_in_the_map_it_joined_and_kept() =>
+            Assert.That(_run.Output, Does.Match(@"gaps in the map joined \(under 5 m\)\s+\d+").And.Match(@"gaps in the map possible \(5 m to 15 m\)\s+\d+"));
+
         [Test]
         public void Then_it_says_what_each_phase_did() =>
             Assert.That(_run.Output, Does.Match(@"(?m)^\s*open ground\s+crossed\b"));

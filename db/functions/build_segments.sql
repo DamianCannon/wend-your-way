@@ -18,6 +18,15 @@ declare
   v_result segment_build;
   v_found text[];
   v_clip boolean;
+  -- Short gaps (#150, T146a): joined under c_gap_joined_m, possible up to c_gap_most_m (the user's
+  -- look at sample gaps, 2026-11-18); met at the other way's own point if no more than c_gap_snap_m
+  -- further than the nearest spot; not where the two ways already meet within c_gap_spur_m along them.
+  c_gap_joined_m constant double precision := 5;
+  c_gap_most_m   constant double precision := 15;
+  c_gap_snap_m   constant double precision := 1;
+  c_gap_spur_m   constant double precision := 50;
+  -- Nor where the path runs beside the way: still within reach of it this far back along the path.
+  c_gap_beside_m constant double precision := 20;
 begin
   -- England and Wales, from the extract's country relations (T030), cut small and indexed so
   -- each test is against a few hundred vertices, not a coastline; Scotland likewise, to count
@@ -92,10 +101,104 @@ begin
   -- they still connect the Network). Buildings and other non-routable ways never count. A way
   -- that comes back to one of its own nodes makes that node a junction too.
   create temporary table tmp_cuts on commit drop as
-  select v.*,
-         (v.idx = 1 or v.idx = v.n or count(*) over (partition by v.node_id) > 1
-          or exists (select 1 from tmp_main_crossings m where m.node_id = v.node_id)) as is_cut
-    from tmp_vertices v;
+  select u.*,
+         (u.idx = 1 or u.idx = u.n or u.uses > 1
+          or exists (select 1 from tmp_main_crossings m where m.node_id = u.node_id)) as is_cut
+    from (select v.*, count(*) over (partition by v.node_id) as uses from tmp_vertices v) u;
+  analyze tmp_cuts;
+
+  -- Short gaps (#150, T146a, STORY-051): a path's dead end, a node no other way uses, is joined to
+  -- the nearest way within c_gap_most_m that it isn't already joined to nearby, unless a barrier,
+  -- waterway or railway is mapped across. A road that dead-ends is left alone. The gap meets that
+  -- way at its own point if that is no more than c_gap_snap_m further than the nearest spot on it,
+  -- or else at that spot, a new point numbered minus the dead end's node id, so it's the same point
+  -- on every build (ADR 0005). Under c_gap_joined_m it's joined; up to c_gap_most_m, possible.
+  create temporary table tmp_gaps on commit drop as
+  with dead as (
+    select c.way_id, c.node_id, ST_Transform(c.point, 27700) as point, c.point as point_4326, w.nodes, ST_Transform(w.geom, 27700) as line
+      from tmp_cuts c
+      join osm.ways w on w.way_id = c.way_id
+     where (c.idx = 1 or c.idx = c.n) and c.uses = 1
+       and classify_ground(w.tags)::text in ('off_road', 'traffic_free')
+       and run_access(w.tags)::text <> 'forbidden'
+  ), near as (
+    select d.*, o.way_id as onto_way_id, o.nodes as onto_nodes, o.line as onto_line,
+           ST_Distance(o.line, d.point) as spot_m, ST_ClosestPoint(o.line, d.point) as spot
+      from dead d
+     cross join lateral (
+       select w.way_id, w.nodes, ST_Transform(w.geom, 27700) as line
+         from osm.ways w
+        where w.geom && ST_Expand(d.point_4326, 0.0004)
+          and w.way_id <> d.way_id
+          and ST_NPoints(w.geom) = cardinality(w.nodes)
+          and run_access(w.tags)::text <> 'forbidden'
+          and ST_DWithin(ST_Transform(w.geom, 27700), d.point, c_gap_most_m)
+        order by ST_Distance(ST_Transform(w.geom, 27700), d.point)
+        limit 1) o
+  ), placed as (
+    select n.*, p.path[1] as onto_idx, p.geom as vertex, ST_Distance(p.geom, n.point) as vertex_m,
+           e.path[1] as edge
+      from near n
+     cross join lateral (select q.path, q.geom from ST_DumpPoints(n.onto_line) q order by q.geom <-> n.point limit 1) p
+     cross join lateral (select q.path from ST_DumpSegments(n.onto_line) q order by ST_Distance(q.geom, n.point) limit 1) e
+  ), chosen as (
+    select p.way_id, p.node_id, p.point, p.nodes, p.line, p.onto_way_id, p.onto_nodes, p.onto_line,
+           p.vertex_m <= p.spot_m + c_gap_snap_m as at_vertex,
+           case when p.vertex_m <= p.spot_m + c_gap_snap_m then p.onto_nodes[p.onto_idx] else -p.node_id end as onto_node_id,
+           case when p.vertex_m <= p.spot_m + c_gap_snap_m then p.onto_idx end as onto_idx,
+           p.edge,
+           case when p.vertex_m <= p.spot_m + c_gap_snap_m then p.vertex else p.spot end as onto_point
+      from placed p
+  )
+  select c.way_id, c.node_id, c.onto_way_id, c.onto_node_id, c.onto_idx, c.edge, c.at_vertex,
+         c.onto_point, ST_MakeLine(c.point, c.onto_point) as geom, ST_Distance(c.point, c.onto_point) as gap_m
+    from chosen c
+   where ST_Distance(c.point, c.onto_point) between 0.01 and c_gap_most_m
+     -- Nothing mapped across: a fence, wall, hedge, waterway or railway (as Open ground, T048).
+     and not exists (select 1 from osm.lines l
+                      where l.geom && ST_Transform(ST_MakeLine(c.point, c.onto_point), 4326)
+                        and ST_Intersects(l.geom, ST_Transform(ST_MakeLine(c.point, c.onto_point), 4326)))
+     -- Not already joined nearby: a spur off the same way, back no further than c_gap_spur_m along the two.
+     and not exists (select 1
+                       from unnest(c.nodes) s (node_id)
+                      cross join lateral (select ST_PointN(c.onto_line, array_position(c.onto_nodes, s.node_id)) as at) v
+                      where v.at is not null
+                        and abs(ST_LineLocatePoint(c.line, v.at) - ST_LineLocatePoint(c.line, c.point)) * ST_Length(c.line)
+                          + abs(ST_LineLocatePoint(c.onto_line, v.at) - ST_LineLocatePoint(c.onto_line, c.onto_point)) * ST_Length(c.onto_line)
+                          <= c_gap_spur_m)
+     -- Not a path beside the way, as a pavement ends beside its road: c_gap_beside_m back along it, it's
+     -- still within reach of the way. Beside, it's the way's own ground (same ground), no new way through.
+     and not ST_DWithin(c.onto_line,
+                        ST_LineInterpolatePoint(c.line, case when c.node_id = c.nodes[1] then least(1, c_gap_beside_m / ST_Length(c.line))
+                                                             else greatest(0, 1 - c_gap_beside_m / ST_Length(c.line)) end),
+                        c_gap_most_m);
+  -- Two paths ending end to end find each other: one gap, from the lower node.
+  delete from tmp_gaps g
+   using tmp_gaps r
+   where r.node_id = g.onto_node_id and r.onto_node_id = g.node_id and r.node_id < g.node_id;
+
+  -- The way each gap meets is cut there: at its own point, or at the new one, put in between its
+  -- points and the way's points numbered afresh.
+  update tmp_cuts c
+     set is_cut = true
+    from tmp_gaps g
+   where g.at_vertex and c.way_id = g.onto_way_id and c.idx = g.onto_idx;
+  with moved as (
+    delete from tmp_cuts c
+     where c.way_id in (select g.onto_way_id from tmp_gaps g where not g.at_vertex)
+    returning c.*
+  ), placed as (
+    select way_id, idx::double precision as at, node_id, point, uses, is_cut from moved
+    union all
+    select g.onto_way_id, g.edge + ST_LineLocatePoint(e.geom, g.onto_point), g.onto_node_id, ST_Transform(g.onto_point, 4326), 1, true
+      from tmp_gaps g
+     cross join lateral (select q.geom from ST_DumpSegments((select ST_Transform(w.geom, 27700) from osm.ways w where w.way_id = g.onto_way_id)) q
+                          where q.path[1] = g.edge) e
+     where not g.at_vertex
+  )
+  insert into tmp_cuts (way_id, idx, node_id, point, n, uses, is_cut)
+  select way_id, row_number() over (partition by way_id order by at), node_id, point, count(*) over (partition by way_id), uses, is_cut
+    from placed;
   analyze tmp_cuts;
 
   -- A piece between consecutive cuts that starts and ends at the same node (a closed way
@@ -296,6 +399,23 @@ begin
    where f.kept
    order by f.geom;
   get diagnostics v_result.segments_written = row_count;
+
+  -- The gaps (T146a), where their path and the way they meet were kept: each is its path's ground
+  -- and its path's to use, and nothing more (no Corridor, Crossing or Main Road).
+  insert into network_next.segments (osm_way_id, from_node_id, to_node_id, geom, ground, access_run, access_ride, greenery, waterside, corridor, main_road,
+                                     crossing, crossing_main_road, crossing_share, bridge_over_water, access_trail, closed_months, busy, carriageway, from_bearing, to_bearing, gap)
+  select distinct on (g.node_id)
+         g.way_id, g.node_id, g.onto_node_id, g.geom, p.ground, p.access_run, p.access_ride, p.greenery, p.waterside, null, false,
+         null, false, 0, false, p.access_trail, p.closed_months, false, false,
+         degrees(ST_Azimuth(ST_StartPoint(g.geom), ST_EndPoint(g.geom))), degrees(ST_Azimuth(ST_EndPoint(g.geom), ST_StartPoint(g.geom))),
+         case when g.gap_m < c_gap_joined_m then 'joined' else 'possible' end
+    from tmp_gaps g
+    join network_next.segments p on p.osm_way_id = g.way_id and g.node_id in (p.from_node_id, p.to_node_id) and p.gap is null
+   where exists (select 1 from network_next.segments o where o.osm_way_id = g.onto_way_id and g.onto_node_id in (o.from_node_id, o.to_node_id))
+   order by g.node_id;
+  select count(*) filter (where gap = 'joined'), count(*) filter (where gap = 'possible')
+    into v_result.gaps_joined, v_result.gaps_possible
+    from network_next.segments where gap is not null;
 
   -- The crossing points on Main Roads that made it into the Network, now junctions (T145a).
   insert into network_next.crossing_nodes (node_id, kind)

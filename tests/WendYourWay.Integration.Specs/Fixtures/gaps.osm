@@ -1,0 +1,224 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  T146 short gaps fixture, near Box Hill (invented; only the place is real). Laid out in metres
+  east and north of 51.2600, -0.3000, each feature 1 km apart; each has a road east to west along
+  its origin, 400 m long, with no point of its own near the gap but where said:
+    1  a footway north to south, ending 3 m short of the road
+    2  a footway ending 1 m short of the road, 1.5 m from the road's own point beside it
+    3  a footway ending 8 m short of the road
+    4  a footway ending 20 m short of the road
+    5  a footway ending 3 m short of the road, a fence along the road between them
+    6  a residential road ending 3 m short of the road
+    7  a footway off the road, round a spur, ending 3 m from the road 15 m along from where it left
+    8  a footway off the road, round 500 m of field, ending 3 m from the road 100 m along
+    9  no road: two footways end to end, 4 m apart
+   10  a bridleway, and a footway ending 3 m short of it
+   11  a private footway ending 3 m short of the road
+   12  no road: two footways end to end, 8 m apart
+   13  a footway beside the road, 6 m from it for 100 m, ending there
+  osm2pgsql needs all nodes before all ways, each sorted by ID.
+-->
+<osm version="0.6" generator="hand">
+  <node id="101" lat="51.2600000" lon="-0.3028705"/>
+  <node id="102" lat="51.2600000" lon="-0.2971295"/>
+  <node id="111" lat="51.2609258" lon="-0.3000000"/>
+  <node id="112" lat="51.2600270" lon="-0.3000000"/>
+  <node id="201" lat="51.2600000" lon="-0.2885181"/>
+  <node id="202" lat="51.2600000" lon="-0.2827772"/>
+  <node id="203" lat="51.2600000" lon="-0.2856476"/>
+  <node id="211" lat="51.2609079" lon="-0.2856319"/>
+  <node id="212" lat="51.2600090" lon="-0.2856319"/>
+  <node id="301" lat="51.2600000" lon="-0.2741658"/>
+  <node id="302" lat="51.2600000" lon="-0.2684248"/>
+  <node id="311" lat="51.2609708" lon="-0.2712953"/>
+  <node id="312" lat="51.2600719" lon="-0.2712953"/>
+  <node id="401" lat="51.2600000" lon="-0.2598134"/>
+  <node id="402" lat="51.2600000" lon="-0.2540725"/>
+  <node id="411" lat="51.2610787" lon="-0.2569429"/>
+  <node id="412" lat="51.2601798" lon="-0.2569429"/>
+  <node id="501" lat="51.2600000" lon="-0.2454611"/>
+  <node id="502" lat="51.2600000" lon="-0.2397201"/>
+  <node id="511" lat="51.2609258" lon="-0.2425906"/>
+  <node id="512" lat="51.2600270" lon="-0.2425906"/>
+  <node id="521" lat="51.2600135" lon="-0.2433082"/>
+  <node id="522" lat="51.2600135" lon="-0.2418730"/>
+  <node id="601" lat="51.2600000" lon="-0.2311087"/>
+  <node id="602" lat="51.2600000" lon="-0.2253678"/>
+  <node id="611" lat="51.2609258" lon="-0.2282382"/>
+  <node id="612" lat="51.2600270" lon="-0.2282382"/>
+  <node id="701" lat="51.2600000" lon="-0.2167564"/>
+  <node id="702" lat="51.2600000" lon="-0.2110154"/>
+  <node id="703" lat="51.2600000" lon="-0.2138859"/>
+  <node id="711" lat="51.2600719" lon="-0.2138859"/>
+  <node id="712" lat="51.2600719" lon="-0.2136706"/>
+  <node id="713" lat="51.2600270" lon="-0.2136706"/>
+  <node id="801" lat="51.2600000" lon="-0.2024040"/>
+  <node id="802" lat="51.2600000" lon="-0.1952278"/>
+  <node id="803" lat="51.2600000" lon="-0.1995335"/>
+  <node id="811" lat="51.2617978" lon="-0.1995335"/>
+  <node id="812" lat="51.2617978" lon="-0.1980983"/>
+  <node id="813" lat="51.2600270" lon="-0.1980983"/>
+  <node id="911" lat="51.2604494" lon="-0.1880517"/>
+  <node id="912" lat="51.2604494" lon="-0.1852099"/>
+  <node id="913" lat="51.2604494" lon="-0.1851525"/>
+  <node id="914" lat="51.2604494" lon="-0.1823107"/>
+  <node id="1001" lat="51.2600000" lon="-0.1736993"/>
+  <node id="1002" lat="51.2600000" lon="-0.1679584"/>
+  <node id="1011" lat="51.2609258" lon="-0.1708288"/>
+  <node id="1012" lat="51.2600270" lon="-0.1708288"/>
+  <node id="1101" lat="51.2600000" lon="-0.1593470"/>
+  <node id="1102" lat="51.2600000" lon="-0.1536060"/>
+  <node id="1111" lat="51.2609258" lon="-0.1564765"/>
+  <node id="1112" lat="51.2600270" lon="-0.1564765"/>
+  <node id="1211" lat="51.2604494" lon="-0.1449946"/>
+  <node id="1212" lat="51.2604494" lon="-0.1421816"/>
+  <node id="1213" lat="51.2604494" lon="-0.1420667"/>
+  <node id="1214" lat="51.2604494" lon="-0.1392537"/>
+  <node id="1301" lat="51.2600000" lon="-0.1306423"/>
+  <node id="1302" lat="51.2600000" lon="-0.1249013"/>
+  <node id="1311" lat="51.2600539" lon="-0.1292070"/>
+  <node id="1312" lat="51.2600539" lon="-0.1277718"/>
+  <way id="101">
+    <nd ref="101"/>
+    <nd ref="102"/>
+    <tag k="highway" v="residential"/>
+  </way>
+  <way id="111">
+    <nd ref="111"/>
+    <nd ref="112"/>
+    <tag k="highway" v="footway"/>
+  </way>
+  <way id="201">
+    <nd ref="201"/>
+    <nd ref="203"/>
+    <nd ref="202"/>
+    <tag k="highway" v="residential"/>
+  </way>
+  <way id="211">
+    <nd ref="211"/>
+    <nd ref="212"/>
+    <tag k="highway" v="footway"/>
+  </way>
+  <way id="301">
+    <nd ref="301"/>
+    <nd ref="302"/>
+    <tag k="highway" v="residential"/>
+  </way>
+  <way id="311">
+    <nd ref="311"/>
+    <nd ref="312"/>
+    <tag k="highway" v="footway"/>
+  </way>
+  <way id="401">
+    <nd ref="401"/>
+    <nd ref="402"/>
+    <tag k="highway" v="residential"/>
+  </way>
+  <way id="411">
+    <nd ref="411"/>
+    <nd ref="412"/>
+    <tag k="highway" v="footway"/>
+  </way>
+  <way id="501">
+    <nd ref="501"/>
+    <nd ref="502"/>
+    <tag k="highway" v="residential"/>
+  </way>
+  <way id="511">
+    <nd ref="511"/>
+    <nd ref="512"/>
+    <tag k="highway" v="footway"/>
+  </way>
+  <way id="521">
+    <nd ref="521"/>
+    <nd ref="522"/>
+    <tag k="barrier" v="fence"/>
+  </way>
+  <way id="601">
+    <nd ref="601"/>
+    <nd ref="602"/>
+    <tag k="highway" v="residential"/>
+  </way>
+  <way id="611">
+    <nd ref="611"/>
+    <nd ref="612"/>
+    <tag k="highway" v="residential"/>
+  </way>
+  <way id="701">
+    <nd ref="701"/>
+    <nd ref="703"/>
+    <nd ref="702"/>
+    <tag k="highway" v="residential"/>
+  </way>
+  <way id="711">
+    <nd ref="703"/>
+    <nd ref="711"/>
+    <nd ref="712"/>
+    <nd ref="713"/>
+    <tag k="highway" v="footway"/>
+  </way>
+  <way id="801">
+    <nd ref="801"/>
+    <nd ref="803"/>
+    <nd ref="802"/>
+    <tag k="highway" v="residential"/>
+  </way>
+  <way id="811">
+    <nd ref="803"/>
+    <nd ref="811"/>
+    <nd ref="812"/>
+    <nd ref="813"/>
+    <tag k="highway" v="footway"/>
+  </way>
+  <way id="911">
+    <nd ref="911"/>
+    <nd ref="912"/>
+    <tag k="highway" v="footway"/>
+  </way>
+  <way id="913">
+    <nd ref="913"/>
+    <nd ref="914"/>
+    <tag k="highway" v="footway"/>
+  </way>
+  <way id="1001">
+    <nd ref="1001"/>
+    <nd ref="1002"/>
+    <tag k="highway" v="bridleway"/>
+  </way>
+  <way id="1011">
+    <nd ref="1011"/>
+    <nd ref="1012"/>
+    <tag k="highway" v="footway"/>
+  </way>
+  <way id="1101">
+    <nd ref="1101"/>
+    <nd ref="1102"/>
+    <tag k="highway" v="residential"/>
+  </way>
+  <way id="1111">
+    <nd ref="1111"/>
+    <nd ref="1112"/>
+    <tag k="highway" v="footway"/>
+    <tag k="access" v="private"/>
+  </way>
+  <way id="1211">
+    <nd ref="1211"/>
+    <nd ref="1212"/>
+    <tag k="highway" v="footway"/>
+  </way>
+  <way id="1213">
+    <nd ref="1213"/>
+    <nd ref="1214"/>
+    <tag k="highway" v="footway"/>
+  </way>
+  <way id="1301">
+    <nd ref="1301"/>
+    <nd ref="1302"/>
+    <tag k="highway" v="residential"/>
+  </way>
+  <way id="1311">
+    <nd ref="1311"/>
+    <nd ref="1312"/>
+    <tag k="highway" v="footway"/>
+  </way>
+</osm>

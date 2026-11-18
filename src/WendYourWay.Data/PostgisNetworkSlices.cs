@@ -52,7 +52,7 @@ public sealed class PostgisNetworkSlices(NpgsqlDataSource dataSource, TimeProvid
                    s.length_m, s.ground::text, {access}::text,
                    s.main_road, s.greenery, s.corridor, s.waterside,
                    s.crossing, s.crossing_main_road, s.crossing_share, s.bridge_over_water, s.ascent_m, s.descent_m,
-                   coalesce(s.carriageway, false), coalesce(s.busy, false), s.from_bearing, s.to_bearing
+                   coalesce(s.carriageway, false), coalesce(s.busy, false), s.from_bearing, s.to_bearing, s.gap
               from network.segments s
              where ST_DWithin(s.geom, ST_SetSRID(ST_MakePoint(@x, @y), 27700), @radius)
                {usable}
@@ -95,7 +95,10 @@ public sealed class PostgisNetworkSlices(NpgsqlDataSource dataSource, TimeProvid
                     Busy = reader.GetBoolean(22),
                     FromBearing = reader.IsDBNull(23) ? null : reader.GetFloat(23),
                     ToBearing = reader.IsDBNull(24) ? null : reader.GetFloat(24),
+                    Gap = reader.IsDBNull(25) ? GapKind.None : reader.GetString(25) == "joined" ? GapKind.Joined : GapKind.Possible,
                 });
+                // A possible gap (T146) is used only when the user includes it: not by any search.
+                if (stored[^1].Gap == GapKind.Possible) stored[^1] = stored[^1] with { Access = AccessKind.Forbidden };
             }
         }
         Beside(stored, rowOf, await pairing);

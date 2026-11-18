@@ -98,6 +98,7 @@ public sealed class NetworkSlice
                 Busy = s.Busy,
                 FromBearing = s.FromBearing,
                 ToBearing = s.ToBearing,
+                Gap = s.Gap,
             });
         }
         var slice = new NetworkSlice([.. nodeIds.Select(id => positions[id])], segments);

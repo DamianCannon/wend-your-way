@@ -34,6 +34,8 @@ public static class OffRoadNetworksPhase
                    ST_X(ST_StartPoint(geom)), ST_Y(ST_StartPoint(geom)), ST_X(ST_EndPoint(geom)), ST_Y(ST_EndPoint(geom))
               from {schema}.segments
              where ground in ('off_road', 'traffic_free') and access_run <> 'forbidden'
+               -- A possible gap (T146) is used only when the user includes it: it joins nothing.
+               and gap is distinct from 'possible'
             """, connection, transaction) { CommandTimeout = 0 })
         await using (var reader = await command.ExecuteReaderAsync(cancellationToken))
         {

@@ -125,6 +125,8 @@ public static class NetworkBuildCommand
             await Row(output, "paths beside roads (same ground)", sameGround.PathsBesideRoads, build.SegmentsWritten);
             await output.WriteLineAsync(string.Format(Culture, "  {0,-44}{1,12:N0}  ({2:N0} km)",
                 "Open ground crossings", report.OpenGround.Crossings, report.OpenGround.LengthM / 1000));
+            await Row(output, "gaps in the map joined (under 5 m)", build.GapsJoined);
+            await Row(output, "gaps in the map possible (5 m to 15 m)", build.GapsPossible);
             await OffRoad(output, report.OffRoad, report.Trailheads, report.Obstacles, report.GravelNetworks);
             if (report.Climbing is { } climbing)
             {
