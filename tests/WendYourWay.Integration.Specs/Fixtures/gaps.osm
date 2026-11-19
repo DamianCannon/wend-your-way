@@ -16,6 +16,8 @@
    11  a private footway ending 3 m short of the road
    12  no road: two footways end to end, 8 m apart
    13  a footway beside the road, 6 m from it for 100 m, ending there
+   14  a footway, drawn from its dead end, round 500 m of field back to the road's own point it
+       left from, ending 3 m from that point
   osm2pgsql needs all nodes before all ways, each sorted by ID.
 -->
 <osm version="0.6" generator="hand">
@@ -78,6 +80,13 @@
   <node id="1302" lat="51.2600000" lon="-0.1249013"/>
   <node id="1311" lat="51.2600539" lon="-0.1292070"/>
   <node id="1312" lat="51.2600539" lon="-0.1277718"/>
+  <node id="1401" lat="51.2600000" lon="-0.1162900"/>
+  <node id="1402" lat="51.2600000" lon="-0.1105490"/>
+  <node id="1403" lat="51.2600000" lon="-0.1134195"/>
+  <node id="1411" lat="51.2600270" lon="-0.1134195"/>
+  <node id="1412" lat="51.2613483" lon="-0.1134195"/>
+  <node id="1413" lat="51.2613483" lon="-0.1148547"/>
+  <node id="1414" lat="51.2601798" lon="-0.1148547"/>
   <way id="101">
     <nd ref="101"/>
     <nd ref="102"/>
@@ -219,6 +228,20 @@
   <way id="1311">
     <nd ref="1311"/>
     <nd ref="1312"/>
+    <tag k="highway" v="footway"/>
+  </way>
+  <way id="1401">
+    <nd ref="1401"/>
+    <nd ref="1403"/>
+    <nd ref="1402"/>
+    <tag k="highway" v="residential"/>
+  </way>
+  <way id="1411">
+    <nd ref="1411"/>
+    <nd ref="1412"/>
+    <nd ref="1413"/>
+    <nd ref="1414"/>
+    <nd ref="1403"/>
     <tag k="highway" v="footway"/>
   </way>
 </osm>

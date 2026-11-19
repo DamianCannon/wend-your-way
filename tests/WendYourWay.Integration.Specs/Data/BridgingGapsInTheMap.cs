@@ -85,13 +85,17 @@ public class BridgingGapsInTheMap
         Assert.That(In(3).Select(g => (g.From, g.Kind, Math.Round(g.LengthM))), Is.EqualTo(new[] { (312L, "possible", 8.0) }));
 
     //  4: 20 m short; 5: 3 m short, a fence between; 6: a road ending 3 m short; 7: a spur that left
-    //  the road 15 m back; 11: a private footway; 13: a footway beside the road, ending 6 m from it.
+    //  the road 15 m back; 11: a private footway; 13: a footway beside the road, ending 6 m from it;
+    //  14: a footway round a field, ending 3 m from the road's own point it left from (it would be
+    //  a second Segment of the footway between the same two points: the Great Britain build of
+    //  2026-11-18 failed on one).
     [TestCase(4, TestName = "Then_a_path_ending_further_than_15_m_away_isn_t_joined")]
     [TestCase(5, TestName = "Then_a_gap_across_a_fence_isn_t_joined")]
     [TestCase(6, TestName = "Then_a_road_that_dead_ends_isn_t_joined")]
     [TestCase(7, TestName = "Then_a_spur_already_joined_to_the_road_nearby_isn_t_joined")]
     [TestCase(11, TestName = "Then_a_path_no_one_may_use_isn_t_joined")]
     [TestCase(13, TestName = "Then_a_path_beside_the_way_it_ends_near_isn_t_joined")]
+    [TestCase(14, TestName = "Then_a_path_ending_near_the_point_it_left_from_isn_t_joined_there")]
     public void Then_it_isn_t_joined(int feature) => Assert.That(In(feature), Is.Empty);
 
     //  8: a footway that left the road and came back round 500 m of field, ending 3 m from it.

@@ -150,10 +150,13 @@ begin
            case when p.vertex_m <= p.spot_m + c_gap_snap_m then p.vertex else p.spot end as onto_point
       from placed p
   )
-  select c.way_id, c.node_id, c.onto_way_id, c.onto_node_id, c.onto_idx, c.edge, c.at_vertex,
+  select c.way_id, c.node_id, c.onto_way_id, c.onto_node_id, c.onto_idx, c.edge, c.at_vertex, c.onto_line,
          c.onto_point, ST_MakeLine(c.point, c.onto_point) as geom, ST_Distance(c.point, c.onto_point) as gap_m
     from chosen c
    where ST_Distance(c.point, c.onto_point) between 0.01 and c_gap_most_m
+     -- Not back to a point of its own path: a path round a field to near where it left its way would
+     -- be a second Segment of the path between the same two points (the Great Britain build failed on one).
+     and c.onto_node_id <> all (c.nodes)
      -- Nothing mapped across: a fence, wall, hedge, waterway or railway (as Open ground, T048).
      and not exists (select 1 from osm.lines l
                       where l.geom && ST_Transform(ST_MakeLine(c.point, c.onto_point), 4326)
@@ -192,7 +195,9 @@ begin
     union all
     select g.onto_way_id, g.edge + ST_LineLocatePoint(e.geom, g.onto_point), g.onto_node_id, ST_Transform(g.onto_point, 4326), 1, true
       from tmp_gaps g
-     cross join lateral (select q.geom from ST_DumpSegments((select ST_Transform(w.geom, 27700) from osm.ways w where w.way_id = g.onto_way_id)) q
+     -- The way's line kept from finding the gap: osm.ways has no index on way_id, and one look-up
+     -- for each gap read all of Great Britain's ways (the build of 2026-11-18 ran 6 hours long).
+     cross join lateral (select q.geom from ST_DumpSegments(g.onto_line) q
                           where q.path[1] = g.edge) e
      where not g.at_vertex
   )
