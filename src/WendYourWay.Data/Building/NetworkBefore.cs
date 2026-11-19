@@ -4,12 +4,18 @@ namespace WendYourWay.Data.Building;
 
 /// <summary>
 /// The map before the one in use (#135, T131): when its data is from, and the one in use's (none
-/// for one built before T117 kept it), and whether this Wend Your Way can read it.
+/// for one built before T117 kept it), and whether this Wend Your Way can read it; and when each was
+/// built (T150), as a rebuild from the same extract keeps a map of the same data's date.
 /// </summary>
-public sealed record MapBefore(DateTimeOffset? At, DateTimeOffset? InUseAt, bool Fits)
+public sealed record MapBefore(DateTimeOffset? At, DateTimeOffset? InUseAt, bool Fits, DateTimeOffset? BuiltAt = null, DateTimeOffset? InUseBuiltAt = null)
 {
-    /// <summary>Whether it's the newer of the two, so going to it is going forward: a map with no date counts as older than one with a date.</summary>
-    public bool Newer => At is { } at && (InUseAt is not { } inUse || at > inUse);
+    /// <summary>
+    /// Whether it's the newer of the two, so going to it is going forward: a map with no date counts as
+    /// older than one with a date; of the same data's date (or both none), the one built later is the newer.
+    /// </summary>
+    public bool Newer => At == InUseAt
+        ? BuiltAt is { } built && InUseBuiltAt is { } inUseBuilt && built > inUseBuilt
+        : At is { } at && (InUseAt is not { } inUse || at > inUse);
 }
 
 /// <summary>A map before that this Wend Your Way can't go back to: none, or of an older make.</summary>
@@ -46,6 +52,8 @@ public static class NetworkBefore
             select exists (select 1 from network_prev.segments),
                    (select osm_data_at from network_prev.built_from limit 1),
                    (select osm_data_at from network.built_from limit 1),
+                   (select built_at from network_prev.built_from limit 1),
+                   (select built_at from network.built_from limit 1),
                    not exists (
                      (select table_name, column_name, data_type, is_nullable, coalesce(generation_expression, '') from information_schema.columns where table_schema = 'network'
                       except select table_name, column_name, data_type, is_nullable, coalesce(generation_expression, '') from information_schema.columns where table_schema = 'network_prev')
@@ -62,7 +70,7 @@ public static class NetworkBefore
         await using var reader = await query.ExecuteReaderAsync(cancellationToken);
         await reader.ReadAsync(cancellationToken);
         if (!reader.GetBoolean(0)) return null;
-        return new MapBefore(At(reader, 1), At(reader, 2), reader.GetBoolean(3));
+        return new MapBefore(At(reader, 1), At(reader, 2), reader.GetBoolean(5), At(reader, 3), At(reader, 4));
     }
 
     private static DateTimeOffset? At(NpgsqlDataReader reader, int column) =>

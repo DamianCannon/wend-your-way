@@ -21,4 +21,11 @@ public sealed class PostgisNetworkDate(NpgsqlDataSource dataSource) : INetworkDa
         await using var query = dataSource.CreateCommand("select osm_data_at from network.built_from");
         return await query.ExecuteScalarAsync(cancellationToken) is DateTime at ? new DateTimeOffset(DateTime.SpecifyKind(at, DateTimeKind.Utc)) : null;
     }
+
+    /// <summary>When the map in use was built (T150): a rebuild from the same extract keeps its date, not this.</summary>
+    public async Task<DateTimeOffset?> BuiltAtAsync(CancellationToken cancellationToken = default)
+    {
+        await using var query = dataSource.CreateCommand("select built_at from network.built_from");
+        return await query.ExecuteScalarAsync(cancellationToken) is DateTime at ? new DateTimeOffset(DateTime.SpecifyKind(at, DateTimeKind.Utc)) : null;
+    }
 }

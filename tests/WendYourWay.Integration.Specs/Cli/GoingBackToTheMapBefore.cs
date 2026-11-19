@@ -31,6 +31,7 @@ public class GoingBackToTheMapBefore
     private long _secondSegments;
     private long _firstCovered;
     private MapBefore _before = null!;
+    private DateTime _firstBuiltAt;
     private (int ExitCode, string Output) _back;
     private (string Kind, string Outcome, string? Message) _backJob;
     private long _backSegments;
@@ -114,6 +115,7 @@ public class GoingBackToTheMapBefore
         await OutingImporter.ImportGpxAsync(dataSource, gpx);
         await OutingScoring.ScoreAsync(dataSource);
         (_firstSegments, _firstCovered, _firstScore) = (await Segments(), await Covered(), await Score());
+        _firstBuiltAt = await Scalar<DateTime>("select built_at from network.built_from");
 
         // Built again without one of the route's ways: the route flagged.
         var gone = traversals[traversals.Count / 2].Key.OsmWayId;
@@ -153,6 +155,11 @@ public class GoingBackToTheMapBefore
     [Test]
     public void Built_again_the_one_before_is_found_and_fits() => Assert.That(_before.Fits, Is.True);
 
+    //  T150: named by when it was built, as a rebuild from the same extract has the same paths' date.
+    [Test]
+    public void Built_again_the_one_before_says_when_it_was_built() =>
+        Assert.That(_before.BuiltAt?.UtcDateTime, Is.EqualTo(DateTime.SpecifyKind(_firstBuiltAt, DateTimeKind.Utc)).Within(TimeSpan.FromSeconds(1)));
+
     [Test]
     public void Gone_back_the_map_is_the_one_before() =>
         Assert.That((_back.ExitCode, _backSegments), Is.EqualTo((0, _firstSegments)), _back.Output);
@@ -163,7 +170,12 @@ public class GoingBackToTheMapBefore
 
     [Test]
     public void It_says_which_map() =>
-        Assert.That(_backJob.Message, Does.Match(@"^Gone (back|forward) to the map (of \d{1,2} \w{3} \d{4}|before this one)\.$"));
+        Assert.That(_backJob.Message, Does.Match(@"^Gone back to the map built \d{1,2} \w{3} \d{4}\.$"));
+
+    //  T150: of two maps from the same extract, the later built is forward.
+    [Test]
+    public void Done_again_it_says_it_went_forward_to_the_later_built() =>
+        Assert.That(_forward.Output, Does.Match(@"Gone forward to the map built \d{1,2} \w{3} \d{4}\."));
 
     [Test]
     public void The_Outings_are_covered_again_on_it() => Assert.That(_backCovered, Is.EqualTo(_firstCovered).And.GreaterThan(0));

@@ -8,6 +8,11 @@
 @implements IDisposable
 
 <div class="map-update">
+    @* The map in use (T150, #154): its paths' date and when it was built, as a rebuild keeps the date. *@
+    @if (_state.MapAt is { } mapAt)
+    {
+        <p class="in-use">In use: paths as of @Day(mapAt)@(_state.MapBuiltAt is { } built ? ", built " + built.ToLocalTime().ToString("d MMM yyyy", System.Globalization.CultureInfo.InvariantCulture) : "").</p>
+    }
     @switch (_state.Kind)
     {
         case MapUpdateKind.Running:
@@ -19,20 +24,10 @@
         case MapUpdateKind.Failed:
             <p>The last update failed: @_state.Message</p>
             break;
-        case MapUpdateKind.Finished or MapUpdateKind.UpToDate:
-            <p>@_state.Message</p>
-            break;
     }
     @if (_state.Kind is not (MapUpdateKind.Running or MapUpdateKind.Stopped or MapUpdateKind.Failed))
     {
-        @if (_state.Newer)
-        {
-            <p>Geofabrik has a map of @Day(_state.SourceAt!.Value).</p>
-        }
-        else if (_state.SourceAt is not null)
-        {
-            <p>Up to date with Geofabrik.</p>
-        }
+        <p class="latest">@(_state.SourceAt is { } sourceAt ? $"Latest map available: {Day(sourceAt)}." : "Latest map not available.")</p>
     }
     @if (_state.Kind is MapUpdateKind.Stopped or MapUpdateKind.Failed)
     {

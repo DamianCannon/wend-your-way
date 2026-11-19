@@ -301,6 +301,17 @@ public class LookingAfterWendYourWay
     public void It_offers_the_map_before_by_its_date() =>
         Assert.That(BackButton(OpenTheMap(new MapBefore(October, November, Fits: true))), Is.EqualTo("Go back to the map of 1 Oct 2026"));
 
+    //  T150 (#154): a rebuild from the same extract keeps a map of the same paths' date, so each is
+    //  named by when it was built.
+    [Test]
+    public void It_names_the_map_before_by_when_it_was_built() =>
+        Assert.That(BackButton(OpenTheMap(new MapBefore(November, November, Fits: true, BuiltAt: November.AddDays(5)))), Is.EqualTo("Go back to the map built 16 Nov 2026"));
+
+    [Test]
+    public void Gone_back_from_a_rebuild_it_offers_forward_to_the_later_built() =>
+        Assert.That(BackButton(OpenTheMap(new MapBefore(November, November, Fits: true, BuiltAt: November.AddDays(8), InUseBuiltAt: November.AddDays(5)))),
+            Is.EqualTo("Go forward to the map built 19 Nov 2026"));
+
     [Test]
     public void One_with_no_date_is_the_map_before_this_one() =>
         Assert.That(BackButton(OpenTheMap(new MapBefore(null, November, Fits: true))), Is.EqualTo("Go back to the map before this one"));

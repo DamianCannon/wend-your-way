@@ -52,7 +52,7 @@ public static class NetworkBackCommand
         return JobEnd.Finished(said);
     }
 
-    // "Gone back to the map of 1 Oct 2026.", "Gone forward to …", or "… the map before this one." with no date.
+    // "Gone back to the map built 16 Nov 2026." (T150), "… the map of 1 Oct 2026." for one with no build date kept, "Gone forward to …", or "… the map before this one." with no date.
     private static string Said(MapBefore to) =>
-        $"Gone {(to.Newer ? "forward" : "back")} to the map {(to.At is { } at ? "of " + at.UtcDateTime.ToString("d MMM yyyy", Culture) : "before this one")}.";
+        $"Gone {(to.Newer ? "forward" : "back")} to the map {(to.BuiltAt is { } built ? "built " + built.ToLocalTime().ToString("d MMM yyyy", Culture) : to.At is { } at ? "of " + at.UtcDateTime.ToString("d MMM yyyy", Culture) : "before this one")}.";
 }

@@ -252,7 +252,10 @@
     // "back" or "forward" (T131): a map with no date counts as the older.
     private static string Way(MapBefore before) => before.Newer ? "forward" : "back";
 
-    private static string Which(MapBefore before) => before.At is { } at ? $"the map of {at.UtcDateTime.ToString("d MMM yyyy", Culture)}" : "the map before this one";
+    // By when it was built (T150), as a rebuild from the same extract keeps the same paths' date; else by its paths'.
+    private static string Which(MapBefore before) =>
+        before.BuiltAt is { } built ? $"the map built {Day(built)}"
+        : before.At is { } at ? $"the map of {at.UtcDateTime.ToString("d MMM yyyy", Culture)}" : "the map before this one";
 
     // How the last change of map went (T131), as the last restore's is said.
     private static string BackSaid(Job back) => back.Outcome switch
