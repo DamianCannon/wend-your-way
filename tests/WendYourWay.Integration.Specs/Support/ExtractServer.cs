@@ -53,7 +53,19 @@ internal sealed class ExtractServer : IDisposable
     public List<string> Asked { get; } = [];
 
     /// <summary>The extract's address, as `wend update --source` takes it.</summary>
-    public string ExtractUrl => $"http://127.0.0.1:{((IPEndPoint)_listener.LocalEndpoint).Port}/{Name}-latest.osm";
+    public string ExtractUrl => $"http://127.0.0.1:{((IPEndPoint)_listener.LocalEndpoint).Port}{(Folders ? $"/{Name}/{Name}-latest.osm" : $"/{Name}-latest.osm")}";
+
+    /// <summary>
+    /// Set, laid out as Geofabrik has been since November 2026 (T151): a folder each, the extract at
+    /// `/{name}/{name}-latest.osm` sent on (307) to the day's file, `/{name}/{name}-261118.osm`, its
+    /// `.md5` beside that only, and the date in `/{name}/updates/state.txt`.
+    /// </summary>
+    public bool Folders { get; init; }
+
+    // Where the extract's bytes are, and its date.
+    private string Served => Folders ? $"/{Name}/{Name}-261118.osm" : $"/{Name}-latest.osm";
+
+    private string State => Folders ? $"/{Name}/updates/state.txt" : $"/{Name}-updates/state.txt";
 
     private async Task ServeAsync()
     {
@@ -87,24 +99,27 @@ internal sealed class ExtractServer : IDisposable
 #pragma warning disable CA5351
             var (status, body, promised) = path switch
             {
-                _ when path == $"/{Name}-updates/state.txt" => (200, Encoding.ASCII.GetBytes(
+                _ when Folders && path == $"/{Name}/{Name}-latest.osm" => (307, Array.Empty<byte>(), (int?)null),
+                _ when path == State => (200, Encoding.ASCII.GetBytes(
                     $"#Wed Nov 11 21:30:00 UTC 2026\nsequenceNumber=4960\ntimestamp={DataAt.UtcDateTime.ToString("yyyy-MM-dd'T'HH\\\\:mm\\\\:ss'Z'", CultureInfo.InvariantCulture)}\n"), (int?)null),
-                _ when path == $"/{Name}-latest.osm.md5" => (200, Encoding.ASCII.GetBytes($"{WrongMd5 ?? Convert.ToHexStringLower(MD5.HashData(Extract))}  {Name}-latest.osm\n"), null),
+                _ when path == Served + ".md5" => (200, Encoding.ASCII.GetBytes($"{WrongMd5 ?? Convert.ToHexStringLower(MD5.HashData(Extract))}  {Name}-latest.osm\n"), null),
                 _ when path == "/index-v1-nogeom.json" && Index is not null => (200, Encoding.UTF8.GetBytes(Index), null),
-                _ when path == $"/{Name}-latest.osm" => (200, CutOffAfter is { } cut ? Extract[..cut] : Extract, Extract.Length),
+                _ when path == Served => (200, CutOffAfter is { } cut ? Extract[..cut] : Extract, Extract.Length),
                 _ => (404, Encoding.ASCII.GetBytes("Not found"), null),
             };
 #pragma warning restore CA5351
-            var head = $"HTTP/1.1 {status} {(status == 200 ? "OK" : "Not Found")}\r\nContent-Length: {promised ?? body.Length}\r\nConnection: close\r\n\r\n";
+            var head = $"HTTP/1.1 {status} {status switch { 200 => "OK", 307 => "Temporary Redirect", _ => "Not Found" }}\r\n"
+                + (status == 307 ? $"Location: {Served}\r\n" : "")
+                + $"Content-Length: {promised ?? body.Length}\r\nConnection: close\r\n\r\n";
             try
             {
                 await stream.WriteAsync(Encoding.ASCII.GetBytes(head));
-                if (StallAfter is { } stall && path == $"/{Name}-latest.osm")
+                if (StallAfter is { } stall && path == Served)
                 {
                     await stream.WriteAsync(body.AsMemory(0, stall));
                     await Task.Delay(Timeout.Infinite, _stop.Token);
                 }
-                if (Trickle is { } every && path == $"/{Name}-latest.osm")
+                if (Trickle is { } every && path == Served)
                 {
                     for (var at = 0; at < body.Length; at += 1_000)
                     {

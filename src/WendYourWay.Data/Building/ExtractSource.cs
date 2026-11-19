@@ -9,12 +9,14 @@ public sealed class ExtractNotDownloadedException(string message, Exception? inn
 /// <summary>
 /// Where extracts come from (T127): Geofabrik's, or one like it. An extract at `…/{name}-latest.osm.pbf`
 /// has its MD5 at the same address with `.md5` after it, and the date its data runs to in
-/// `…/{name}-updates/state.txt`.
+/// `…/{name}-updates/state.txt`. Since November 2026 (#155, T151) Geofabrik keeps each in a folder of
+/// its own, `…/{name}/{name}-latest.osm.pbf`, sending that on to the day's file with the MD5 beside
+/// that only, and the date in `…/{name}/updates/state.txt`.
 /// </summary>
 public sealed class ExtractSource
 {
     /// <summary>Great Britain, from Geofabrik: the one Wend Your Way builds from.</summary>
-    public const string GreatBritain = "https://download.geofabrik.de/europe/great-britain-latest.osm.pbf";
+    public const string GreatBritain = "https://download.geofabrik.de/europe/great-britain/great-britain-latest.osm.pbf";
 
     private readonly HttpClient _http;
     private readonly Uri _extract;
@@ -26,8 +28,14 @@ public sealed class ExtractSource
         _extract = new Uri(extractUrl);
         var at = extractUrl.LastIndexOf("-latest", StringComparison.Ordinal);
         if (at < 0) throw new ArgumentException("An extract's address ends in -latest and its kind, as Geofabrik's do.", nameof(extractUrl));
-        State = new Uri(extractUrl[..at] + "-updates/state.txt");
         FileName = Path.GetFileName(_extract.LocalPath);
+        // In a folder named as it is, the folder's updates; else beside it, as before.
+        var named = FileName.LastIndexOf("-latest", StringComparison.Ordinal);
+        var name = named < 0 ? null : FileName[..named];
+        var folder = _extract.Segments.Length >= 2 ? _extract.Segments[^2].TrimEnd('/') : "";
+        State = folder == name
+            ? new Uri(_extract, "updates/state.txt")
+            : new Uri(extractUrl[..at] + "-updates/state.txt");
         PreviousFileName = FileName.Replace("-latest", "-prev", StringComparison.Ordinal);
     }
 
@@ -68,10 +76,13 @@ public sealed class ExtractSource
         var part = kept + ".part";
         try
         {
-            var md5 = (await _http.GetStringAsync(new Uri(_extract + ".md5"), stalled.Token)).Split(' ', '\t', '\n')[0].Trim().ToLowerInvariant();
-            stalled.CancelAfter(quiet);
             using var response = await _http.GetAsync(_extract, HttpCompletionOption.ResponseHeadersRead, stalled.Token);
             response.EnsureSuccessStatusCode();
+            stalled.CancelAfter(quiet);
+            // The MD5 beside the file that came: the day's, where it was sent on to one (T151).
+            var came = response.RequestMessage?.RequestUri ?? _extract;
+            var md5 = (await _http.GetStringAsync(new Uri(came + ".md5"), stalled.Token)).Split(' ', '\t', '\n')[0].Trim().ToLowerInvariant();
+            stalled.CancelAfter(quiet);
             using var hash = IncrementalHash.CreateHash(HashAlgorithmName.MD5);
             long written = 0;
             await using (var from = await response.Content.ReadAsStreamAsync(stalled.Token))

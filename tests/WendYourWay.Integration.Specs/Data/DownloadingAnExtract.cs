@@ -32,6 +32,40 @@ public class DownloadingAnExtract
         }
     }
 
+    //  Geofabrik's folders (#155, T151): the extract sent on to the day's file, whose MD5 is beside
+    //  it only, and the date in the folder's updates.
+    [Test]
+    public async Task From_Geofabriks_folders_the_days_file_is_downloaded_and_checked_against_its_own_MD5()
+    {
+        var extract = new byte[10_000];
+        Random.Shared.NextBytes(extract);
+        using var server = new ExtractServer("foldered", extract, DateTimeOffset.UnixEpoch) { Folders = true };
+        var folder = Directory.CreateTempSubdirectory("cutthrough-folders-").FullName;
+        try
+        {
+            using var http = new HttpClient();
+            var kept = await new ExtractSource(http, server.ExtractUrl).DownloadAsync(folder);
+            Assert.That((Path.GetFileName(kept), await File.ReadAllBytesAsync(kept)), Is.EqualTo(("foldered-latest.osm", extract)));
+        }
+        finally
+        {
+            Directory.Delete(folder, recursive: true);
+        }
+    }
+
+    [Test]
+    public async Task From_Geofabriks_folders_the_date_is_read_from_the_folders_updates()
+    {
+        var at = new DateTimeOffset(2026, 11, 18, 21, 21, 2, TimeSpan.Zero);
+        using var server = new ExtractServer("foldered", [], at) { Folders = true };
+        using var http = new HttpClient();
+        Assert.That(await new ExtractSource(http, server.ExtractUrl).DataAtAsync(), Is.EqualTo(at));
+    }
+
+    [Test]
+    public void Great_Britain_is_asked_for_in_its_folder() =>
+        Assert.That(ExtractSource.GreatBritain, Is.EqualTo("https://download.geofabrik.de/europe/great-britain/great-britain-latest.osm.pbf"));
+
     //  Slow but steady (a thousand bytes every 0.3 s, three seconds in all): not given up after the
     //  second it may go quiet, as each byte that comes puts the wait back.
     [Test]
