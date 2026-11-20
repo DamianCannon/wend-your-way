@@ -9,11 +9,8 @@ namespace WendYourWay.Cli;
 /// </summary>
 public static class RegionCommand
 {
-    private static readonly HttpClient Http = new(new SocketsHttpHandler { PooledConnectionLifetime = TimeSpan.FromMinutes(10) })
-    {
-        Timeout = Timeout.InfiniteTimeSpan,
-        DefaultRequestHeaders = { { "User-Agent", "WendYourWay-region/1.0" } },
-    };
+    // Over IPv4 first, and tried again (T154).
+    private static readonly HttpClient Http = GeofabrikConnection.Client("WendYourWay-region/1.0");
 
     public static async Task<int> List(string index, TextWriter output, CancellationToken cancellationToken = default)
     {

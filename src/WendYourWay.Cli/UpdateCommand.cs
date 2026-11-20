@@ -212,11 +212,8 @@ public static class UpdateCommand
     private static string Day(DateTimeOffset at) => at.UtcDateTime.ToString("d MMM yyyy", Culture);
 
     // One client for the run: no timeout for a 2 GB download, which the run's own token can stop.
-    private static readonly HttpClient Http = new(new SocketsHttpHandler { PooledConnectionLifetime = TimeSpan.FromMinutes(10) })
-    {
-        Timeout = Timeout.InfiniteTimeSpan,
-        DefaultRequestHeaders = { { "User-Agent", "WendYourWay-map-update/1.0" } },
-    };
+    // Over IPv4 first, and tried again (T154).
+    private static readonly HttpClient Http = GeofabrikConnection.Client("WendYourWay-map-update/1.0");
 
     /// <summary>A log file the run's words are written to as well, kept as they're written.</summary>
     public static StreamWriter OpenLog(string file)

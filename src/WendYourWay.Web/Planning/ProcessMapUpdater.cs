@@ -18,7 +18,8 @@ public sealed class ProcessMapUpdater(
     private readonly string _source = source ?? ExtractSource.GreatBritain;
 
     private static readonly TimeSpan AskEvery = TimeSpan.FromHours(1);
-    private static readonly HttpClient Http = new() { Timeout = TimeSpan.FromSeconds(10), DefaultRequestHeaders = { { "User-Agent", "WendYourWay-map-update/1.0" } } };
+    // Over IPv4 first, and tried again (T154): 30 s, so an address that doesn't answer leaves time for the next.
+    private static readonly HttpClient Http = WendYourWay.Data.Building.GeofabrikConnection.Client("WendYourWay-map-update/1.0", TimeSpan.FromSeconds(30));
 
     private readonly Lock _gate = new();
     private (DateTimeOffset At, DateTimeOffset? SourceAt)? _asked;
