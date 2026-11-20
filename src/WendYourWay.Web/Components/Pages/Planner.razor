@@ -10,7 +10,6 @@
 @inject ICarParks CarParks
 @inject ILoopPreviews Previews
 @inject IPlaceSearch Places
-@inject INetworkDate NetworkDate
 @inject IJSRuntime JS
 @inject ILogger<PlannerSession> SessionLogger
 @implements IAsyncDisposable
@@ -116,13 +115,8 @@
                     </div>
                 }
             </div>
-            @* How recent the Network's paths are (T117): the tiles behind can be newer, and show a path
-               the Loops can't use yet ("that's a bit annoying and confusing", user, 2026-11-11). *@
-            @if (Session.OsmDataAt is { } dataAt)
-            {
-                <p class="hint paths-as-of">Paths as of @dataAt.UtcDateTime.ToString("d MMM yyyy", System.Globalization.CultureInfo.InvariantCulture), from OpenStreetMap.</p>
-            }
-            @* The map brought up to date from here (T128). *@
+            @* How recent the Network's paths are (T117: the tiles behind can be newer, and show a path
+               the Loops can't use yet), and the map brought up to date from here (T128); said once (T155). *@
             <MapUpdateLine />
         </Request>
         <Outings>
@@ -157,7 +151,7 @@
 
     protected override async Task OnInitializedAsync()
     {
-        Session = new PlannerSession(LoopPlanner, Store, Marks, Settings, LastRequest, CarParks, Previews, Places, Turns, PhoneShare, NetworkDate, SessionLogger);
+        Session = new PlannerSession(LoopPlanner, Store, Marks, Settings, LastRequest, CarParks, Previews, Places, Turns, PhoneShare, SessionLogger);
         Session.Changed += () => _ = InvokeAsync(StateHasChanged);
         await Session.InitializeAsync();
     }

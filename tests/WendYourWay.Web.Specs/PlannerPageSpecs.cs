@@ -35,7 +35,6 @@ public abstract class PlannerPageSpecs
     private protected FakeCarParks _carParks = null!;
     private protected FakePreviews _previews = null!;
     private protected FakePlaceSearch _places = null!;
-    private protected FakeNetworkDate _networkDate = null!;
 
     [SetUp]
     public void Arrange()
@@ -44,7 +43,7 @@ public abstract class PlannerPageSpecs
         _screen = new PlannerScreen(_planner = new FakePlanner());
         (_context, _map) = (_screen.Context, _screen.Map);
         (_last, _saved, _marks, _phone, _turns) = (_screen.LastRequest, _screen.SavedRoutes, _screen.Marks, _screen.Phone, _screen.Turns);
-        (_carParks, _previews, _places, _networkDate) = (_screen.CarParks, _screen.Previews, _screen.Places, _screen.NetworkDate);
+        (_carParks, _previews, _places) = (_screen.CarParks, _screen.Previews, _screen.Places);
     }
 
     [TearDown]

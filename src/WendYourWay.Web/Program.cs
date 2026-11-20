@@ -48,7 +48,6 @@ builder.Services.AddSingleton<IAmenities, PostgisAmenities>();
 builder.Services.AddSingleton<IGravelHotspots, PostgisGravelHotspots>();
 builder.Services.AddSingleton<ISavedRoutes, PostgisSavedRoutes>();
 builder.Services.AddSingleton<IMarks, PostgisMarks>();
-builder.Services.AddSingleton<INetworkDate, PostgisNetworkDate>();
 // Backups under way finished before the app stops (T138): closing its window stops it. The host
 // waits for them up to its shutdown timeout, long enough for a backup.
 builder.Services.AddSingleton<WendYourWay.Web.Planning.WorkUnderWay>();

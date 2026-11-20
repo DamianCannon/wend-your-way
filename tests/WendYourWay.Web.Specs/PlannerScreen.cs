@@ -38,7 +38,6 @@ internal sealed class PlannerScreen : IDisposable
         services.AddSingleton<ICarParks>(CarParks);
         services.AddSingleton<ILoopPreviews>(Previews);
         services.AddSingleton<IPlaceSearch>(Places);
-        services.AddSingleton<INetworkDate>(NetworkDate);
         services.AddSingleton<IMapUpdater>(MapUpdater);
         services.AddSingleton<IAdmin>(Admin);
         services.AddSingleton<TimeProvider>(Time);
@@ -58,7 +57,6 @@ internal sealed class PlannerScreen : IDisposable
     public FakeCarParks CarParks { get; } = new();
     public FakePreviews Previews { get; } = new();
     public FakePlaceSearch Places { get; } = new();
-    public FakeNetworkDate NetworkDate { get; } = new();
     public FakeMapUpdater MapUpdater { get; } = new();
     public FakeAdmin Admin { get; } = new();
 

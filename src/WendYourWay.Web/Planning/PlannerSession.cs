@@ -22,7 +22,7 @@ namespace WendYourWay.Web.Planning;
 internal sealed class PlannerSession(
     ILoopPlanner loopPlanner, ISavedRoutes store, IMarks marks, PlannerSettings settings, ILastRequest lastRequest,
     ICarParks carParks, ILoopPreviews previews, IPlaceSearch places, IRouteTurns turns, IPhoneShare phoneShare,
-    INetworkDate networkDate, ILogger<PlannerSession> logger) : IDisposable
+    ILogger<PlannerSession> logger) : IDisposable
 {
     private readonly ILogger<PlannerSession> _logger = logger;
     private IPlannerMap _map = null!;
@@ -139,19 +139,7 @@ internal sealed class PlannerSession(
             // Not knowing the last Request is no reason not to plan the next.
             Log.SettingsNotKept(_logger, e);
         }
-        try
-        {
-            _osmDataAt = await networkDate.OsmDataAtAsync();
-        }
-        catch (Exception e) when (e is not OperationCanceledException)
-        {
-            // Not knowing its date is no reason not to plan: none is shown.
-            Log.SettingsNotKept(_logger, e);
-        }
     }
-
-    // The date of the OpenStreetMap extract the Network was built from (T117), if kept.
-    private DateTimeOffset? _osmDataAt;
 
     /// <summary>Keeps the settings as they are now, for next time; home as home, never its position.</summary>
     private async Task KeepSettingsAsync()
@@ -1053,7 +1041,6 @@ internal sealed class PlannerSession(
     internal int Saves => _saves;
     internal MapBounds? View => _starts.View;
     internal int Zoom => _starts.Zoom;
-    internal DateTimeOffset? OsmDataAt => _osmDataAt;
     internal string ExportedAs => ExportName;
 
     /// <summary>What the Loop card shows (T124e).</summary>

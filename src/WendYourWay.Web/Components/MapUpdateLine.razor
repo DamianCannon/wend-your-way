@@ -8,10 +8,11 @@
 @implements IDisposable
 
 <div class="map-update">
-    @* The map in use (T150, #154): its paths' date and when it was built, as a rebuild keeps the date. *@
+    @* The map in use (T150, #154): its paths' date and when it was built, as a rebuild keeps the date.
+       Said once, here (T155, #159): the tiles behind can be newer than its paths (T117). *@
     @if (_state.MapAt is { } mapAt)
     {
-        <p class="in-use">In use: paths as of @Day(mapAt)@(_state.MapBuiltAt is { } built ? ", built " + built.ToLocalTime().ToString("d MMM yyyy", System.Globalization.CultureInfo.InvariantCulture) : "").</p>
+        <p class="in-use">Paths from OpenStreetMap as of @Day(mapAt)@(_state.MapBuiltAt is { } built ? " (map built " + built.ToLocalTime().ToString("d MMM yyyy", System.Globalization.CultureInfo.InvariantCulture) + ")" : "").</p>
     }
     @switch (_state.Kind)
     {
@@ -27,7 +28,9 @@
     }
     @if (_state.Kind is not (MapUpdateKind.Running or MapUpdateKind.Stopped or MapUpdateKind.Failed))
     {
-        <p class="latest">@(_state.SourceAt is { } sourceAt ? $"Latest map available: {Day(sourceAt)}." : "Latest map not available.")</p>
+        @* Whether there's anything to do, not two dates to compare (T155). *@
+        <p class="latest">@(_state.SourceAt is not { } sourceAt ? "Latest map not available."
+            : _state.Newer ? $"A newer map is available: {Day(sourceAt)}." : $"Up to date: Geofabrik's latest is {Day(sourceAt)}.")</p>
     }
     @if (_state.Kind is MapUpdateKind.Stopped or MapUpdateKind.Failed)
     {

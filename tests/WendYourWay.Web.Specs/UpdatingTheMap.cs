@@ -40,22 +40,24 @@ public class UpdatingTheMap
 
     //  T150 (#154; user: "just say something like latest map available as of XXX or if not available
     //  then say latest map not available"): the map in use, by its paths' date and when it was built.
+    //  T155 (#159; user: "the request panel says this at the bottom which isn't entirely clear"): said
+    //  once, as of its paths' date from OpenStreetMap, and whether Geofabrik's latest is any newer.
     [Test]
     public void It_says_which_map_is_in_use() =>
-        Assert.That(Said(Open(State(MapUpdateKind.None, sourceAt: Monday))), Does.Contain("In use: paths as of 9 Nov 2026, built 12 Nov 2026."));
+        Assert.That(Said(Open(State(MapUpdateKind.None, sourceAt: Monday))), Does.Contain("Paths from OpenStreetMap as of 9 Nov 2026 (map built 12 Nov 2026)."));
 
     [Test]
     public void A_newer_map_is_offered_with_its_date()
     {
         var page = Open(State(MapUpdateKind.None, sourceAt: Tuesday));
-        Assert.That((Said(page).Contains("Latest map available: 10 Nov 2026.", StringComparison.Ordinal), page.FindAll(".map-update button.update").Count), Is.EqualTo((true, 1)));
+        Assert.That((Said(page).Contains("A newer map is available: 10 Nov 2026.", StringComparison.Ordinal), page.FindAll(".map-update button.update").Count), Is.EqualTo((true, 1)));
     }
 
     [Test]
     public void Up_to_date_it_says_so_and_offers_no_update()
     {
         var page = Open(State(MapUpdateKind.None, sourceAt: Monday));
-        Assert.That((Said(page).Contains("Latest map available: 9 Nov 2026.", StringComparison.Ordinal), page.FindAll(".map-update button.update").Count), Is.EqualTo((true, 0)));
+        Assert.That((Said(page).Contains("Up to date: Geofabrik's latest is 9 Nov 2026.", StringComparison.Ordinal), page.FindAll(".map-update button.update").Count), Is.EqualTo((true, 0)));
     }
 
     [Test]
@@ -131,7 +133,7 @@ public class UpdatingTheMap
     public void Finished_it_says_the_map_now_in_use_not_the_last_updates_own_words()
     {
         var page = Open(State(MapUpdateKind.Finished, "backing up", "Updated: the map's paths are as of 10 Nov 2026.", Tuesday) with { MapAt = Tuesday });
-        Assert.That((Said(page).Contains("In use: paths as of 10 Nov 2026, built 12 Nov 2026.", StringComparison.Ordinal), Said(page).Contains("Updated:", StringComparison.Ordinal)),
+        Assert.That((Said(page).Contains("Paths from OpenStreetMap as of 10 Nov 2026 (map built 12 Nov 2026).", StringComparison.Ordinal), Said(page).Contains("Updated:", StringComparison.Ordinal)),
             Is.EqualTo((true, false)));
     }
 }

@@ -36,19 +36,18 @@ public class AskingForALoop : PlannerPageSpecs
     }
 
     //  T117 (user: "we're seeing the current map tiles but *you* don't see it - that's a bit annoying
-    //  and confusing"): the date of the Network's data, at the foot of the Request panel.
+    //  and confusing"): the date of the Network's data, at the foot of the Request panel. Said once
+    //  (T155, #159), by the map's update line, looked at again every half minute: not read once as the
+    //  page opens, and out of date after an update.
     [Test]
-    public void The_date_of_the_maps_paths_is_shown()
+    public void The_date_of_the_maps_paths_is_said_once()
     {
-        _networkDate.At = new DateTimeOffset(2026, 11, 9, 21, 22, 17, TimeSpan.Zero);
+        _screen.MapUpdater.State = MapUpdateState.Unknown with { MapAt = new DateTimeOffset(2026, 11, 9, 21, 22, 17, TimeSpan.Zero) };
         var screen = Open(KenwoodHouse);
-        screen.WaitForAssertion(() => Assert.That(screen.Find(".paths-as-of").TextContent.Trim(),
-            Is.EqualTo("Paths as of 9 Nov 2026, from OpenStreetMap.")));
+        screen.WaitForElement(".map-update .in-use");
+        Assert.That((screen.FindAll(".paths-as-of").Count, screen.Find(".map-update .in-use").TextContent.Trim()),
+            Is.EqualTo((0, "Paths from OpenStreetMap as of 9 Nov 2026.")));
     }
-
-    [Test]
-    public void With_no_date_kept_none_is_shown() =>
-        Assert.That(Open(KenwoodHouse).FindAll(".paths-as-of"), Is.Empty);
 
     //  T115 (user: "when you click on start/finish the contents should auto-select because I will be
     //  looking to replace it"): both boxes are marked for js/select-on-focus.js, which selects all

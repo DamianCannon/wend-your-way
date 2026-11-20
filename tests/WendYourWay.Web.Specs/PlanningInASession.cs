@@ -27,7 +27,7 @@ public class PlanningInASession
     {
         (_planner, _saved, _map) = (new FakePlanner { Answer = Planned }, new FakeSavedRoutes(), new RecordingMap());
         _session = new PlannerSession(_planner, _saved, new FakeMarks(), new PlannerSettings(KenwoodHouse), new FakeLastRequest(),
-            new FakeCarParks(), new FakePreviews(), new FakePlaceSearch(), new FakeRouteTurns(), new FakePhoneShare(), new FakeNetworkDate(),
+            new FakeCarParks(), new FakePreviews(), new FakePlaceSearch(), new FakeRouteTurns(), new FakePhoneShare(),
             NullLogger<PlannerSession>.Instance);
         _session.Changed += () => _changed++;
         await _session.InitializeAsync();
