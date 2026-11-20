@@ -8,11 +8,11 @@
 @implements IDisposable
 
 <div class="map-update">
-    @* The map in use (T150, #154): its paths' date and when it was built, as a rebuild keeps the date.
+    @* The map in use (T150, #154): its paths' date (when it was built left out, T156: "it wraps").
        Said once, here (T155, #159): the tiles behind can be newer than its paths (T117). *@
     @if (_state.MapAt is { } mapAt)
     {
-        <p class="in-use">Paths from OpenStreetMap as of @Day(mapAt)@(_state.MapBuiltAt is { } built ? " (map built " + built.ToLocalTime().ToString("d MMM yyyy", System.Globalization.CultureInfo.InvariantCulture) + ")" : "").</p>
+        <p class="in-use">Paths from OpenStreetMap as of @Day(mapAt).</p>
     }
     @switch (_state.Kind)
     {

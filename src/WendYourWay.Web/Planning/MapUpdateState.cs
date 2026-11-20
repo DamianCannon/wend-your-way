@@ -16,11 +16,10 @@ public enum MapUpdateKind
 /// <summary>
 /// What the planner says of the map's update (T128): the last run's kind, stage, start and sentence;
 /// when Geofabrik's map runs to (none if it couldn't be asked) and the map in use does; and whether
-/// a job of another kind is running, holding the one lock (T132); and when the map in use was built (T150).
+/// a job of another kind is running, holding the one lock (T132).
 /// </summary>
 public sealed record MapUpdateState(
-    MapUpdateKind Kind, string? Stage, DateTimeOffset? StartedAt, string? Message, DateTimeOffset? SourceAt, DateTimeOffset? MapAt, bool Busy = false,
-    DateTimeOffset? MapBuiltAt = null)
+    MapUpdateKind Kind, string? Stage, DateTimeOffset? StartedAt, string? Message, DateTimeOffset? SourceAt, DateTimeOffset? MapAt, bool Busy = false)
 {
     /// <summary>Before anything's known.</summary>
     public static MapUpdateState Unknown { get; } = new(MapUpdateKind.None, null, null, null, null, null);
@@ -29,11 +28,10 @@ public sealed record MapUpdateState(
     public bool Newer => SourceAt is { } source && (MapAt is not { } map || source > map);
 
     /// <summary>From the last run (none if never), Geofabrik's date, the map in use's, the time, and the last job of any kind.</summary>
-    public static MapUpdateState Of(Job? last, DateTimeOffset? sourceAt, DateTimeOffset? mapAt, DateTimeOffset now, Job? lastOfAny = null, DateTimeOffset? mapBuiltAt = null) =>
+    public static MapUpdateState Of(Job? last, DateTimeOffset? sourceAt, DateTimeOffset? mapAt, DateTimeOffset now, Job? lastOfAny = null) =>
         FromLast(last, sourceAt, mapAt, now) with
         {
             Busy = lastOfAny is { Outcome: "running" } other && other.Kind != JobKind.Update && !other.Stopped(now),
-            MapBuiltAt = mapBuiltAt,
         };
 
     private static MapUpdateState FromLast(Job? last, DateTimeOffset? sourceAt, DateTimeOffset? mapAt, DateTimeOffset now) =>

@@ -29,8 +29,7 @@ public sealed class ProcessMapUpdater(
         var updates = new Jobs(dataSource);
         var last = await updates.LastAsync(JobKind.Update, cancellationToken);
         var mapAt = Latest(await updates.NewestSourceAtAsync(cancellationToken), await new PostgisNetworkDate(dataSource).OsmDataAtAsync(cancellationToken));
-        return MapUpdateState.Of(last, await SourceAtAsync(cancellationToken), mapAt, time.GetUtcNow(), await updates.LastAsync(cancellationToken: cancellationToken),
-            await new PostgisNetworkDate(dataSource).BuiltAtAsync(cancellationToken));
+        return MapUpdateState.Of(last, await SourceAtAsync(cancellationToken), mapAt, time.GetUtcNow(), await updates.LastAsync(cancellationToken: cancellationToken));
     }
 
     // Geofabrik's date, asked at most hourly; none if it can't be asked.

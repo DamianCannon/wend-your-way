@@ -34,17 +34,22 @@ public class UpdatingTheMap
     }
 
     private static MapUpdateState State(MapUpdateKind kind, string? stage = null, string? message = null, DateTimeOffset? sourceAt = null) =>
-        new(kind, stage, kind == MapUpdateKind.None ? null : Started, message, sourceAt, Monday, MapBuiltAt: Started);
+        new(kind, stage, kind == MapUpdateKind.None ? null : Started, message, sourceAt, Monday);
 
     private static string Said(IRenderedComponent<Planner> page) => page.Find(".map-update").TextContent;
 
     //  T150 (#154; user: "just say something like latest map available as of XXX or if not available
-    //  then say latest map not available"): the map in use, by its paths' date and when it was built.
+    //  then say latest map not available"): the map in use, by its paths' date.
     //  T155 (#159; user: "the request panel says this at the bottom which isn't entirely clear"): said
     //  once, as of its paths' date from OpenStreetMap, and whether Geofabrik's latest is any newer.
     [Test]
     public void It_says_which_map_is_in_use() =>
-        Assert.That(Said(Open(State(MapUpdateKind.None, sourceAt: Monday))), Does.Contain("Paths from OpenStreetMap as of 9 Nov 2026 (map built 12 Nov 2026)."));
+        Assert.That(Said(Open(State(MapUpdateKind.None, sourceAt: Monday))), Does.Contain("Paths from OpenStreetMap as of 9 Nov 2026."));
+
+    //  T156 (#160; user: "we don't need this bit because it wraps"): by its paths' date alone.
+    [Test]
+    public void It_doesnt_say_when_the_map_was_built() =>
+        Assert.That(Said(Open(State(MapUpdateKind.None, sourceAt: Monday))), Does.Not.Contain("built"));
 
     [Test]
     public void A_newer_map_is_offered_with_its_date()
@@ -133,7 +138,7 @@ public class UpdatingTheMap
     public void Finished_it_says_the_map_now_in_use_not_the_last_updates_own_words()
     {
         var page = Open(State(MapUpdateKind.Finished, "backing up", "Updated: the map's paths are as of 10 Nov 2026.", Tuesday) with { MapAt = Tuesday });
-        Assert.That((Said(page).Contains("Paths from OpenStreetMap as of 10 Nov 2026 (map built 12 Nov 2026).", StringComparison.Ordinal), Said(page).Contains("Updated:", StringComparison.Ordinal)),
+        Assert.That((Said(page).Contains("Paths from OpenStreetMap as of 10 Nov 2026.", StringComparison.Ordinal), Said(page).Contains("Updated:", StringComparison.Ordinal)),
             Is.EqualTo((true, false)));
     }
 }

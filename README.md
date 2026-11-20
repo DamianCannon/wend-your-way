@@ -159,7 +159,7 @@ Your own data (Outings, stars, Saved Routes, Marks, settings) lives apart from t
 
 The button starts the built `wend` (build it once with `dotnet build -c Release src/WendYourWay.Cli`, and again after pulling new code: the panel says when it's needed) in a process of its own, with its words in `data/logs/`; closing the app doesn't stop it, and the panel shows its stage while it runs and how it ended.
 
-The foot of the Request panel says how recent the Network's paths are ("Paths from OpenStreetMap as of 19 Nov 2026 (map built 20 Nov 2026).") and whether Geofabrik has anything newer ("Up to date: Geofabrik's latest is 19 Nov 2026."): the extract's own date, kept by the build. The map's tiles come from OpenStreetMap as it is now, so a path added since can show on the map before a Loop can use it; a newer extract and `wend network build` bring it in.
+The foot of the Request panel says how recent the Network's paths are ("Paths from OpenStreetMap as of 19 Nov 2026.") and whether Geofabrik has anything newer ("Up to date: Geofabrik's latest is 19 Nov 2026."): the extract's own date, kept by the build. The map's tiles come from OpenStreetMap as it is now, so a path added since can show on the map before a Loop can use it; a newer extract and `wend network build` bring it in.
 
 After a change to a rule rather than the data, `wend network rebuild` is enough (no osm2pgsql); after a change only to how car parks or Off-road networks are found, `wend network offroad`; after a change to scoring, `wend outings score --all`, then `wend outings calibrate`.
 
