@@ -54,4 +54,22 @@ public class GeneratingDestinationLoops
             .Select(s => LongerRiver.Node(s.From).X).Distinct().Order();
         Assert.That(bridges, Is.EqualTo(new double[] { 0, 2000 }));
     }
+
+    //  T152 (#156): a 10 km grid of streets with a hundred parks, 400 m square and 1 km apart, each a
+    //  destination with its gates; a 100 km Run reaches them all, so a thousand gates are spread.
+    private static readonly NetworkSlice ParksInStreets = GridNetwork.Create(junctionsAcross: 101,
+        ground: m => m.X % 1000 is >= 100 and <= 500 && m.Y % 1000 is >= 100 and <= 500 ? GroundKind.TrafficFree : GroundKind.Connector);
+
+    //  Their pairings, a million of them, aren't all held to keep the 60 nearest the Distance: a 99 km
+    //  Loop's took the app past 10 GB on the Great Britain map.
+    [Test]
+    public void Then_among_many_gates_their_pairings_aren_t_all_held()
+    {
+        var start = Enumerable.Range(0, ParksInStreets.NodeCount).MinBy(n => ParksInStreets.Node(n).DistanceTo(new NodePoint(0, 0)));
+        DestinationLoops.Plan(ParksInStreets, start, 100_000, ScoringWeights.Default);
+        var before = GC.GetAllocatedBytesForCurrentThread();
+        var planned = DestinationLoops.Plan(ParksInStreets, start, 100_000, ScoringWeights.Default);
+        var allocatedMb = (GC.GetAllocatedBytesForCurrentThread() - before) / 1e6;
+        Assert.That((planned.Count, allocatedMb < 20), Is.EqualTo((DestinationLoops.MostBuilt, true)), $"{allocatedMb:0} MB allocated");
+    }
 }

@@ -92,19 +92,36 @@ public static class DestinationLoops
         }
         spread.AddRange(bridgeEnds.Distinct().Except(spread));
 
-        // Out to one gate and back another way, or through two, estimated by the lengths to them.
-        var shapes = new List<(int[] Gates, double Estimate)>();
-        foreach (var g in spread) shapes.Add(([g], 2.2 * reach[g]));
+        // Out to one gate and back another way, or through two, estimated by the lengths to them: the
+        // MostBuilt nearest the Distance kept as they come, the first of equals first. Not every pairing
+        // held and sorted (T152, #156): a 99 km Loop's slice spread thousands of gates, whose pairings
+        // took the app past 10 GB.
+        var kept = new PriorityQueue<(int A, int B), (double Off, long Order)>(MostBuilt + 1, Furthest);
+        long order = 0;
+        void Consider(int a, int b, double estimate)
+        {
+            var key = (Math.Abs(estimate - distanceM), order++);
+            if (kept.Count == MostBuilt && kept.TryPeek(out _, out var furthest) && Furthest.Compare(key, furthest) <= 0) return;
+            kept.Enqueue((a, b), key);
+            if (kept.Count > MostBuilt) kept.Dequeue();
+        }
+        foreach (var g in spread) Consider(g, -1, 2.2 * reach[g]);
         foreach (var a in spread)
         {
             foreach (var b in spread)
             {
-                if (a != b) shapes.Add(([a, b], reach[a] + (1.25 * slice.Node(a).DistanceTo(slice.Node(b))) + reach[b]));
+                if (a != b) Consider(a, b, reach[a] + (1.25 * slice.Node(a).DistanceTo(slice.Node(b))) + reach[b]);
             }
         }
 
-        return [.. shapes.OrderBy(s => Math.Abs(s.Estimate - distanceM)).Take(MostBuilt).Select(s => s.Gates)];
+        var nearest = new List<((int A, int B) Gates, (double Off, long Order) Key)>(kept.Count);
+        while (kept.TryDequeue(out var gates, out var key)) nearest.Add((gates, key));
+        return [.. nearest.OrderBy(n => n.Key.Off).ThenBy(n => n.Key.Order).Select(n => n.Gates.B < 0 ? new[] { n.Gates.A } : [n.Gates.A, n.Gates.B])];
     }
+
+    // The furthest from the Distance first, the later of equals first: what's dropped when one nearer comes.
+    private static readonly Comparer<(double Off, long Order)> Furthest = Comparer<(double Off, long Order)>.Create(
+        (x, y) => x.Off != y.Off ? y.Off.CompareTo(x.Off) : y.Order.CompareTo(x.Order));
 
     /// <summary>
     /// The candidates through these gates, in their order, each told to <paramref name="built"/> as
