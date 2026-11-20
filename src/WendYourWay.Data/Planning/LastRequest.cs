@@ -20,6 +20,9 @@ public sealed record RequestSettings(LatLon? Start, double DistanceKm, double Hi
 
     /// <summary>What the finish is called (T093): a place's name or a postcode; null if neither.</summary>
     public string? FinishName { get; init; }
+
+    /// <summary>Whether Explain? was on (T157): the route's notes on the map. Off when kept before there was one.</summary>
+    public bool Explain { get; init; }
 }
 
 /// <summary>Keeps the last Request's settings.</summary>

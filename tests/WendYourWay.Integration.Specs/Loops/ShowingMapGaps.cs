@@ -56,6 +56,12 @@ public class ShowingMapGaps
     public void Then_the_gap_runs_from_the_paths_end_to_the_road() =>
         Assert.That(_route.MapGaps.Select(g => (Metres(g.From, At(100, 3)) < 0.5, Metres(g.To, At(100, 0)) < 0.5)), Is.EqualTo(new[] { (true, true) }));
 
+    //  T157 (#161): its notes, for Explain?, put on its line: the 300 m of road west, halfway along it.
+    [Test]
+    public void Then_its_notes_say_why_it_goes_as_it_does() =>
+        Assert.That(_route.Notes.Where(n => n.Note.Kind == NoteKind.Road).Select(n => (Math.Round(n.Note.LengthM / 10) * 10, Metres(n.At, At(-50, 0)) < 20)),
+            Is.EqualTo(new[] { (300.0, true) }));
+
     [Test]
     public async Task Then_its_turn_points_say_to_check_the_gap_is_passable()
     {

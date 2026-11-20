@@ -681,7 +681,7 @@ public sealed class LoopPlanner(INetworkSlices slices, MapGeometry geometry, Sco
     private async Task<PlannedLoop> ForTheMapAsync(NetworkSlice slice, Loop loop, CancellationToken cancellationToken)
     {
         (SegmentKey, bool)[] traversals = [.. Corners.OnTheMap(slice, loop.Traversals)];
-        var (line, ways) = await geometry.TraceWithWaysAsync(traversals, cancellationToken);
+        var (line, ways, of) = await geometry.TraceAlongAsync(traversals, cancellationToken);
         var points = await geometry.ToLatLonAsync([slice.Node(loop.Start), .. loop.Anchors.Select(slice.Node)], cancellationToken);
         // The Map gaps it crosses (T146b), each from where the Loop first meets it to where it leaves it: once,
         // though the Loop may cross back over it.
@@ -699,7 +699,20 @@ public sealed class LoopPlanner(INetworkSlices slices, MapGeometry geometry, Sco
             Ways = ways,
             MapGaps = [.. gaps.Select((t, i) => new MapGapCrossed(ends[2 * i], ends[(2 * i) + 1], slice.Segments[t.Segment].LengthM))],
             PossibleMapGaps = [.. possible.Select((p, i) => new MapGapCrossed(possibleEnds[2 * i], possibleEnds[(2 * i) + 1], p.LengthM))],
+            Notes = RouteNotes.Place(line, of, OnTheMap(slice, loop), Explanation.Of(slice, loop)),
         };
+    }
+
+    // Each of a Loop's Traversals' index among those the map has (T157), or none for a crossing link, which it leaves out.
+    private static int?[] OnTheMap(NetworkSlice slice, Loop loop)
+    {
+        var onTheMap = new int?[loop.Traversals.Count];
+        var drawn = 0;
+        for (var t = 0; t < onTheMap.Length; t++)
+        {
+            if (!slice.Segments[loop.Traversals[t].Segment].IsCrossingLink) onTheMap[t] = drawn++;
+        }
+        return onTheMap;
     }
 
     /// <summary>How near a Loop's junctions a possible Map gap's end is to be drawn for it (T146c).</summary>

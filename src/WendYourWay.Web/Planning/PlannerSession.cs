@@ -39,6 +39,7 @@ internal sealed class PlannerSession(
     private double _offRoadLean;
     // The route off the map, to see the ground under it (T071): kept while paging, not between visits.
     private bool _routeHidden;
+    private bool _explaining;
 
     // One history of what's been on screen (T078): a step for each Request's Loops and each
     // Nudge, the Loop paged to and the Leans' re-ranking kept in the step they belong to. The last
@@ -132,6 +133,7 @@ internal sealed class PlannerSession(
             {
                 (_start, _distanceKm, _hillsLean, _offRoadLean, _activity) = (last.Start ?? settings.Home, last.DistanceKm, last.HillsLean, last.OffRoadLean, last.Activity);
                 (_endElsewhere, _finish, _finishDistanceKm, _finishName) = (last.Finish is not null, last.Finish, last.FinishDistanceKm, last.FinishName);
+                _explaining = last.Explain;
             }
         }
         catch (Exception e) when (e is not OperationCanceledException)
@@ -151,6 +153,7 @@ internal sealed class PlannerSession(
                 Finish = _endElsewhere ? _finish : null,
                 FinishDistanceKm = _endElsewhere ? _finishDistanceKm : null,
                 FinishName = _endElsewhere ? _finishName : null,
+                Explain = _explaining,
             });
         }
         catch (Exception e) when (e is not OperationCanceledException)
@@ -517,6 +520,7 @@ internal sealed class PlannerSession(
         _loops = [.. _loops.Select((l, i) => i == _current ? nudged.Loop : l)];
         Changed?.Invoke();
         await _map.ShowLoopAsync(nudged.Loop, fit: false);
+        await ShowNotesAsync(nudged.Loop);
         Take(_history.CurrentRequest!.Value);
     }
 
@@ -856,6 +860,20 @@ internal sealed class PlannerSession(
             Changed?.Invoke();
         }
         await _map.ShowLoopAsync(loop, fit);
+        await ShowNotesAsync(loop);
+    }
+
+    // Explain? (T157, #161): the route's notes on the map while it's on, none while it's off; again for each route drawn, nudged or paged to.
+    private Task ShowNotesAsync(PlannedLoop? route) =>
+        _map.ShowNotesAsync(_explaining && route is not null ? [.. route.Notes.Select(NoteOnMap.Of)] : []);
+
+    /// <summary>Explain? on the Loop card (T157): the route's notes on the map, or off it; kept for next time.</summary>
+    internal async Task ToggleExplainAsync()
+    {
+        _explaining = !_explaining;
+        Changed?.Invoke();
+        await KeepSettingsAsync();
+        await ShowNotesAsync(Shown);
     }
 
     /// <summary>The route's show/hide button: one click either way (T071).</summary>
@@ -1038,6 +1056,7 @@ internal sealed class PlannerSession(
     internal bool PhoneAsked { get => _phoneAsked; set => _phoneAsked = value; }
     internal WendYourWay.Web.Phone.PhoneLink? Phone => _phone;
     internal bool RouteHidden => _routeHidden;
+    internal bool Explaining => _explaining;
     internal int Saves => _saves;
     internal MapBounds? View => _starts.View;
     internal int Zoom => _starts.Zoom;
@@ -1047,7 +1066,7 @@ internal sealed class PlannerSession(
     internal PagerView Pager => new(_loops, _current, _activity, _offered?.ShortestM, _finding, _progress, _searching, _nothingFound, _problem,
         _phoneAsked, _phone, _routeHidden, CanUndo, CanRedo, _nudgeNote, SuggestedName,
         // The car park started from, named on the card opened (T061).
-        _chosen is { } chosen && _start == chosen.At ? chosen.Name : null);
+        _chosen is { } chosen && _start == chosen.At ? chosen.Name : null) { Explaining = _explaining };
 
     /// <summary>The Loop shown as a GPX file, its turns as waypoints, named as it's exported (T100, T112).</summary>
     internal async Task<GpxFile?> GpxAsync() => Shown is { } shown ? LoopGpx.Of(shown, await TurnsOfAsync(shown), ExportName) : null;

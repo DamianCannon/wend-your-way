@@ -82,6 +82,9 @@
     /// <summary>Takes the last Loop off the map.</summary>
     public Task ClearLoopAsync() => Call("clearLoop");
 
+    /// <summary>The route's notes, for Explain? (T157); none to take them off.</summary>
+    public Task ShowNotesAsync(IReadOnlyList<WendYourWay.Web.Planning.NoteOnMap> notes) => Call("showNotes", notes);
+
     /// <summary>Draws an Outing: the Segments it covered, coloured by ground, its track over them, and its gaps.</summary>
     public Task ShowOutingAsync(OutingView outing) => Call("showOuting", OutingOnMap.From(outing));
 

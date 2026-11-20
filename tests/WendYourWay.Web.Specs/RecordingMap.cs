@@ -37,4 +37,5 @@ internal sealed class RecordingMap : IPlannerMap
     public Task ClearStartsAsync() => Kept("clearStarts");
     public Task GoToAsync(LatLon place, int zoom) => Kept("goTo", (place, zoom));
     public Task ShowMarksAsync(IReadOnlyList<MarkOnMap> marks) => Kept("showMarks", marks);
+    public Task ShowNotesAsync(IReadOnlyList<NoteOnMap> notes) => Kept("showNotes", notes);
 }

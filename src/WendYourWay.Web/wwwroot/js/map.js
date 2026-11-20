@@ -24,6 +24,8 @@ let startsLayer;
 let marksLayer;
 let carParks;
 let owner;
+let notesLayer;
+let notes = [];
 
 // An Outing's covered Segments by ground (STORY-030). Hi-vis orange stays the Loop's own.
 const groundColours = { off_road: "#2e7d32", traffic_free: "#1f78c8", connector: "#8a8f8c" };
@@ -158,6 +160,7 @@ export function create(element, tiles, centre, dotNet) {
     map = L.map(element, { zoomControl: false, keyboard: false }).setView(centre ? point(centre) : london, 14);
     L.control.zoom({ position: "topright" }).addTo(map);
     L.control.scale({ position: "bottomright", imperial: false }).addTo(map);
+    map.on("zoomend", drawNotes);
     // Every map the app offers, the one chosen last (or the first) on screen, and a switcher when
     // there's a choice. Each credits its maker while it's shown.
     const layers = {};
@@ -358,6 +361,7 @@ export function showLoop(loop, fit = true) {
 export function showRoute(shown) {
     routeShown = shown;
     if (loopLayer) shown ? loopLayer.addTo(map) : loopLayer.remove();
+    drawNotes();
     if (shown) decorate();
     else if (decorations) decorations.remove();
 }
@@ -531,8 +535,32 @@ export function clearPlace() {
 }
 
 /** Takes the last Loop off the map. */
+/**
+ * Explain? (T157, #161): the route's notes, each a label where it is: its Crossings and Obstacles,
+ * its stretches of road, its longest green stretch. Each said from its zoom in, so zoomed out the map
+ * isn't buried; none while the route is hidden. None given takes them off.
+ */
+export function showNotes(shown) {
+    notes = shown ?? [];
+    drawNotes();
+}
+
+function drawNotes() {
+    if (notesLayer) notesLayer.remove();
+    notesLayer = undefined;
+    if (!map || notes.length === 0 || !routeShown) return;
+    const escape = text => text.replace(/[&<>"']/g, c => `&#${c.charCodeAt(0)};`);
+    const zoom = map.getZoom();
+    notesLayer = L.layerGroup(notes.filter(n => zoom >= n.fromZoom).map(n => L.marker(point(n.at), {
+        icon: L.divIcon({ className: `note-marker ${n.kind}`, html: `<span>${escape(n.words)}</span>`, iconSize: null }),
+        keyboard: false, interactive: false, zIndexOffset: 400
+    }))).addTo(map);
+}
+
 export function clearLoop() {
     clearPlace();
+    notes = [];
+    drawNotes();
     map.off("zoomend", decorate);
     if (decorations) decorations.remove();
     if (loopLayer) loopLayer.remove();

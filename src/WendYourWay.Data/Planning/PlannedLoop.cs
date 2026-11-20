@@ -41,6 +41,12 @@ public sealed record PlannedLoop(IReadOnlyList<LatLon> Line, LatLon Start, IRead
     public IReadOnlyList<MapGapCrossed> PossibleMapGaps { get; init; } = [];
 
     /// <summary>
+    /// Why it goes the way it does (T157, #161): its Crossings, Obstacles, stretches of road and longest
+    /// green stretch, each where it is, for the map to say when Explain? is on.
+    /// </summary>
+    public IReadOnlyList<RouteNote> Notes { get; init; } = [];
+
+    /// <summary>
     /// Whether it was offered in another direction, below the usual bar, because few Loops were on it
     /// (T096, STORY-044). Of the Request that offered it, so not kept with a Saved Route.
     /// </summary>

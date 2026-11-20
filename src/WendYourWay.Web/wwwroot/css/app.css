@@ -69,8 +69,8 @@ html, body { margin: 0; height: 100%; background: var(--paper); }
     left: calc(var(--side) + (100% - var(--side)) / 2); transform: translateX(-50%);
     /* A fixed width, so the buttons never move from under the pointer as Loops change (user, 2026-10-27);
        410 px from T071, so the route's eye fits beside a summary still whole; 440 px from T080, the bookmark;
-       510 px from T099, the QR button; 580 px for TCX beside it (user, 2026-11-10) */
-    box-sizing: border-box; width: 580px; max-width: calc(100% - var(--side) - 32px); padding: 12px 20px; text-align: center;
+       510 px from T099, the QR button; 580 px for TCX beside it (user, 2026-11-10); 660 px for Explain? (T157) */
+    box-sizing: border-box; width: 660px; max-width: calc(100% - var(--side) - 32px); padding: 12px 20px; text-align: center;
     background: var(--paper); border: 1px solid var(--paper-edge); border-radius: var(--radius); box-shadow: var(--shadow);
 }
 .pager .empty { color: var(--ink-soft); font-size: 0.95rem; }
@@ -270,6 +270,14 @@ html, body { margin: 0; height: 100%; background: var(--paper); }
 .pager .route:hover { background: var(--paper-edge); }
 .pager .route[aria-pressed="true"] { background: var(--hi-vis); color: #fff; }
 .pager .route:focus-visible { outline: 2px solid var(--hi-vis); outline-offset: 1px; }
+/* Explain? (T157): the route's notes on the map, hi-vis while they're on */
+.pager .explain {
+    height: 30px; padding: 4px 8px; border: 0; border-radius: 6px; background: transparent; color: var(--ink);
+    font: inherit; font-size: 0.85rem; font-weight: 600; cursor: pointer; white-space: nowrap;
+}
+.pager .explain:hover { background: var(--paper-edge); }
+.pager .explain[aria-pressed="true"] { background: var(--hi-vis); color: #fff; }
+.pager .explain:focus-visible { outline: 2px solid var(--hi-vis); outline-offset: 1px; }
 .pager .export, .pager .phone {
     display: flex; align-items: center; gap: 4px; height: 30px; padding: 4px 10px 4px 7px; margin-left: 4px;
     border: 0; border-radius: 6px; background: var(--hi-vis); color: #fff; cursor: pointer;
@@ -573,3 +581,22 @@ html, body { margin: 0; height: 100%; background: var(--paper); }
 .pager .export[aria-disabled="true"]:not(.preparing), .pager .phone[aria-disabled="true"]:not(.preparing) { opacity: 0.55; cursor: default; filter: none; }
 /* Read by a screen reader, not seen. */
 .visually-hidden { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+
+/* Explain? (T157, #161): the route's notes on the map, a label above each place with a dot on the route. */
+.note-marker span {
+    position: absolute; left: 0; bottom: 7px; transform: translateX(-50%); padding: 2px 7px; border-radius: 6px;
+    background: #fff; color: var(--ink); border: 1.5px solid var(--ink-soft); box-shadow: 0 1px 3px rgb(0 0 0 / 0.3);
+    font: 600 0.72rem/1.25 system-ui, sans-serif; white-space: nowrap; pointer-events: none;
+}
+.note-marker::after {
+    content: ""; position: absolute; left: -4px; top: -4px; width: 8px; height: 8px; border-radius: 50%;
+    background: #fff; border: 2px solid var(--ink-soft); box-sizing: border-box;
+}
+.note-marker.green span { border-color: var(--forest-light); color: var(--forest); }
+.note-marker.green::after { border-color: var(--forest-light); }
+.note-marker.main-road span { border-color: var(--hi-vis); }
+.note-marker.main-road::after { border-color: var(--hi-vis); }
+.note-marker.crossing span { border-color: #1f78c8; }
+.note-marker.crossing::after { border-color: #1f78c8; }
+.note-marker.obstacle span { border-color: #8d5b3a; }
+.note-marker.obstacle::after { border-color: #8d5b3a; }

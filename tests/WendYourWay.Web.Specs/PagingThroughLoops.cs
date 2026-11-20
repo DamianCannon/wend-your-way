@@ -41,6 +41,17 @@ public class PagingThroughLoops : PlannerPageSpecs
         Assert.That(RouteButton(screen), Is.EqualTo("Show route"));
     }
 
+    //  T157 (#161; user: "Maybe the switch should just say 'Explain?'"): pressed, the map says the route's notes.
+    [Test]
+    public void Explain_says_why_the_route_goes_as_it_does()
+    {
+        var screen = OfferThree();
+        var button = screen.Find(".pager .explain");
+        Assert.That((button.TextContent.Trim(), button.GetAttribute("aria-pressed")), Is.EqualTo(("Explain?", "false")));
+        button.Click();
+        screen.WaitForAssertion(() => Assert.That((screen.Find(".pager .explain").GetAttribute("aria-pressed"), _map.Invocations["showNotes"].Count), Is.EqualTo(("true", 2))));
+    }
+
     [Test]
     public void Show_route_puts_it_back()
     {

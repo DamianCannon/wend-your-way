@@ -18,6 +18,9 @@ public sealed record PagerView(
     bool PhoneAsked, PhoneLink? Phone, bool RouteHidden, bool CanUndo, bool CanRedo,
     string? NudgeNote, string SuggestedName, string? Place)
 {
+    /// <summary>Whether Explain? is on (T157): the route's notes on the map.</summary>
+    public bool Explaining { get; init; }
+
     /// <summary>Before any Request: no Loops yet.</summary>
     public static PagerView None { get; } = new([], 0, Activity.Run, null, false, null, false, false, null, false, null, false, false, false, null, "", null);
 }

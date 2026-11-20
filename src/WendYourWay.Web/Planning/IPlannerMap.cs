@@ -27,4 +27,7 @@ public interface IPlannerMap
     Task ClearStartsAsync();
     Task GoToAsync(LatLon place, int zoom);
     Task ShowMarksAsync(IReadOnlyList<MarkOnMap> marks);
+
+    /// <summary>The route's notes, for Explain? (T157): none to take them off.</summary>
+    Task ShowNotesAsync(IReadOnlyList<NoteOnMap> notes);
 }

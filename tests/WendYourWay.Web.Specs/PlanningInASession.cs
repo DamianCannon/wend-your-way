@@ -58,13 +58,13 @@ public class PlanningInASession
         Assert.That((_session.Loops, _session.Current, _session.Finding), Is.EqualTo((new[] { Planned }, 0, false)));
     }
 
-    //  The last Loop off the map at once, then the new one drawn and fitted.
+    //  The last Loop off the map at once, then the new one drawn and fitted, and its notes (none, Explain? off: T157).
     [Test]
     public async Task Go_clears_the_map_then_draws_the_Loop_fitted()
     {
         _map.Calls.Clear();
         await _session.GoAsync();
-        Assert.That((_map.Names.ToArray(), _map.Last("showLoop")), Is.EqualTo((new[] { "clearLoop", "showLoop" }, (object)(Planned, true))));
+        Assert.That((_map.Names.ToArray(), _map.Last("showLoop")), Is.EqualTo((new[] { "clearLoop", "showLoop", "showNotes" }, (object)(Planned, true))));
     }
 
     [Test]

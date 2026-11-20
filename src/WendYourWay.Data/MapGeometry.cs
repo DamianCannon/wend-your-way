@@ -41,8 +41,19 @@ public sealed class MapGeometry(NpgsqlDataSource dataSource)
     public async Task<(IReadOnlyList<LatLon> Line, IReadOnlyList<long> Ways)> TraceWithWaysAsync(
         IReadOnlyList<(SegmentKey Key, bool Forward)> traversals, CancellationToken cancellationToken = default)
     {
+        var (line, ways, _) = await TraceAlongAsync(traversals, cancellationToken);
+        return (line, ways);
+    }
+
+    /// <summary>
+    /// The same line and ways, with the index of the Traversal each point was traced from (T157): for
+    /// putting a Loop's notes on it.
+    /// </summary>
+    public async Task<(IReadOnlyList<LatLon> Line, IReadOnlyList<long> Ways, IReadOnlyList<int> Of)> TraceAlongAsync(
+        IReadOnlyList<(SegmentKey Key, bool Forward)> traversals, CancellationToken cancellationToken = default)
+    {
         var traced = await TraceAsync(traversals, 4326, cancellationToken);
-        return ([.. traced.Select(p => new LatLon(p.At.Y, p.At.X))], [.. traced.Select(p => traversals[p.Of].Key.OsmWayId)]);
+        return ([.. traced.Select(p => new LatLon(p.At.Y, p.At.X))], [.. traced.Select(p => traversals[p.Of].Key.OsmWayId)], [.. traced.Select(p => p.Of)]);
     }
 
     /// <summary>The same line as <see cref="TraceAsync(IReadOnlyList{ValueTuple{SegmentKey, bool}}, CancellationToken)"/>, in British National Grid.</summary>
