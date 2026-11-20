@@ -75,7 +75,14 @@ public sealed class LoopPlanner(INetworkSlices slices, MapGeometry geometry, Sco
         }
 
         var found = new Found(this, slice, activity, null, null) { Gaps = saved.Gaps, Gpx = new GpxPoints(saved.Line, line) };
-        return found.Reopened(saved, new Loop(StartOf(kept[0]), anchors, kept), avoided);
+        var loop = new Loop(StartOf(kept[0]), anchors, kept);
+        // Saved before there were notes (T157): worked out from its Segments, on its line as the map draws it.
+        if (saved.Notes.Count == 0)
+        {
+            var (traced, _, of) = await geometry.TraceAlongAsync([.. Corners.OnTheMap(slice, kept)], cancellationToken);
+            saved = saved with { Notes = NotesOn(slice, loop, traced, of) };
+        }
+        return found.Reopened(saved, loop, avoided);
     }
 
     /// <summary>Why a Point-to-point whose start and end are too far apart isn't planned (T090).</summary>
@@ -699,9 +706,13 @@ public sealed class LoopPlanner(INetworkSlices slices, MapGeometry geometry, Sco
             Ways = ways,
             MapGaps = [.. gaps.Select((t, i) => new MapGapCrossed(ends[2 * i], ends[(2 * i) + 1], slice.Segments[t.Segment].LengthM))],
             PossibleMapGaps = [.. possible.Select((p, i) => new MapGapCrossed(possibleEnds[2 * i], possibleEnds[(2 * i) + 1], p.LengthM))],
-            Notes = RouteNotes.Place(line, of, OnTheMap(slice, loop), Explanation.Of(slice, loop)),
+            Notes = NotesOn(slice, loop, line, of),
         };
     }
+
+    // Why a Loop goes the way it does (T157), on its line as the map draws it.
+    private static IReadOnlyList<RouteNote> NotesOn(NetworkSlice slice, Loop loop, IReadOnlyList<LatLon> line, IReadOnlyList<int> of) =>
+        RouteNotes.Place(line, of, OnTheMap(slice, loop), Explanation.Of(slice, loop));
 
     // Each of a Loop's Traversals' index among those the map has (T157), or none for a crossing link, which it leaves out.
     private static int?[] OnTheMap(NetworkSlice slice, Loop loop)

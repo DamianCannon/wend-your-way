@@ -58,6 +58,20 @@ public class SavingRoutes
         Assert.That((opened.Loop.Breakdown.LengthM, opened.Loop.Breakdown.Obstacles, opened.Loop.Profile.Count), Is.EqualTo((9_400.0, Loop.Breakdown.Obstacles, 2)));
     }
 
+    //  T157 (#161): its notes for Explain?, each where it is and what it says.
+    [Test]
+    public async Task Its_notes_are_kept_with_it()
+    {
+        RouteNote[] notes =
+        [
+            new(KenwoodHouse, new LoopNote(NoteKind.Crossing, 1, NotePlace.End) { Crossing = CrossingKind.Signals, MainRoad = true }),
+            new(new LatLon(51.5600, -0.1600), new LoopNote(NoteKind.Road, 2, NotePlace.Middle) { Along = 0.3, LengthM = 450, MainRoadM = 120, Pavement = true }),
+            new(new LatLon(51.5650, -0.1650), new LoopNote(NoteKind.Obstacle, 0, NotePlace.Middle) { Obstacle = ObstacleKind.KissingGate }),
+        ];
+        var id = await _saved.SaveAsync("Heath wiggle", Loop with { Notes = notes }, Traversals);
+        Assert.That((await _saved.OpenAsync(id))!.Loop.Notes, Is.EqualTo(notes));
+    }
+
     //  T097 (STORY-045 AC1): the user's own stars for a Saved Route, kept with it and listed.
     [Test]
     public async Task Its_stars_are_kept_and_listed()

@@ -86,13 +86,16 @@ internal sealed class FakePlanner : ILoopPlanner
     /// <summary>When set, reopening waits for it.</summary>
     public TaskCompletionSource? ReopenPending { get; set; }
 
+    /// <summary>When set, what a Saved Route reopens as: with its notes worked out (T157), say.</summary>
+    public PlannedLoop? ReopenedAs { get; set; }
+
     public async Task<IOfferedLoops> ReopenAsync(
         PlannedLoop saved, IReadOnlyList<(WendYourWay.Core.Network.SegmentKey Key, bool Forward)> traversals, Activity activity = Activity.Run, CancellationToken cancellationToken = default)
     {
         Reopened.Add((saved, activity));
         if (ReopenPending is not null) await ReopenPending.Task;
         if (ReopenFailure is not null) throw ReopenFailure;
-        return Offer([saved]);
+        return Offer([ReopenedAs ?? saved]);
     }
 
     public Task<IOfferedLoops> ImportAsync(IReadOnlyList<LatLon> route, Activity activity = Activity.Run, CancellationToken cancellationToken = default)

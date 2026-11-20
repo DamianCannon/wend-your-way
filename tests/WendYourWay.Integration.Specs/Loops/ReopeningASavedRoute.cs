@@ -58,6 +58,15 @@ public class ReopeningASavedRoute
         Assert.That((reopened.Count, ReferenceEquals(reopened[0], _planned), reopened.TraversalsOf(reopened[0])), Is.EqualTo((1, true, _offered.TraversalsOf(_planned))));
     }
 
+    //  T157 (#161): saved before there were notes, it's reopened with them, worked out from its Segments.
+    [Test]
+    public async Task Saved_with_no_notes_it_is_reopened_with_them()
+    {
+        Assume.That(_planned.Notes, Is.Not.Empty, "a Loop with notes");
+        var reopened = await _planner.ReopenAsync(_planned with { Notes = [] }, _offered.TraversalsOf(_planned)!);
+        Assert.That(reopened[0].Notes, Is.EqualTo(_planned.Notes));
+    }
+
     [Test]
     public async Task Reopened_it_is_nudged_with_no_length_window()
     {

@@ -120,6 +120,17 @@ public class ExplainingTheRoute
         Assert.That((_session.Explaining, Said.Count()), Is.EqualTo((true, 2)));
     }
 
+    //  Saved before there were notes, a Saved Route is said once it's ready to nudge: its notes worked
+    //  out from its Segments, it's the same route by the same name.
+    [Test]
+    public async Task A_Saved_Route_reopened_says_its_notes_once_ready()
+    {
+        _planner.ReopenedAs = Explained;
+        await _session.ToggleExplainAsync();
+        await _session.OpenSavedAsync(new SavedRoute(4, "Sunday hills", Planned));
+        Assert.That((Said, _session.ExportedAs), Is.EqualTo((new[] { "Crossing with lights", "Longest green: 2.40 km" }, "Sunday hills")));
+    }
+
     [Test]
     public async Task The_card_shows_whether_it_s_on()
     {

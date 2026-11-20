@@ -650,7 +650,15 @@ internal sealed class PlannerSession(
         var (offered, _) = await reopening;
         if (offered is null || reopening != _reopening || request.IsCancellationRequested) return;
         _offered = offered;
+        // Saved before there were notes (T157), it's back with them: the same route, by the same name, said.
+        var swapped = offered.Count == 1 && _loops is [var shown] && !ReferenceEquals(offered[0], shown);
+        if (swapped)
+        {
+            _savedNames.Carry(_loops[0], offered[0]);
+            _loops = [offered[0]];
+        }
         Amend();
+        if (swapped) await ShowNotesAsync(_loops[0]);
     }
 
     /// <summary>
