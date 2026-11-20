@@ -318,12 +318,11 @@ public class AskingForALoop : PlannerPageSpecs
             Assert.That(screen.Find(".pager").TextContent, Does.Contain("outside England and Wales")));
     }
 
-    [TestCase(0.5)]
-    [TestCase(1000)]
-    public void A_Distance_outside_1_to_100_km_is_not_asked_for(double km)
+    [Test]
+    public void A_Distance_under_1_km_is_not_asked_for()
     {
         var screen = Open(KenwoodHouse);
-        SetDistance(screen, km);
+        SetDistance(screen, 0.5);
         PressGo(screen);
         Assert.Multiple(() =>
         {
@@ -331,4 +330,19 @@ public class AskingForALoop : PlannerPageSpecs
             Assert.That(screen.Find(".pager").TextContent, Does.Contain("from 1 to 100 km"));
         });
     }
+
+    //  T153 (#157): over 100 km, it's 100 km ("should that even let you enter a value above 100km", user).
+    [Test]
+    public void A_Distance_over_100_km_is_100_km()
+    {
+        var screen = Open(KenwoodHouse);
+        SetDistance(screen, 1000);
+        PressGo(screen);
+        Assert.That((screen.Find("input.distance").GetAttribute("value"), _planner.Asked.Single()), Is.EqualTo(("100", (KenwoodHouse, 100.0))));
+    }
+
+    //  T153: and it's made 100 km as it's typed, in the browser.
+    [Test]
+    public void The_Distance_box_takes_no_more_than_100_km_as_it_s_typed() =>
+        Assert.That(Open(KenwoodHouse).Find("input.distance").GetAttribute("oninput"), Is.EqualTo("if (+this.value > 100) this.value = 100"));
 }

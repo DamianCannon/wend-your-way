@@ -1028,8 +1028,9 @@ internal sealed class PlannerSession(
     // --- What the page reads and binds (T124c): the session's state, named as the page shows it. ---
     internal LatLon? Start => _start;
     internal FoundStart? Chosen => _chosen;
-    internal double DistanceKm { get => _distanceKm; set => _distanceKm = value; }
-    internal double? FinishDistanceKm { get => _finishDistanceKm; set => _finishDistanceKm = value; }
+    // No more than 100 km (T153, #157: "should that even let you enter a value above 100km", user).
+    internal double DistanceKm { get => _distanceKm; set => _distanceKm = Math.Min(value, WendYourWay.Core.Loops.Request.MaxDistanceKm); }
+    internal double? FinishDistanceKm { get => _finishDistanceKm; set => _finishDistanceKm = value is { } km ? Math.Min(km, WendYourWay.Core.Loops.Request.MaxDistanceKm) : null; }
     internal double HillsLean { get => _hillsLean; set => _hillsLean = value; }
     internal double OffRoadLean { get => _offRoadLean; set => _offRoadLean = value; }
     internal Activity Activity => _activity;

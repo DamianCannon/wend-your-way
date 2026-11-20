@@ -453,4 +453,14 @@ public class EndingElsewhere : PlannerPageSpecs
         screen.WaitForAssertion(() => Assert.That((FinishText(screen), _map.Invocations["clearFinish"].Count > 0),
             Is.EqualTo(("", true))));
     }
+
+    //  T153 (#157): a Point-to-point's Distance over 100 km is 100 km, as a Loop's is.
+    [Test]
+    public void A_Distance_over_100_km_is_100_km()
+    {
+        var screen = RoutesTo(PembrokeLodge);
+        screen.Find("input.distance").Change(1000);
+        Assert.That((screen.Find("input.distance").GetAttribute("value"), screen.Find("input.distance").GetAttribute("oninput")),
+            Is.EqualTo(("100", "if (+this.value > 100) this.value = 100")));
+    }
 }
