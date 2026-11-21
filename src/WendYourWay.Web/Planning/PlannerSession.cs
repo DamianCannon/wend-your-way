@@ -122,7 +122,7 @@ internal sealed class PlannerSession(
     // an old start never appears under a new one.
     private CancellationTokenSource? _request;
 
-    internal string StartLabel => RouteNames.Start(_start, settings.Home, _chosen, _startName);
+    internal string StartLabel => RouteNames.Start(_start, settings.Home, _chosen, _startName, settings.HomeName);
 
 
     // The last Request's settings, or home, 10 km and Hills at its centre before any (R1.1a, T056).

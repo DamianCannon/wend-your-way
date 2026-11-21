@@ -17,9 +17,9 @@ public static class RouteNames
     /// The Start box's words: nothing with no start; "Home" at home; a car park's name at the car park
     /// chosen; else its postcode, or <see cref="ChosenOnTheMap"/> with none.
     /// </summary>
-    public static string Start(LatLon? start, LatLon? home, FoundStart? chosen, string? startName) =>
+    public static string Start(LatLon? start, LatLon? home, FoundStart? chosen, string? startName, string homeName = "Home") =>
         start is null ? ""
-        : start == home ? "Home"
+        : start == home ? homeName
         : chosen is { } carPark && start == carPark.At ? carPark.Name
         : startName ?? ChosenOnTheMap;
 

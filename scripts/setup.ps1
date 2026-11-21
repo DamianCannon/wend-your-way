@@ -10,6 +10,7 @@
   4. osm2pgsql                         (official Windows zip, into tools\osm2pgsql)
   5. The `cutthrough` role and database with PostGIS enabled, plus a `cutthrough_test`
      database (also PostGIS) that the integration specs wipe and rebuild.
+     And a `cutthrough_practice` database (also PostGIS) for the practice map.
      The role's password is random and stored only in your libpq password file
      (%APPDATA%\postgresql\pgpass.conf), which psql, osm2pgsql and Npgsql all
      read, so no password ever appears in the repository or in connection strings.
@@ -251,6 +252,18 @@ try {
     }
     Sql $TestDbName 'create extension if not exists postgis' | Out-Null
     Done "PostGIS enabled in '$TestDbName'"
+
+    # The practice map's database (T161): Richmond Park and around, to try Wend Your Way on first
+    # (`wend practice` builds it; the "Wend Your Way – practice map" shortcut opens it).
+    $PracticeDbName = "${DbName}_practice"
+    if ((Sql 'postgres' "select 1 from pg_database where datname = '$PracticeDbName'") -eq '1') {
+        Done "Database '$PracticeDbName' already exists"
+    } else {
+        Sql 'postgres' "create database $PracticeDbName owner $DbRole" | Out-Null
+        Done "Database '$PracticeDbName' created for the practice map, owned by '$DbRole'"
+    }
+    Sql $PracticeDbName 'create extension if not exists postgis' | Out-Null
+    Done "PostGIS enabled in '$PracticeDbName'"
 }
 finally {
     Remove-Item Env:\PGPASSWORD -ErrorAction SilentlyContinue

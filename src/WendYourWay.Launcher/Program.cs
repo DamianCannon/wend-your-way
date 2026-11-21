@@ -14,6 +14,10 @@ internal static class Program
         NativeMethods.SetCurrentProcessExplicitAppUserModelID(NativeMethods.AppId);
         var launcherArguments = args.TakeWhile(a => a != "--").ToList();
         var appArguments = args.SkipWhile(a => a != "--").Skip(1).ToList();
+        // The practice map (T161): the app told so, at its own address, in a window of its own.
+        var practising = launcherArguments.Contains(Practice.Flag);
+        IReadOnlyList<string> practiceBuild = practising ? Practice.WendArguments(appArguments) : [];
+        if (practising) appArguments = [.. Practice.AppArguments(appArguments)];
         var root = Repository.Root(AppContext.BaseDirectory);
         var folder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Wend Your Way");
         Directory.CreateDirectory(folder);
@@ -29,8 +33,8 @@ internal static class Program
         }
 
         // Once (AC5): clicked again while open, the window already open is brought forward.
-        using var once = new Mutex(true, @"Local\WendYourWay.Launcher", out var first);
-        using var bringForward = new EventWaitHandle(false, EventResetMode.AutoReset, @"Local\WendYourWay.Launcher.Forward");
+        using var once = new Mutex(true, Practice.Once(practising), out var first);
+        using var bringForward = new EventWaitHandle(false, EventResetMode.AutoReset, Practice.Once(practising) + ".Forward");
         if (!first)
         {
             NativeMethods.AllowSetForegroundWindow(NativeMethods.AnyProcess);
@@ -40,7 +44,7 @@ internal static class Program
 
         ApplicationConfiguration.Initialize();
         using var icon = new Icon(typeof(StartingWindow).Assembly.GetManifestResourceStream("WendYourWay.Launcher.wend-your-way.ico") ?? File.OpenRead(Path.Combine(AppContext.BaseDirectory, "wend-your-way.ico")));
-        using var context = new Opening(root, appArguments, folder, logs, icon, bringForward, Log);
+        using var context = new Opening(root, appArguments, practiceBuild, folder, logs, icon, bringForward, Log);
         Application.Run(context);
         return 0;
     }
@@ -72,13 +76,14 @@ internal sealed class Opening : ApplicationContext
     private readonly Icon _icon;
     private readonly Action<string> _log;
     private readonly RegisteredWaitHandle _forward;
+    private readonly IReadOnlyList<string> _practiceBuild;
     private PlannerWindow? _planner;
     private bool _started;
     private bool _closingDown;
 
-    public Opening(string? root, IReadOnlyList<string> appArguments, string folder, string logs, Icon icon, EventWaitHandle bringForward, Action<string> log)
+    public Opening(string? root, IReadOnlyList<string> appArguments, IReadOnlyList<string> practiceBuild, string folder, string logs, Icon icon, EventWaitHandle bringForward, Action<string> log)
     {
-        (_root, _folder, _logs, _icon, _log) = (root, folder, logs, icon, log);
+        (_root, _folder, _logs, _icon, _log, _practiceBuild) = (root, folder, logs, icon, log, practiceBuild);
         _starting = new StartingWindow(icon);
         // Closed while the app it started is still starting (#151, T147): the app stopped too, not left
         // running with no window, where every later click would open onto it and never stop it.
@@ -128,6 +133,17 @@ internal sealed class Opening : ApplicationContext
                     _log($"Rebuild failed: {failed}");
                     _starting.Step($"The latest code didn't build ({failed.Split(Environment.NewLine)[0]}), so the last build that worked is opening.");
                     await Task.Delay(TimeSpan.FromSeconds(4));
+                }
+            }
+            // The practice map built first, if it's needed (T161): a few seconds.
+            if (_practiceBuild.Count > 0)
+            {
+                _starting.Step("Getting the practice map ready…");
+                if (await _app.WendAsync(_practiceBuild) is { } why)
+                {
+                    _log($"Practice map: {why}");
+                    _starting.Stopped(why);
+                    return;
                 }
             }
             _starting.Step("Starting Wend Your Way…");

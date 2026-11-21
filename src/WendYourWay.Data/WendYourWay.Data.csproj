@@ -22,4 +22,9 @@
     <EmbeddedResource Include="..\..\db\osm2pgsql\cutthrough.lua" LogicalName="cutthrough.lua" />
   </ItemGroup>
 
+  <ItemGroup>
+    <!-- The practice map (T161): Richmond Park and around, from OpenStreetMap, beside every program that builds or opens it. -->
+    <None Include="..\..\db\practice\richmond-park.osm.gz" Link="practice\richmond-park.osm.gz" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
 </Project>

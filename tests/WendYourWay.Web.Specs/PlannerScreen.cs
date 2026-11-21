@@ -70,6 +70,13 @@ internal sealed class PlannerScreen : IDisposable
         return Context.Render<Planner>();
     }
 
+    /// <summary>The page, opened with these settings: the practice map's, say (T161).</summary>
+    public IRenderedComponent<Planner> Open(PlannerSettings settings)
+    {
+        Context.Services.AddSingleton(settings);
+        return Context.Render<Planner>();
+    }
+
     public void Dispose() => Context.Dispose();
 }
 

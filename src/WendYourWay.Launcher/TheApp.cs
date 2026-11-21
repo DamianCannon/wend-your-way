@@ -80,6 +80,16 @@ internal sealed class TheApp(string root, IReadOnlyList<string> appArguments, Ac
         return null;
     }
 
+    /// <summary>Runs the built `wend` with these arguments (`practice`, T161); what it said last if it failed.</summary>
+    public async Task<string?> WendAsync(IReadOnlyList<string> arguments)
+    {
+        var wend = Path.Combine(Bin("WendYourWay.Cli"), "wend.dll");
+        if (!File.Exists(wend)) return "wend isn't built yet: run dotnet build -c Release src/WendYourWay.Cli once, then try again.";
+        var (code, output) = await RunAsync("dotnet", [wend, .. arguments]);
+        log(output);
+        return code == 0 ? null : output.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).LastOrDefault() ?? $"wend stopped ({code}).";
+    }
+
     /// <summary>Starts the built app; false if there's no build to start.</summary>
     public bool Start(string logFile)
     {

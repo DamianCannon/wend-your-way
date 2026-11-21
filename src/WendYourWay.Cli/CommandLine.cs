@@ -14,6 +14,9 @@ public static class CommandLine
               Rebuild the Network from an OpenStreetMap extract (Geofabrik .osm.pbf or .osm XML).
           wend network build --region <region> [--data <folder>] [--database <connection string>] [--terrain <folder>] [--rights-of-way <folder>]
               Download a region of England or Wales from Geofabrik (a county, say: surrey) and build the Network from it.
+          wend practice [--rebuild] [--database <connection string>] [--osm2pgsql <path>]
+              Build the practice map (Richmond Park and around, shipped with the app) in its own database beside
+              the app's (<name>_practice), to try Wend Your Way on before building a region; --rebuild builds it again.
           wend byways get [--folder <folder>]
               Download the highway authorities' Definitive Map byways, for Trail Rides, from rowmaps.com (about 10 MB;
               default data/rights-of-way). Run again to refresh.
@@ -70,6 +73,15 @@ public static class CommandLine
         if (args is ["byways", "get", .. var byways] && Options.TryParse(byways, out var bywayOptions))
             return await BywaysCommand.Get(bywayOptions.GetValueOrDefault("--folder", DefaultRightsOfWay), bywayOptions.GetValueOrDefault("--source", BywaysCommand.Source),
                 TimeSpan.FromMilliseconds(double.Parse(bywayOptions.GetValueOrDefault("--pause", "300"), System.Globalization.CultureInfo.InvariantCulture)), output, cancellationToken);
+
+        // The practice map (T161): Richmond Park and around, in its own database.
+        if (args is ["practice", .. var practising])
+        {
+            var rebuildPractice = practising.Contains("--rebuild");
+            if (Options.TryParse([.. practising.Where(a => a != "--rebuild")], out var practiceOptions))
+                return await PracticeCommand.Run(practiceOptions.GetValueOrDefault("--database", UsualDatabase),
+                    practiceOptions.GetValueOrDefault("--osm2pgsql") ?? Osm2pgsqlLocator.Find(), rebuildPractice, output, cancellationToken);
+        }
 
         // A region of your own (T143): its extract downloaded from Geofabrik, then built as below.
         if (args is ["network", "regions", .. var listing] && Options.TryParse(listing, out var listOptions))

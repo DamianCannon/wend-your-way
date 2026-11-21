@@ -28,7 +28,10 @@ builder.Services.AddSingleton(services => MapTiles.From(services.GetRequiredServ
 builder.Services.AddSingleton(services => PlannerSettings.From(services.GetRequiredService<IConfiguration>()));
 
 // The Network, in the app's own database (scripts/setup.ps1, `wend network build`).
-static string ConnectionString(IConfiguration configuration) => configuration.GetConnectionString("WendYourWay") ?? Database.DefaultConnectionString;
+// On the practice map (T161, Practice=true), the practice database beside it.
+static string ConnectionString(IConfiguration configuration) =>
+    PlannerSettings.IsPractice(configuration) ? PracticeMap.ConnectionStringOf(OwnDatabase(configuration)) : OwnDatabase(configuration);
+static string OwnDatabase(IConfiguration configuration) => configuration.GetConnectionString("WendYourWay") ?? Database.DefaultConnectionString;
 builder.Services.AddSingleton(services => Database.CreateDataSource(ConnectionString(services.GetRequiredService<IConfiguration>())));
 builder.Services.AddSingleton<INetworkSlices, PostgisNetworkSlices>();
 builder.Services.AddSingleton<MapGeometry>();
@@ -88,12 +91,16 @@ if (started.Migrated is { Count: > 0 } applied) Log.Migrated(app.Logger, applied
 if (started.JobRunning) Log.HeldBack(app.Logger, started.HeldBack);
 app.Services.GetRequiredService<WendYourWay.Web.Planning.HeldBackAtStart>().Migrations = started.HeldBack;
 
+// The practice map opened afresh (T161): what was done there before emptied, its map kept; never backed up.
+var practice = PlannerSettings.IsPractice(app.Configuration);
+if (practice) await PracticeMap.EmptyAsync(ConnectionString(app.Configuration));
+
 // The user's own data backed up as the app starts, when the last backup is a day old (T102): in
 // the background, so the map isn't kept waiting; Backup:Folder, else Wend Your Way Backups in OneDrive.
 // Finished before the app stops, not cut off by it (T138). Not while a job runs (#153, T149): an update
 // is moving Saved Routes and rescoring, and backs up as it ends; the next start after does it, if still due.
 var backups = UserDataBackups.Folder(app.Configuration["Backup:Folder"]);
-if (!started.JobRunning && UserDataBackups.FolderOf(backups, ConnectionString(app.Configuration)) is { } ours && UserDataBackups.IsDue(ours, DateTimeOffset.Now))
+if (!practice && !started.JobRunning && UserDataBackups.FolderOf(backups, ConnectionString(app.Configuration)) is { } ours && UserDataBackups.IsDue(ours, DateTimeOffset.Now))
     _ = app.Services.GetRequiredService<WendYourWay.Web.Planning.WorkUnderWay>().Run(() =>
         UserDataBackups.AutomaticallyAsync(ConnectionString(app.Configuration), backups, line => Log.BackedUp(app.Logger, line), CancellationToken.None));
 

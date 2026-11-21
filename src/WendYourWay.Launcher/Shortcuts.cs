@@ -18,6 +18,10 @@ internal static class Shortcuts
             Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory), "Wend Your Way.lnk"),
         ];
         foreach (var path in made) Make(launcher, path);
+        // The practice map (T161), from the Start menu: Richmond Park, in a window of its own.
+        var practice = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Programs), "Wend Your Way – practice map.lnk");
+        Make(launcher, practice, WendYourWay.Launching.Practice.Flag, "Try Wend Your Way on a practice map of Richmond Park");
+        made = [.. made, practice];
         // Its shortcuts from before the rename (T140), whose launcher has moved: gone, not left broken.
         foreach (var folder in new[] { Environment.SpecialFolder.Programs, Environment.SpecialFolder.DesktopDirectory })
         {
@@ -27,13 +31,14 @@ internal static class Shortcuts
         return made;
     }
 
-    private static void Make(string launcher, string path)
+    private static void Make(string launcher, string path, string arguments = "", string description = "Plan running and riding Loops off the beaten track")
     {
         var link = (IShellLinkW)new ShellLink();
         link.SetPath(launcher);
+        link.SetArguments(arguments);
         link.SetWorkingDirectory(Path.GetDirectoryName(launcher)!);
         link.SetIconLocation(launcher, 0);
-        link.SetDescription("Plan running and riding Loops off the beaten track");
+        link.SetDescription(description);
         var properties = (IPropertyStore)link;
         var key = new PropertyKey(new Guid("9F4C2855-9F79-4B39-A8D0-E1D42DE1D5F3"), 5);
         var value = new PropVariant { Type = 31, Value = Marshal.StringToCoTaskMemUni(NativeMethods.AppId) };

@@ -63,7 +63,7 @@ public static class UserDataBackups
     public static string? FolderOf(string? folder, string connectionString)
     {
         var database = new NpgsqlConnectionStringBuilder(connectionString).Database ?? "";
-        return folder is null || database.EndsWith("_test", StringComparison.Ordinal) ? null
+        return folder is null || database.EndsWith("_test", StringComparison.Ordinal) || database.EndsWith(PracticeMap.Suffix, StringComparison.Ordinal) ? null
             : database == new NpgsqlConnectionStringBuilder(Database.DefaultConnectionString).Database ? folder
             : Path.Combine(folder, database);
     }
@@ -274,7 +274,7 @@ public static class UserDataBackups
     // Neither backed up nor emptied by a restore, which writes its own row there.
     private static readonly string[] NotTheUsers = ["map_updates"];
 
-    private static async Task<List<string>> TablesAsync(NpgsqlDataSource dataSource, CancellationToken cancellationToken)
+    internal static async Task<List<string>> TablesAsync(NpgsqlDataSource dataSource, CancellationToken cancellationToken)
     {
         var tables = new List<string>();
         await using var list = dataSource.CreateCommand(

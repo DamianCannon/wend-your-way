@@ -14,7 +14,7 @@
 @inject ILogger<PlannerSession> SessionLogger
 @implements IAsyncDisposable
 
-<PageTitle>Wend Your Way</PageTitle>
+<PageTitle>@(Settings.Practice ? "Wend Your Way · practice map" : "Wend Your Way")</PageTitle>
 
 <div class="planner" data-tour="@Session.Tour?.Here">
     <JobUnderWayLine />
@@ -117,13 +117,29 @@
             </div>
             @* How recent the Network's paths are (T117: the tiles behind can be newer, and show a path
                the Loops can't use yet), and the map brought up to date from here (T128); said once (T155). *@
-            <MapUpdateLine />
+            @if (Settings.Practice)
+            {
+                @* The practice map (T161): said so, and no map update from it. *@
+                <p class="practice">The practice map: Richmond Park and around. Nothing done here is kept: it's emptied each time it opens.</p>
+            }
+            else
+            {
+                <MapUpdateLine />
+            }
         </Request>
         <Outings>
             <OutingsPanel OnShow="Session.ShowOutingAsync" OnMakeRoute="Session.MakeRouteAsync" OnGone="Session.OutingGoneAsync" />
         </Outings>
         <Admin>
-            <AdminPanel />
+            @if (Settings.Practice)
+            {
+                @* Nothing here changes the practice map, or backs up what's thrown away (T161). *@
+                <p class="practice">This is the practice map, to try Wend Your Way on. To plan where you run, build your own region's map: Getting started in the README says how, a county in minutes. Your own map opens from the usual Wend Your Way shortcut.</p>
+            }
+            else
+            {
+                <AdminPanel />
+            }
         </Admin>
         <SavedRoutes>
             <SavedRoutesPanel OnOpen="Session.OpenSavedAsync" OnImport="Session.ImportAsync" Saves="Session.Saves" />

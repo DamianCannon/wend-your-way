@@ -31,6 +31,8 @@
 
   <ItemGroup>
     <None Include="Fixtures\**\*.csv;Fixtures\**\*.osm;Fixtures\**\*.osm.gz;Fixtures\**\*.gpx;Fixtures\**\*.asc;Fixtures\rights-of-way\**\*.json;Fixtures\rights-of-way\**\*.kml;Fixtures\rights-of-way\**\*.tsv" CopyToOutputDirectory="PreserveNewest" />
+    <!-- Richmond Park, the practice map's extract (T161): one copy, under db/practice. -->
+    <None Include="..\..\db\practice\richmond-park.osm.gz" Link="Fixtures\richmond-park.osm.gz" CopyToOutputDirectory="PreserveNewest" />
     <!-- GPX 1.1, shared with the Web specs -->
     <None Include="..\WendYourWay.Web.Specs\Schemas\*.xsd" Link="Schemas\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>

@@ -3,6 +3,8 @@
 # (copy .env.example). The `wend` command line runs beside them, for example to build your region:
 #   docker compose run --rm wend byways get
 #   docker compose run --rm wend network build --region surrey
+# The practice map (T161), Richmond Park and around, to try it on first, on http://127.0.0.1:5020:
+#   docker compose --profile practice up -d practice
 name: wend-your-way
 
 x-database: &database
@@ -37,6 +39,22 @@ services:
       db:
         condition: service_healthy
     restart: unless-stopped
+
+  # The practice map (T161): built in its own database beside the app's if it isn't there (a few seconds),
+  # then the planner on it, emptied of what was done there each time it starts.
+  practice:
+    image: wend-your-way:local
+    profiles: [practice]
+    entrypoint: ["sh", "-c", "dotnet /app/wend/wend.dll practice && exec dotnet /app/web/WendYourWay.Web.dll --urls http://0.0.0.0:5020 --Practice=true"]
+    environment:
+      <<: *database
+      ConnectionStrings__WendYourWay: Host=db;Port=5432;Database=cutthrough;Username=cutthrough;Password=${DB_PASSWORD:-wend-your-way}
+      Thunderforest__ApiKey: ${THUNDERFOREST_KEY:-}
+    ports:
+      - "127.0.0.1:5020:5020"
+    depends_on:
+      db:
+        condition: service_healthy
 
   wend:
     image: wend-your-way:local
