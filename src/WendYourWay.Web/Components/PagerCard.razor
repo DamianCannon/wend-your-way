@@ -105,13 +105,13 @@
                     }
                 </svg>
             </button>
-            @* Why it goes the way it does, said on the map (T157, #161; user: "Maybe the switch should just say 'Explain?'"). *@
-            <button type="button" class="explain" aria-pressed="@(View.Explaining ? "true" : "false")"
-                    title="@(View.Explaining ? "Take the notes off the map" : "Say on the map why the route goes the way it does: its crossings, gates and stiles, roads, and longest green stretch")"
-                    @onclick="OnExplain">Explain?</button>
             <button type="button" class="save" aria-label="Save this route" title="Save this route, to find it under Saved Routes" aria-expanded="@(_naming ? "true" : "false")" @onclick="StartNaming">
                 <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6.5 3.5h11v17l-5.5-4-5.5 4z" /></svg>
             </button>
+            @* Why it goes the way it does, said on the map (T157, #161; user: "Maybe the switch should just say 'Explain?'"); after the bookmark, orange like the rest (T164). *@
+            <button type="button" class="explain" aria-pressed="@(View.Explaining ? "true" : "false")"
+                    title="@(View.Explaining ? "Take the notes off the map" : "Say on the map why the route goes the way it does: its crossings, gates and stiles, roads, and longest green stretch")"
+                    @onclick="OnExplain">Explain?</button>
             @* Each says so while it's made (T139, user: "there's a short delay with no feedback"), and
                none of the three is pressed again till it's done; a screen reader is told. *@
             <span class="visually-hidden" role="status">@Announced</span>

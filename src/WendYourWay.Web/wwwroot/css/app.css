@@ -270,14 +270,14 @@ html, body { margin: 0; height: 100%; background: var(--paper); }
 .pager .route:hover { background: var(--paper-edge); }
 .pager .route[aria-pressed="true"] { background: var(--hi-vis); color: #fff; }
 .pager .route:focus-visible { outline: 2px solid var(--hi-vis); outline-offset: 1px; }
-/* Explain? (T157): the route's notes on the map, hi-vis while they're on */
+/* Explain? (T157): the route's notes on the map; orange like QR, GPX and TCX beside it (T164), forest green while they're on */
 .pager .explain {
-    height: 30px; padding: 4px 8px; border: 0; border-radius: 6px; background: transparent; color: var(--ink);
-    font: inherit; font-size: 0.85rem; font-weight: 600; cursor: pointer; white-space: nowrap;
+    height: 30px; padding: 4px 10px; margin-left: 4px; border: 0; border-radius: 6px; background: var(--hi-vis); color: #fff;
+    font: inherit; font-size: 0.85rem; font-weight: 600; line-height: 1; cursor: pointer; white-space: nowrap;
 }
-.pager .explain:hover { background: var(--paper-edge); }
-.pager .explain[aria-pressed="true"] { background: var(--hi-vis); color: #fff; }
-.pager .explain:focus-visible { outline: 2px solid var(--hi-vis); outline-offset: 1px; }
+.pager .explain:hover { filter: brightness(1.08); }
+.pager .explain[aria-pressed="true"] { background: var(--forest); }
+.pager .explain:focus-visible { outline: 2px solid var(--forest); outline-offset: 1px; }
 .pager .export, .pager .phone {
     display: flex; align-items: center; gap: 4px; height: 30px; padding: 4px 10px 4px 7px; margin-left: 4px;
     border: 0; border-radius: 6px; background: var(--hi-vis); color: #fff; cursor: pointer;
@@ -619,11 +619,12 @@ html, body { margin: 0; height: 100%; background: var(--paper); }
 .tour .quiet { background: transparent; color: var(--ink-soft); }
 .tour .quiet:hover { background: var(--paper-edge); color: var(--ink); }
 .tour button:focus-visible { outline: 2px solid var(--hi-vis); outline-offset: 2px; }
+/* Outlined, orange only under the pointer, as Back to my map is (T164). */
 .panel .take-tour {
-    margin: 12px 0; padding: 8px 14px; border: 0; border-radius: 6px; background: var(--hi-vis); color: #fff;
+    margin: 12px 0; padding: 7px 14px; border: 1px solid var(--hi-vis); border-radius: 6px; background: transparent; color: var(--hi-vis);
     font: inherit; font-size: 0.9rem; font-weight: 600; cursor: pointer;
 }
-.panel .take-tour:hover { background: #cf4e09; }
+.panel .take-tour:hover { background: var(--hi-vis); color: #fff; }
 .planner[data-tour="start"] .field.ends,
 .planner[data-tour="go"] .distance-go .go,
 .planner[data-tour="page"] .pager .page,

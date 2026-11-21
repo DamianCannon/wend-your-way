@@ -52,6 +52,12 @@ public class PagingThroughLoops : PlannerPageSpecs
         screen.WaitForAssertion(() => Assert.That((screen.Find(".pager .explain").GetAttribute("aria-pressed"), _map.Invocations["showNotes"].Count), Is.EqualTo(("true", 2))));
     }
 
+    //  T164 (#168; user: "move the Explain? button after the save icon"): after the bookmark, before QR, GPX and TCX.
+    [Test]
+    public void Explain_comes_after_the_bookmark() =>
+        Assert.That(OfferThree().FindAll(".pager .bar button").Select(b => b.ClassName!.Split(" ")[0]).SkipWhile(c => c != "route"),
+            Is.EqualTo(new[] { "route", "save", "explain", "phone", "export", "export", "expand" }));
+
     [Test]
     public void Show_route_puts_it_back()
     {
