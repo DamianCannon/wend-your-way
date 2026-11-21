@@ -70,6 +70,9 @@ public static class PracticeMap
             var role = new NpgsqlConnectionStringBuilder(connectionString).Username;
             await using var drop = dataSource.CreateCommand($"drop owned by \"{role}\"");
             await drop.ExecuteNonQueryAsync(cancellationToken);
+            // Where the role is the superuser (Docker's), PostGIS was its own, and went too: put back.
+            await using var postgis = dataSource.CreateCommand("create extension if not exists postgis");
+            await postgis.ExecuteNonQueryAsync(cancellationToken);
         }
         Migrations.Apply(connectionString);
         OsmImport.Run(osm2pgsqlExe, connectionString, extract, cancellationToken: cancellationToken);

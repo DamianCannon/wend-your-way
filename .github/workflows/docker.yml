@@ -49,4 +49,4 @@ jobs:
 
       - name: What happened, if it failed
         if: failure()
-        run: docker compose logs --no-color
+        run: docker compose --profile practice logs --no-color
