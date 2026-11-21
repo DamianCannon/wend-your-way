@@ -1096,7 +1096,7 @@ internal sealed class PlannerSession(
     internal async Task PhoneAsync()
     {
         if (Shown is not { } shown) return;
-        _phone = await phoneShare.ShareAsync(LoopGpx.Of(shown, await TurnsOfAsync(shown), ExportName));
+        _phone = await phoneShare.ShareAsync(LoopGpx.Of(shown, await TurnsOfAsync(shown), ExportName, _activity));
         _phoneAsked = true;
         Toured(TourMove.Kept);
     }
@@ -1158,7 +1158,7 @@ internal sealed class PlannerSession(
         _chosen is { } chosen && _start == chosen.At ? chosen.Name : null) { Explaining = _explaining };
 
     /// <summary>The Loop shown as a GPX file, its turns as waypoints, named as it's exported (T100, T112).</summary>
-    internal async Task<GpxFile?> GpxAsync() => Shown is { } shown ? Kept(LoopGpx.Of(shown, await TurnsOfAsync(shown), ExportName)) : null;
+    internal async Task<GpxFile?> GpxAsync() => Shown is { } shown ? Kept(LoopGpx.Of(shown, await TurnsOfAsync(shown), ExportName, _activity)) : null;
 
     /// <summary>The Loop shown as a TCX course, its turns as course points, for a watch (T100).</summary>
     internal async Task<GpxFile?> TcxAsync() => Shown is { } shown ? Kept(LoopTcx.Of(shown, await TurnsOfAsync(shown), ExportName)) : null;

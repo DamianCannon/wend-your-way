@@ -34,10 +34,10 @@ public class ExportingTurnPoints
 
     private static XElement[] Waypoints() => [.. XDocument.Parse(LoopGpx.Of(Planned, Turns).Content).Root!.Elements(Gpx + "wpt")];
 
+    //  Each a little before its turn (T159: HearingATurnInTime).
     [Test]
     public void Each_turn_is_a_waypoint_in_the_GPX() =>
-        Assert.That(Waypoints().Select(w => (double.Parse(w.Attribute("lat")!.Value, System.Globalization.CultureInfo.InvariantCulture), w.Element(Gpx + "name")!.Value)),
-            Is.EqualTo(new[] { (51.5597, "Left onto the footpath"), (51.565, "Sharp right onto Millfield Lane") }));
+        Assert.That(Waypoints().Select(w => w.Element(Gpx + "name")!.Value), Is.EqualTo(new[] { "Left onto the footpath", "Sharp right onto Millfield Lane" }));
 
     [Test]
     public void Its_symbol_says_which_way() =>
