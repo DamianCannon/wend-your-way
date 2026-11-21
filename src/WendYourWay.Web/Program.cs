@@ -76,6 +76,10 @@ builder.Services.AddSingleton<WendYourWay.Web.Planning.IMapUpdater>(services => 
     services.GetRequiredService<ILogger<WendYourWay.Web.Planning.ProcessMapUpdater>>(),
     services.GetRequiredService<IConfiguration>()["MapUpdate:Source"], services.GetRequiredService<IConfiguration>()["MapUpdate:Data"]));
 builder.Services.AddSingleton<IRouteTurns, RouteTurns>();
+// The practice map offered while there's no map of your own (T162): through the launcher, if it's built here.
+builder.Services.AddSingleton<IPracticeOffer>(services => new PracticeOffer(
+    OwnDatabase(services.GetRequiredService<IConfiguration>()), PracticeOffer.Launcher(builder.Environment.ContentRootPath), PracticeOffer.InContainer,
+    services.GetRequiredService<ILogger<PracticeOffer>>()));
 // A route to the phone (T099): a listener of its own on the home network, when asked; the app
 // itself stays on this laptop. Disposed, and so stopped, with the app.
 builder.Services.AddSingleton<WendYourWay.Web.Phone.IPhoneShare>(_ => WendYourWay.Web.Phone.PhoneShare.OnTheHomeNetwork());

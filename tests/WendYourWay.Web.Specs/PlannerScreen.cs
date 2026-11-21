@@ -40,6 +40,7 @@ internal sealed class PlannerScreen : IDisposable
         services.AddSingleton<IPlaceSearch>(Places);
         services.AddSingleton<IMapUpdater>(MapUpdater);
         services.AddSingleton<IAdmin>(Admin);
+        services.AddSingleton<IPracticeOffer>(PracticeOffer);
         services.AddSingleton<TimeProvider>(Time);
     }
 
@@ -58,6 +59,7 @@ internal sealed class PlannerScreen : IDisposable
     public FakePreviews Previews { get; } = new();
     public FakePlaceSearch Places { get; } = new();
     public FakeMapUpdater MapUpdater { get; } = new();
+    public FakePracticeOffer PracticeOffer { get; } = new();
     public FakeAdmin Admin { get; } = new();
 
     /// <summary>The time, as a spec sets it (T138).</summary>

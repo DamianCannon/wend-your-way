@@ -1,0 +1,40 @@
+@using WendYourWay.Web.Planning
+@inject IPracticeOffer Offer
+@inject PlannerSettings Settings
+@* No map of your own yet (T162, #166; user chose "Offered when no map"): said, and the practice map
+   (T161) offered, opened through the launcher; where there's none (Docker), how to open it. *@
+
+@if (_noMap)
+{
+    <div class="no-map" role="status">
+        <p>There's no map of your own yet, so no Loops can be found here. Build your region's map (Getting started in the README says how: a county takes minutes), or try Wend Your Way first on the practice map of Richmond Park.</p>
+        @if (_opening)
+        {
+            <p class="opening">Opening the practice map in a window of its own…</p>
+        }
+        else if (Offer.CanOpen)
+        {
+            <button type="button" class="try-practice" @onclick="OpenAsync">Try the practice map</button>
+        }
+        else
+        {
+            <p class="how">To try it: @Offer.HowToOpen.</p>
+        }
+    </div>
+}
+
+@code {
+    private bool _noMap;
+    private bool _opening;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (!Settings.Practice) _noMap = await Offer.NoMapOfYourOwnAsync();
+    }
+
+    private async Task OpenAsync()
+    {
+        _opening = true;
+        await Offer.OpenAsync();
+    }
+}
