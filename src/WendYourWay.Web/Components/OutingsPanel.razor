@@ -64,7 +64,7 @@ else
                             @* Asking whether to delete, the question and its Yes and No have the row (T116). *@
                             @if (!_deleting)
                             {
-                            <button type="button" class="make-route" disabled="@_making" title="Make it a route: shown on the map to nudge, export and save under Saved Routes" @onclick="() => MakeRouteAsync(shown)">To Route</button>
+                            <button type="button" class="make-route" disabled="@_making" title="Make it a route: shown on the map to nudge, export and save under Saved Routes" @onclick="() => MakeRouteAsync(shown)">To route</button>
                             @* Its own track, to overlay in OpenStreetMap's editor, even where it can't be made a route. *@
                             <button type="button" class="download-gpx" title="Download its own track as a GPX file: to overlay in OpenStreetMap's editor, say" @onclick="() => DownloadAsync(shown)">GPX</button>
                             <button type="button" class="rename-outing" title="Rename it" @onclick="() => StartRenaming(shown)">Rename</button>

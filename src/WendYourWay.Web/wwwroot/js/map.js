@@ -27,11 +27,15 @@ let owner;
 let notesLayer;
 let notes = [];
 
+// The stylesheet's own colours (T165): the map draws in them, so the two never drift apart.
+const colour = (name, fallback) => getComputedStyle(document.documentElement).getPropertyValue(name).trim() || fallback;
+const hiVis = colour("--hi-vis", "#e8590c");
+const danger = colour("--danger", "#c92a2a");
 // An Outing's covered Segments by ground (STORY-030). Hi-vis orange stays the Loop's own.
-const groundColours = { off_road: "#2e7d32", traffic_free: "#1f78c8", connector: "#8a8f8c" };
-const gapColour = "#d62828";
+const groundColours = { off_road: colour("--ground-off-road", "#2e7d32"), traffic_free: colour("--ground-traffic-free", "#1f78c8"), connector: colour("--ground-connector", "#8a8f8c") };
+const gapColour = colour("--map-gap", "#d62828");
 // A route's gaps (T088): a break in the orange, dotted in ink, so they never read as more route.
-const routeGapInk = "#1f2a24";
+const routeGapInk = colour("--ink", "#1f2a24");
 
 const point = p => [p.latitude, p.longitude];
 
@@ -293,7 +297,7 @@ export function showLoop(loop, fit = true) {
     const line = loop.line.map(point);
     loopLayer = L.layerGroup([
         L.polyline(line, { color: "#ffffff", weight: 12, opacity: 0.9, interactive: false }),
-        L.polyline(line, { color: "#e8590c", weight: 8, opacity: 1, interactive: false }),
+        L.polyline(line, { color: hiVis, weight: 8, opacity: 1, interactive: false }),
         // The Map gaps it crosses (#150, T146b): red and dashed, so the user checks each is passable.
         // Under the grab line, so Avoid this time and a Via work on a gap as on any way.
         ...(loop.mapGaps ?? []).flatMap(gap => {
@@ -383,7 +387,7 @@ function nudgeable(line) {
             if (!ghost && at.distanceTo(start) < 6) return;
             const to = map.containerPointToLatLng(at);
             if (ghost) ghost.setLatLngs([from, to]);
-            else ghost = L.polyline([from, to], { color: "#e8590c", weight: 4, dashArray: "6 8", interactive: false }).addTo(map);
+            else ghost = L.polyline([from, to], { color: hiVis, weight: 4, dashArray: "6 8", interactive: false }).addTo(map);
         };
         const up = event => {
             document.removeEventListener("mousemove", move);
@@ -482,7 +486,7 @@ function removable(marker, label, remove) {
 export function showMarks(marks) {
     if (marksLayer) marksLayer.remove();
     marksLayer = L.layerGroup(marks.map(mark => {
-        const line = L.polyline(mark.line.map(point), { color: "#c92a2a", weight: 6, dashArray: "6 6", opacity: 0.9, bubblingMouseEvents: false, className: "blocked" });
+        const line = L.polyline(mark.line.map(point), { color: danger, weight: 6, dashArray: "6 6", opacity: 0.9, bubblingMouseEvents: false, className: "blocked" });
         line.on("click", e => {
             L.DomEvent.stop(e);
             const content = L.DomUtil.create("div", "route-popup");
@@ -524,7 +528,7 @@ function wayAt(at) {
 export function markPlace(place) {
     if (placeMarker) placeMarker.setLatLng(point(place));
     else placeMarker = L.circleMarker(point(place), {
-        radius: 7, color: "#ffffff", weight: 3, fillColor: "#e8590c", fillOpacity: 1, interactive: false,
+        radius: 7, color: "#ffffff", weight: 3, fillColor: hiVis, fillOpacity: 1, interactive: false,
     }).addTo(map);
 }
 
@@ -644,7 +648,7 @@ export function showOuting(outing) {
         ...outing.covered.map(segment => L.polyline(segment.line.map(point), {
             color: groundColours[segment.ground] ?? groundColours.connector, weight: 8, opacity: 0.75, interactive: false,
         })),
-        L.polyline(track, { color: "#1f2a24", weight: 2, opacity: 0.9, interactive: false }),
+        L.polyline(track, { color: routeGapInk, weight: 2, opacity: 0.9, interactive: false }),
         ...outing.gaps.flatMap(gap => {
             const line = gap.line.map(point);
             return [

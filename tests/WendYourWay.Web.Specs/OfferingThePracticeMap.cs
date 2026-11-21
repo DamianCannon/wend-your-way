@@ -58,7 +58,7 @@ public class OfferingThePracticeMap
     public void In_a_browser_it_says_how_to_open_it()
     {
         var screen = Open(noMap: true, inWindow: false);
-        screen.WaitForAssertion(() => Assert.That((screen.Find(".panel .no-map .how").TextContent, screen.FindAll(".panel .no-map button").Count),
+        screen.WaitForAssertion(() => Assert.That((screen.Find(".panel .no-map .open-how").TextContent, screen.FindAll(".panel .no-map button").Count),
             Is.EqualTo(("To try it: docker compose --profile practice up -d practice, then http://127.0.0.1:5020.", 0))));
     }
 
@@ -90,14 +90,14 @@ public class OfferingThePracticeMap
         Assert.That(back.TextContent, Is.EqualTo("Back to my map"));
         back.Click();
         screen.WaitForAssertion(() => Assert.That((AskedToSwitchTo, screen.Find(".panel .practice-help .switching").TextContent),
-            Is.EqualTo((new object?[] { "own" }, "Going back to your own map…"))));
+            Is.EqualTo((new object?[] { "own" }, "Going back to my map…"))));
     }
 
     [Test]
     public void In_a_browser_Help_says_how_to_open_it()
     {
         var screen = InHelp(Open(inWindow: false));
-        screen.WaitForAssertion(() => Assert.That((screen.Find(".panel .practice-help .how").TextContent, screen.FindAll(".panel .practice-help button").Count),
+        screen.WaitForAssertion(() => Assert.That((screen.Find(".panel .practice-help .open-how").TextContent, screen.FindAll(".panel .practice-help button").Count),
             Is.EqualTo(("To open it: docker compose --profile practice up -d practice, then http://127.0.0.1:5020.", 0))));
     }
 }

@@ -9,21 +9,80 @@
     --forest-light: #2f5a47;
     --moss: #a9c4a1;
     --hi-vis: #e8590c;
+    --hi-vis-dark: #cf4e09;
+    --white: #fff;
+    /* Lines between things, and the outlines of quiet controls. */
+    --line: var(--paper-edge);
+    /* What's wrong or never to be used: a stretch blocked, a problem said. */
+    --danger: #c92a2a;
+    /* The map's own colours (T165: one set, the map's script reads them too). */
+    --ground-off-road: #2e7d32;
+    --ground-traffic-free: #1f78c8;
+    --ground-connector: #8a8f8c;
+    --map-gap: #d62828;
+    --cafe: #8d5b3a;
+    --toilets: #3d6f9e;
+    --held: #5a4a1e;
+    --star-off: #b8ad98;
+    --star-on-dark: #ffb380;
+    --paper-light: #fffdf8;
     --rail: 56px;
     /* 380: an Outing's four buttons on one line beside a long list's 16 px scrollbar need 370 (T115). */
     --panel: min(380px, calc(100vw - var(--rail)));
     --radius: 10px;
+    --radius-control: 6px;
     --shadow: 0 6px 24px rgb(20 30 25 / 0.18), 0 1px 3px rgb(20 30 25 / 0.12);
+    /* A marker or label on the map, lifted off it. */
+    --shadow-pin: 0 1px 3px rgb(0 0 0 / 0.35);
+    --shadow-band: 0 2px 8px rgb(0 0 0 / 0.25);
     font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
     color: var(--ink);
 }
 
 html, body { margin: 0; height: 100%; background: var(--paper); }
 
+/* Every control alike (T165): one focus ring, forest on an orange fill; one disabled look. */
+button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible, summary:focus-visible,
+.import-gpx:focus-within { outline: 2px solid var(--hi-vis); outline-offset: 2px; }
+button:disabled, button[aria-disabled="true"]:not(.preparing) { opacity: 0.5; cursor: default; }
+
+/* Three kinds of button (T165, user: Explain? "the orange background like the other buttons"; the
+   tour's "only goes orange when the mouse is over it"). Solid orange: an action. */
+.go, .avoid-this, .pager .explain, .pager .export, .pager .phone, .tour .show-me,
+.saved-routes .confirm-delete, .outings .outing .as-route .confirm-delete, .panel .admin .confirm button.job.yes,
+.panel .no-map .switch-map, .outing .rename-outing-form .save-name {
+    border: 1px solid var(--hi-vis); border-radius: var(--radius-control); background: var(--hi-vis); color: var(--white);
+    font: inherit; font-weight: 600; cursor: pointer;
+}
+:is(.go, .avoid-this, .pager .explain, .pager .export, .pager .phone, .tour .show-me, .saved-routes .confirm-delete,
+    .outings .outing .as-route .confirm-delete, .panel .admin .confirm button.job.yes, .panel .no-map .switch-map,
+    .outing .rename-outing-form .save-name):hover:enabled { background: var(--hi-vis-dark); border-color: var(--hi-vis-dark); color: var(--white); }
+:is(.go, .avoid-this, .pager .explain, .pager .export, .pager .phone, .tour .show-me, .saved-routes .confirm-delete,
+    .outings .outing .as-route .confirm-delete, .panel .admin .confirm button.job.yes, .panel .no-map .switch-map,
+    .outing .rename-outing-form .save-name):focus-visible { outline-color: var(--forest); }
+/* Outlined orange, filled under the pointer: a secondary action in a panel. */
+.panel .take-tour, .panel .switch-map, .panel .map-update button.update, .panel .admin button.job, .saved-routes .move,
+.import-gpx, .outings .outing .as-route button, .outing .rename-outing-form button, .pager .to-phone .close-phone {
+    display: inline-block; width: auto; padding: 5px 10px; border: 1px solid var(--hi-vis); border-radius: var(--radius-control);
+    background: transparent; color: var(--hi-vis); font: inherit; font-size: 0.85rem; font-weight: 600; white-space: nowrap; cursor: pointer;
+}
+:is(.panel .take-tour, .panel .switch-map, .panel .map-update button.update, .panel .admin button.job, .saved-routes .move,
+    .outings .outing .as-route button, .outing .rename-outing-form button, .pager .to-phone .close-phone):hover:enabled,
+.import-gpx:hover:not(.busy) { background: var(--hi-vis); color: var(--white); }
+/* Quiet: a cancel, or an action in a list's row. */
+.tour .quiet, .pager form.saving .cancel, .panel .admin .confirm button.no, .panel .admin .backup-list button.restore,
+.saved-routes .rename, .saved-routes .delete, .saved-routes .keep, .outings .outing .as-route .keep, .outing .rename-outing-form .keep-name {
+    padding: 4px 8px; border: 0; border-radius: var(--radius-control); background: transparent; color: var(--ink-soft);
+    font: inherit; font-size: 0.85rem; cursor: pointer;
+}
+:is(.tour .quiet, .pager form.saving .cancel, .panel .admin .confirm button.no, .panel .admin .backup-list button.restore,
+    .saved-routes .rename, .saved-routes .delete, .saved-routes .keep, .outings .outing .as-route .keep,
+    .outing .rename-outing-form .keep-name):hover:enabled { background: var(--paper-edge); color: var(--ink); }
+
 .planner { position: fixed; inset: 0; --side: var(--rail); }
 .planner:has(.panel) { --side: calc(var(--rail) + var(--panel)); }
 
-.map { position: absolute; inset: 0; z-index: 0; background: #e9e6dc; }
+.map { position: absolute; inset: 0; z-index: 0; background: var(--paper-edge); }
 
 /* The icon rail */
 .rail {
@@ -35,9 +94,8 @@ html, body { margin: 0; height: 100%; background: var(--paper); }
     width: 40px; height: 40px; border: 0; border-radius: 8px; padding: 8px;
     background: transparent; color: var(--moss); cursor: pointer;
 }
-.rail button:hover { background: var(--forest-light); color: #fff; }
+.rail button:hover { background: var(--forest-light); color: var(--white); }
 .rail button.on { background: var(--paper); color: var(--forest); }
-.rail button:focus-visible, .panel button:focus-visible { outline: 2px solid var(--hi-vis); outline-offset: 2px; }
 
 /* The app's own line icons (never Leaflet's SVG layer, which draws the Loop) */
 .rail svg, .panel svg, .pager svg {
@@ -82,30 +140,21 @@ html, body { margin: 0; height: 100%; background: var(--paper); }
 /* The Request panel */
 .field { display: flex; flex-direction: column; gap: 4px; margin-bottom: 16px; }
 .field .label { font-size: 0.72rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-soft); }
-.start { font-size: 1rem; }
 .field .hint { font-size: 0.8rem; color: var(--ink-soft); }
 /* The map in use and its update (T117, T128, T155), at the foot of the Request panel: a line or two, and a button when there's one to do. */
-.panel .map-update { margin-top: 18px; font-size: 0.8rem; line-height: 1.4; color: var(--ink-soft); }
+.panel .map-update { margin-top: 16px; font-size: 0.8rem; line-height: 1.4; color: var(--ink-soft); }
 .panel .admin .map-update { margin-top: 4px; }
 .panel .map-update p { margin: 2px 0; }
 .panel .map-update .problem, .panel .admin .problem { color: var(--hi-vis); }
 .panel .admin .last-import .line { display: block; }
 /* A folder's long path wraps rather than widening the panel (found by hand, T132). */
 .panel .admin p { overflow-wrap: anywhere; }
-.panel .map-update button.update, .panel .admin button.job {
-    display: inline-block; width: auto; margin-top: 6px; padding: 5px 12px; border: 1px solid var(--forest); border-radius: 6px;
-    background: transparent; color: var(--forest); font: inherit; font-size: 0.85rem; font-weight: 600; cursor: pointer;
-}
-.panel .map-update button.update:hover, .panel .admin button.job:hover:enabled { background: var(--forest); color: #fff; }
-.panel .map-update button.update:disabled, .panel .admin button.job:disabled { opacity: 0.5; cursor: default; }
+.panel h3 { margin: 16px 0 6px; font-size: 0.72rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--forest); }
+.panel .map-update button.update, .panel .admin button.job { margin-top: 6px; }
 /* The backups there (T132): when and how many Outings each, a quiet Restore beside it, asked first. */
 .panel .admin .backup-list { list-style: none; margin: 8px 0 0; padding: 0; font-size: 0.85rem; }
-.panel .admin .backup-list li { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 3px 0; border-top: 1px solid var(--line, #e3e6df); }
+.panel .admin .backup-list li { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 3px 0; border-top: 1px solid var(--line); }
 .panel .admin .backup-list .when { min-width: 0; font-variant-numeric: tabular-nums; }
-.panel .admin .backup-list button.restore, .panel .admin .confirm button.no {
-    width: auto; padding: 2px 8px; border: 0; background: transparent; color: var(--forest); font: inherit; font-size: 0.8rem; text-decoration: underline; cursor: pointer;
-}
-.panel .admin .backup-list button.restore:disabled { opacity: 0.5; cursor: default; }
 .panel .admin .confirm { margin-top: 8px; padding: 8px 10px; border: 1px solid var(--hi-vis); border-radius: 6px; }
 .panel .admin .confirm .question { margin: 0; }
 .distance-input { display: flex; align-items: center; gap: 8px; }
@@ -113,14 +162,9 @@ html, body { margin: 0; height: 100%; background: var(--paper); }
 .lean-input input { flex: 1; min-width: 0; accent-color: var(--hi-vis); }
 .distance {
     width: 6.5em; padding: 8px 10px; font: inherit; font-size: 1rem; color: var(--ink);
-    background: #fff; border: 1px solid var(--paper-edge); border-radius: 6px;
+    background: var(--white); border: 1px solid var(--paper-edge); border-radius: 6px;
 }
-.distance:focus-visible { outline: 2px solid var(--hi-vis); outline-offset: 1px; }
-.go {
-    width: 100%; padding: 11px 16px; border: 0; border-radius: 8px; cursor: pointer;
-    font: inherit; font-weight: 700; letter-spacing: 0.04em; color: #fff; background: var(--hi-vis);
-}
-.go:hover:not(:disabled) { background: #cf4e09; }
+.go { width: 100%; padding: 11px 16px; font-weight: 700; letter-spacing: 0.04em; }
 /* Run or Gravel Ride (T068): two halves of one control, the chosen in forest */
 .activity { display: flex; margin-bottom: 16px; border: 1px solid var(--paper-edge); border-radius: 8px; overflow: hidden; }
 .activity button { flex: 1; padding: 7px 10px; white-space: nowrap; border: 0; background: transparent; color: var(--ink-soft); font: inherit; font-weight: 600; cursor: pointer; }
@@ -136,10 +180,9 @@ html, body { margin: 0; height: 100%; background: var(--paper); }
     transform: none; max-width: calc(100vw - 16px);
 }
 .pager.dragging, .pager.dragging .bar { cursor: grabbing; user-select: none; }
-.go:disabled { background: var(--paper-edge); color: var(--ink-soft); cursor: default; }
 
 /* Where to start (T060): the car parks around here, the start's marked */
-.where { margin-top: 22px; padding-top: 16px; border-top: 1px solid var(--paper-edge); }
+.where { margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--paper-edge); }
 .starts { display: flex; flex-direction: column; gap: 6px; margin-top: 10px; }
 .starts button {
     display: flex; flex-direction: column; align-items: flex-start; gap: 2px; padding: 8px 10px; text-align: left;
@@ -151,13 +194,13 @@ html, body { margin: 0; height: 100%; background: var(--paper); }
 /* A place to start on the map: a parking sign in forest green, the chosen one in hi-vis */
 .trailhead-marker span {
     display: flex; align-items: center; justify-content: center; width: 24px; height: 24px; box-sizing: border-box;
-    border: 2px solid #fff; border-radius: 6px; background: var(--forest); color: #fff;
-    font: 700 13px/1 system-ui, sans-serif; box-shadow: 0 1px 3px rgb(0 0 0 / 0.35);
+    border: 2px solid var(--white); border-radius: 6px; background: var(--forest); color: var(--white);
+    font: 700 13px/1 system-ui, sans-serif; box-shadow: var(--shadow-pin);
 }
 .trailhead-marker.chosen span { background: var(--hi-vis); }
 .where .around { display: flex; align-items: center; font-size: 0.8rem; font-weight: 600; color: var(--ink-soft); }
-.starts button .details { font-size: 0.78rem; color: var(--ink-soft); }
-.starts button .preview { font-size: 0.78rem; color: var(--forest); font-variant-numeric: tabular-nums; }
+.starts button .details { font-size: 0.8rem; color: var(--ink-soft); }
+.starts button .preview { font-size: 0.8rem; color: var(--forest); font-variant-numeric: tabular-nums; }
 .starts .none { margin: 0; font-size: 0.85rem; color: var(--ink-soft); }
 
 /* The pager card's Loop and Breakdown */
@@ -172,29 +215,24 @@ html, body { margin: 0; height: 100%; background: var(--paper); }
 /* The route takes Nudges (T076): grab it to drag it; "Avoid this time" where it's clicked */
 .loop-grab { cursor: grab; }
 .nudge-popup .leaflet-popup-content { margin: 8px; }
-.avoid-this {
-    padding: 6px 12px; border: 0; border-radius: 6px; background: var(--hi-vis); color: #fff;
-    font: inherit; font-weight: 600; cursor: pointer;
-}
-.avoid-this:hover { filter: brightness(1.08); }
+.avoid-this { padding: 5px 12px; font-size: 0.85rem; }
 .route-popup { display: flex; flex-direction: column; align-items: stretch; gap: 6px; }
+/* Never use this (T090): the danger's red, outlined as a secondary action is. */
 .route-popup .block-this {
-    padding: 6px 12px; border: 1px solid #c92a2a; border-radius: 6px; background: transparent; color: #c92a2a;
-    font: inherit; font-weight: 600; cursor: pointer;
+    padding: 5px 12px; border: 1px solid var(--danger); border-radius: var(--radius-control); background: transparent; color: var(--danger);
+    font: inherit; font-size: 0.85rem; font-weight: 600; cursor: pointer;
 }
-.route-popup .block-this:hover { background: #c92a2a; color: #fff; }
-.route-popup .blocked-title { color: #c92a2a; text-align: center; }
-.route-popup .block-this.suggested { background: #c92a2a; color: #fff; }
-.route-popup .fix-hint { margin: 0; max-width: 220px; font-size: 0.85em; color: #555; text-align: center; }
+.route-popup .block-this:hover, .route-popup .block-this.suggested { background: var(--danger); color: var(--white); }
+.route-popup .blocked-title { color: var(--danger); text-align: center; }
+.route-popup .fix-hint { margin: 0; max-width: 220px; font-size: 0.85em; color: var(--ink-soft); text-align: center; }
 .leaflet-interactive.blocked { cursor: pointer; }
 .route-popup .osm-link { font-size: 0.85rem; color: var(--forest); text-align: center; }
 /* An Avoid (T079): a round hi-vis marker with "!", where the route was told to go round */
 .avoid-marker {
     display: flex; align-items: center; justify-content: center; border-radius: 50%;
-    background: var(--hi-vis); color: #fff; border: 2px solid #fff; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
+    background: var(--hi-vis); color: var(--white); border: 2px solid var(--white); box-shadow: var(--shadow-pin);
     font-weight: 800; font-size: 0.85rem; line-height: 1; cursor: pointer;
 }
-.anchor-marker { cursor: pointer; }
 /* After a Nudge (T076): Undo and what it said, on a line under the bar */
 .pager .nudged { display: flex; align-items: center; justify-content: center; gap: 10px; margin-top: 8px; font-size: 0.85rem; }
 .pager .undo, .pager .redo {
@@ -204,8 +242,6 @@ html, body { margin: 0; height: 100%; background: var(--paper); }
 }
 .pager .undo svg, .pager .redo svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 .pager .undo:hover:not(:disabled), .pager .redo:hover:not(:disabled) { background: var(--paper-edge); }
-.pager .undo:disabled, .pager .redo:disabled { color: var(--paper-edge); cursor: default; }
-.pager .undo:focus-visible, .pager .redo:focus-visible { outline: 2px solid var(--hi-vis); outline-offset: 1px; }
 .pager .nudge-note { margin: 6px 0 0; font-size: 0.85rem; color: var(--ink-soft); }
 /* Save the route (T080): a bookmark on the bar; its name asked for under it */
 .pager .save {
@@ -214,27 +250,21 @@ html, body { margin: 0; height: 100%; background: var(--paper); }
 }
 .pager .save svg { width: 19px; height: 19px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linejoin: round; }
 .pager .save:hover, .pager .save[aria-expanded="true"] { background: var(--paper-edge); }
-.pager .save:focus-visible { outline: 2px solid var(--hi-vis); outline-offset: 1px; }
 .pager form.saving { display: flex; gap: 6px; margin-top: 8px; }
 .pager .save-name { flex: 1; min-width: 0; padding: 5px 8px; border: 1px solid var(--paper-edge); border-radius: 6px; font: inherit; }
-.pager form.saving .cancel { border: 0; background: transparent; color: var(--ink-soft); font: inherit; cursor: pointer; }
 /* Saved Routes (T080): newest first, each opened, renamed or deleted in place */
 /* Import a GPX (T083): a button-like label over the hidden file input, above the list. */
 .import { display: flex; flex-direction: column; gap: 6px; margin-bottom: 10px; }
-.import-gpx {
-    position: relative; align-self: flex-start; padding: 6px 12px; border: 1px solid var(--line, #d0d4d2); border-radius: 6px;
-    font-weight: 600; cursor: pointer;
-}
-.import-gpx:hover { background: rgba(0, 0, 0, 0.04); }
-.import-gpx.busy { opacity: 0.6; cursor: progress; }
+.import-gpx { position: relative; align-self: flex-start; }
+.import-gpx.busy { opacity: 0.5; cursor: progress; }
 .import-gpx input[type=file] { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
-.import-problem, .route-problem { margin: 0; color: #c92a2a; line-height: 1.4; }
-.pager .gap-note { margin: 4px 0 0; text-align: center; font-size: 0.85rem; color: #1f2a24; }
+.import-problem, .route-problem { margin: 0; color: var(--danger); line-height: 1.4; }
+.pager .gap-note { margin: 4px 0 0; text-align: center; font-size: 0.85rem; color: var(--ink); }
 /* Drawn as the map draws a route's gaps (T088): ink dots on white. */
-.pager .gap-note::before { content: ""; display: inline-block; width: 22px; height: 0; margin-right: 6px; vertical-align: middle; border-top: 4px dotted #1f2a24; }
+.pager .gap-note::before { content: ""; display: inline-block; width: 22px; height: 0; margin-right: 6px; vertical-align: middle; border-top: 4px dotted var(--ink); }
 /* A Map gap (#150, T146b): red and dashed, as the map draws it. */
-.pager .map-gap-note { margin: 4px 0 0; text-align: center; font-size: 0.85rem; color: #b01e1e; }
-.pager .map-gap-note::before { content: ""; display: inline-block; width: 22px; height: 0; margin-right: 6px; vertical-align: middle; border-top: 4px dashed #d62828; }
+.pager .map-gap-note { margin: 4px 0 0; text-align: center; font-size: 0.85rem; color: var(--danger); }
+.pager .map-gap-note::before { content: ""; display: inline-block; width: 22px; height: 0; margin-right: 6px; vertical-align: middle; border-top: 4px dashed var(--map-gap); }
 .saved-routes { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
 /* The name across the top, cut short; km and date a line each beneath it, the buttons beside them */
 .saved-routes li {
@@ -254,11 +284,7 @@ html, body { margin: 0; height: 100%; background: var(--paper); }
 .saved-routes .actions { grid-column: 2; grid-row: 2 / 4; display: flex; align-items: center; gap: 2px; }
 .saved-routes .asking { font-size: 0.8rem; color: var(--ink-soft); }
 .saved-routes li > form { grid-column: 1 / -1; }
-.saved-routes .rename, .saved-routes .delete, .saved-routes .confirm-delete, .saved-routes .keep {
-    border: 0; border-radius: 6px; background: transparent; color: var(--ink-soft); font: inherit; font-size: 0.8rem; cursor: pointer; padding: 4px 6px;
-}
-.saved-routes .rename:hover, .saved-routes .delete:hover, .saved-routes .keep:hover { background: var(--paper-edge); color: var(--ink); }
-.saved-routes .confirm-delete { background: var(--hi-vis); color: #fff; }
+.saved-routes .confirm-delete { padding: 4px 8px; font-size: 0.85rem; }
 .saved-routes form { display: flex; flex: 1; gap: 6px; }
 .saved-routes .new-name { flex: 1; min-width: 0; padding: 4px 6px; border: 1px solid var(--paper-edge); border-radius: 6px; font: inherit; }
 /* Hide or show the route (T071): an eye on the bar, hi-vis while the route is hidden */
@@ -268,27 +294,13 @@ html, body { margin: 0; height: 100%; background: var(--paper); }
 }
 .pager .route svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
 .pager .route:hover { background: var(--paper-edge); }
-.pager .route[aria-pressed="true"] { background: var(--hi-vis); color: #fff; }
-.pager .route:focus-visible { outline: 2px solid var(--hi-vis); outline-offset: 1px; }
+.pager .route[aria-pressed="true"] { background: var(--hi-vis); color: var(--white); }
 /* Explain? (T157): the route's notes on the map; orange like QR, GPX and TCX beside it (T164), forest green while they're on */
-.pager .explain {
-    height: 30px; padding: 4px 10px; margin-left: 4px; border: 0; border-radius: 6px; background: var(--hi-vis); color: #fff;
-    font: inherit; font-size: 0.85rem; font-weight: 600; line-height: 1; cursor: pointer; white-space: nowrap;
-}
-.pager .explain:hover { filter: brightness(1.08); }
-.pager .explain[aria-pressed="true"] { background: var(--forest); }
-.pager .explain:focus-visible { outline: 2px solid var(--forest); outline-offset: 1px; }
-.pager .export, .pager .phone {
-    display: flex; align-items: center; gap: 4px; height: 30px; padding: 4px 10px 4px 7px; margin-left: 4px;
-    border: 0; border-radius: 6px; background: var(--hi-vis); color: #fff; cursor: pointer;
-    font-family: inherit; font-size: 0.85rem; font-weight: 600; line-height: 1;
-}
+.pager .explain { height: 30px; padding: 4px 10px; margin-left: 4px; font-size: 0.85rem; line-height: 1; white-space: nowrap; }
+.pager .explain[aria-pressed="true"], .pager .explain[aria-pressed="true"]:hover { background: var(--forest); border-color: var(--forest); }
+.pager .export, .pager .phone { display: flex; align-items: center; gap: 4px; height: 30px; padding: 4px 10px 4px 7px; margin-left: 4px; font-size: 0.85rem; line-height: 1; }
 .pager .export svg, .pager .phone svg { width: 18px; height: 18px; stroke-width: 2.2; }
-.pager .export:hover, .pager .phone:hover { filter: brightness(1.08); }
-.pager .export:focus-visible, .pager .phone:focus-visible { outline: 2px solid var(--forest); outline-offset: 1px; }
-.pager .page:disabled { color: var(--paper-edge); cursor: default; }
 .pager .expand:hover, .pager .page:hover:not(:disabled) { background: var(--paper-edge); }
-.pager .expand:focus-visible, .pager .page:focus-visible { outline: 2px solid var(--hi-vis); outline-offset: 1px; }
 /* The elevation profile (T051): the ground in moss on a simple axis, the place pointed at in hi-vis */
 .profile { margin: 0 0 10px; }
 .profile .chart { display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-rows: 64px auto; column-gap: 6px; }
@@ -298,7 +310,7 @@ html, body { margin: 0; height: 100%; background: var(--paper); }
 .profile .at { fill: transparent; }
 .profile .dot {
     position: absolute; width: 10px; height: 10px; margin: -5px 0 0 -5px; border-radius: 50%; pointer-events: none;
-    background: var(--hi-vis); border: 2px solid #fff; box-shadow: 0 1px 3px rgb(0 0 0 / 0.35); box-sizing: border-box;
+    background: var(--hi-vis); border: 2px solid var(--white); box-shadow: var(--shadow-pin); box-sizing: border-box;
 }
 .profile .y-axis, .profile .x-axis { position: relative; font-size: 0.72rem; color: var(--ink-soft); font-variant-numeric: tabular-nums; white-space: nowrap; }
 .profile .y-axis { width: 3.4em; }
@@ -308,20 +320,19 @@ html, body { margin: 0; height: 100%; background: var(--paper); }
 .profile .x-axis .start { left: 0; }
 .profile .x-axis .end { right: 0; }
 .profile .x-axis .now { transform: translateX(-50%); }
-.profile .now { z-index: 1; padding: 0 3px; border-radius: 3px; font-weight: 700; color: #fff; background: var(--hi-vis); }
+.profile .now { z-index: 1; padding: 0 3px; border-radius: 3px; font-weight: 700; color: var(--white); background: var(--hi-vis); }
 .profile .pointing .top, .profile .pointing .bottom, .profile .pointing .start, .profile .pointing .end { opacity: 0.35; }
 .profile figcaption { margin-top: 2px; font-size: 0.85rem; color: var(--ink-soft); font-variant-numeric: tabular-nums; }
-.breakdown { width: 100%; margin-bottom: 10px; border-collapse: collapse; font-size: 0.92rem; }
+.breakdown { width: 100%; margin-bottom: 10px; border-collapse: collapse; font-size: 0.95rem; }
 .breakdown th { text-align: left; font-weight: 500; color: var(--ink-soft); padding: 4px 0; }
 .breakdown td { text-align: right; font-variant-numeric: tabular-nums; padding: 4px 0; }
 .breakdown tr + tr { border-top: 1px solid var(--paper-edge); }
 .pager .credit { margin: -4px 0 10px; font-size: 0.72rem; color: var(--ink-soft); }
 /* A Loop on its way to the phone (T099): its QR code above the bar. */
-.pager .to-phone { display: grid; justify-items: center; gap: 6px; margin: 0 0 10px; padding: 10px; border: 1px solid var(--paper-edge); border-radius: 8px; background: #fff; }
+.pager .to-phone { display: grid; justify-items: center; gap: 6px; margin: 0 0 10px; padding: 10px; border: 1px solid var(--paper-edge); border-radius: 8px; background: var(--white); }
 .pager .to-phone .qr { display: block; width: 180px; height: 180px; image-rendering: pixelated; }
-.pager .to-phone .link { margin: 0; font-size: 0.75rem; word-break: break-all; color: var(--ink-soft); }
-.pager .to-phone .terms { margin: 0; font-size: 0.9rem; font-weight: 600; font-variant-numeric: tabular-nums; }
-.pager .to-phone .close-phone { padding: 4px 12px; border: 1px solid var(--paper-edge); border-radius: 6px; background: transparent; font: inherit; cursor: pointer; }
+.pager .to-phone .link { margin: 0; font-size: 0.72rem; word-break: break-all; color: var(--ink-soft); }
+.pager .to-phone .terms { margin: 0; font-size: 0.95rem; font-weight: 600; font-variant-numeric: tabular-nums; }
 .pager .other-way { margin: 0 0 6px; font-size: 0.8rem; color: var(--ink-soft); text-align: center; }
 /* The Loop in words (T101): read like a guidebook's line, not a table. */
 .pager .closures { margin: 0 0 10px; font-size: 0.8rem; line-height: 1.4; }
@@ -329,33 +340,33 @@ html, body { margin: 0; height: 100%; background: var(--paper); }
 .pager .searching { margin: 6px 0 0; font-size: 0.8rem; color: var(--ink-soft); }
 
 /* How far a Request has got (T054): its own numbers, and a meter once there's a total */
-.pager .progress { display: grid; gap: 6px; font-size: 0.9rem; color: var(--ink-soft); }
+.pager .progress { display: grid; gap: 6px; font-size: 0.85rem; color: var(--ink-soft); }
 .pager .bar + .progress { margin-top: 8px; font-size: 0.8rem; }
 .pager .progress .meter { height: 4px; border-radius: 2px; background: var(--paper-edge); overflow: hidden; }
 .pager .progress .done { height: 100%; background: var(--forest); transition: width 0.2s linear; }
 
 /* On the map: the start, the Loop's direction, its distance markers and its Anchors */
-.start-marker { border-radius: 50%; background: var(--hi-vis); border: 3px solid #fff; box-shadow: 0 1px 4px rgb(0 0 0 / 0.35); box-sizing: border-box; }
+.start-marker { border-radius: 50%; background: var(--hi-vis); border: 3px solid var(--white); box-shadow: var(--shadow-pin); box-sizing: border-box; }
 /* A Point-to-point's finish (T091): a chequered flag's square beside the start's round pin. */
-.finish-marker { border-radius: 4px; border: 3px solid #fff; box-shadow: 0 1px 4px rgb(0 0 0 / 0.35); box-sizing: border-box;
-    background: repeating-conic-gradient(#1f2a24 0 25%, #fff 0 50%) 0 0 / 8px 8px; }
+.finish-marker { border-radius: 4px; border: 3px solid var(--white); box-shadow: var(--shadow-pin); box-sizing: border-box;
+    background: repeating-conic-gradient(var(--ink) 0 25%, var(--white) 0 50%) 0 0 / 8px 8px; }
 .anchor-marker {
-    display: grid; place-items: center; border-radius: 50%; box-sizing: border-box;
-    background: var(--forest); color: #fff; border: 2px solid #fff; font: 700 12px/1 system-ui, sans-serif;
-    box-shadow: 0 1px 4px rgb(0 0 0 / 0.35);
+    display: grid; place-items: center; border-radius: 50%; box-sizing: border-box; cursor: pointer;
+    background: var(--forest); color: var(--white); border: 2px solid var(--white); font: 700 12px/1 system-ui, sans-serif;
+    box-shadow: var(--shadow-pin);
 }
-.direction-arrow svg { display: block; width: 12px; height: 12px; fill: none; stroke: #fff; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.direction-arrow svg { display: block; width: 12px; height: 12px; fill: none; stroke: var(--white); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 .distance-marker {
     translate: -50% -50%; padding: 2px 5px; border-radius: 9px; white-space: nowrap;
-    background: #fff; color: var(--ink); border: 1.5px solid var(--hi-vis);
+    background: var(--white); color: var(--ink); border: 1.5px solid var(--hi-vis);
     font: 700 10px/1.2 system-ui, sans-serif; font-variant-numeric: tabular-nums;
-    box-shadow: 0 1px 3px rgb(0 0 0 / 0.3);
+    box-shadow: var(--shadow-pin);
 }
 
 /* Blazor's own banner for a broken connection or an unrecoverable error (App.razor) */
 #blazor-error-ui {
     display: none; position: fixed; z-index: 2000; left: 0; right: 0; bottom: 0;
-    padding: 12px 20px; background: var(--ink); color: #fff; font-size: 0.95rem;
+    padding: 12px 20px; background: var(--ink); color: var(--white); font-size: 0.95rem;
 }
 #blazor-error-ui .reload { margin-left: 12px; color: var(--hi-vis); font-weight: 600; }
 
@@ -366,12 +377,7 @@ html, body { margin: 0; height: 100%; background: var(--paper); }
 .outing .as-route { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-bottom: 10px; }
 .outing .as-route .route-problem { flex-basis: 100%; }
 /* Its buttons alike, one font and one weight (user, 2026-11-10); the Yes to deleting in hi-vis. */
-.outings .outing .as-route button {
-    display: inline-block; width: auto; padding: 5px 10px; border: 1px solid var(--paper-edge); border-radius: 6px;
-    background: transparent; color: var(--ink); font: inherit; font-size: 0.85rem; font-weight: 600; white-space: nowrap; cursor: pointer;
-}
-.outings .outing .as-route button:hover { background: var(--paper-edge); }
-.outings .outing .as-route .confirm-delete { background: var(--hi-vis); border-color: var(--hi-vis); color: #fff; }
+.outings .outing .as-route .confirm-delete { padding: 5px 10px; font-size: 0.85rem; white-space: nowrap; }
 .outing .asking { font-size: 0.85rem; color: var(--ink-soft); }
 .outing .gaps-shown summary { cursor: pointer; font-size: 0.85rem; font-weight: 600; margin: 4px 0; }
 .outing .gaps-shown[open] .gaps { max-height: 30vh; overflow-y: auto; }
@@ -382,32 +388,31 @@ html, body { margin: 0; height: 100%; background: var(--paper); }
     background: transparent; color: var(--ink); font: inherit; cursor: pointer;
 }
 .outings button:hover { background: var(--paper-edge); }
-.outings button:focus-visible { outline: 2px solid var(--hi-vis); outline-offset: 1px; }
 /* Chosen, the whole row is: the Outing, its stars and the user's (user, 2026-11-09: "isn't properly selected"). */
-.outings li.on { display: flow-root; background: var(--forest); color: #fff; border-radius: 6px; }
-.outings li.on > button { background: transparent; color: #fff; }
+.outings li.on { display: flow-root; background: var(--forest); color: var(--white); border-radius: 6px; }
+.outings li.on > button { background: transparent; color: var(--white); }
 .outings li.on > button:hover { background: rgb(255 255 255 / 0.08); }
 .outings .name { display: block; font-weight: 600; }
 .outings .facts { display: block; font-size: 0.85rem; color: var(--ink-soft); font-variant-numeric: tabular-nums; }
 .outings li.on .facts { color: rgb(255 255 255 / 0.8); }
-.app-stars { display: flex; align-items: center; font-size: 0.9rem; color: var(--forest); }
+.app-stars { display: flex; align-items: center; font-size: 0.85rem; color: var(--forest); }
 /* The app's stars and the user's lined up, star over star (user, 2026-11-10): one label width,
    one star box, the same size; in flex rows, so no space between the label and the stars counts. */
 .app-stars .star, .my-stars button { display: inline-block; width: 1.25em; padding: 0; text-align: center; font-size: 1.05rem; line-height: 1.25; }
 .outings .stars { padding: 0 8px 8px; }
 .outings .stars .my-stars { padding: 0; }
 .app-stars.none { color: var(--ink-soft); }
-.outings li.on .app-stars { color: #fff; }
+.outings li.on .app-stars { color: var(--white); }
 /* The user's own stars (T097): five to click, beside the app's, filled up to those given. */
 .my-stars { display: inline-flex; align-items: center; gap: 0; padding: 0 8px 8px; }
 /* App and You: whose stars are whose (user, 2026-11-09). */
-.who { display: inline-block; flex: none; width: 2.6em; min-width: 0; margin-right: 4px; font-size: 0.7rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-soft); }
+.who { display: inline-block; flex: none; width: 2.6em; min-width: 0; margin-right: 4px; font-size: 0.72rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-soft); }
 .outings li.on .who { color: rgb(255 255 255 / 0.75); }
 .outings li.on .my-stars button { color: rgb(255 255 255 / 0.4); }
-.outings li.on .my-stars button.on, .outings li.on .apart { color: #ffb380; }
-.my-stars button { border: 0; background: transparent; color: #b8ad98; cursor: pointer; }
+.outings li.on .my-stars button.on, .outings li.on .apart { color: var(--star-on-dark); }
+.my-stars button { border: 0; background: transparent; color: var(--star-off); cursor: pointer; }
 .my-stars button.on { color: var(--hi-vis); }
-.my-stars button:hover, .my-stars button:focus-visible { color: var(--ink-soft); outline: none; }
+.my-stars button:hover, .my-stars button:focus-visible { color: var(--ink-soft); }
 .my-stars button.on:hover { color: var(--hi-vis); }
 .saved-routes .my-stars { padding: 0 0 6px; }
 /* Where the user and the app are 2 stars or more apart (T097): it stands out, and says so. */
@@ -417,26 +422,21 @@ html, body { margin: 0; height: 100%; background: var(--paper); }
 /* A Saved Route the map has changed under (T103): said under it, across the card. */
 .saved-routes .map-changed { grid-column: 1 / -1; margin: 0 0 6px; font-size: 0.8rem; color: var(--hi-vis); }
 /* Moved onto the map as it is (T136): under its note, across the card. */
-.saved-routes .move {
-    grid-column: 1 / -1; justify-self: start; margin: 0 0 4px; padding: 4px 10px; border: 1px solid var(--forest); border-radius: 6px;
-    background: transparent; color: var(--forest); font: inherit; font-size: 0.8rem; font-weight: 600; cursor: pointer;
-}
-.saved-routes .move:hover:enabled { background: var(--forest); color: #fff; }
-.saved-routes .move:disabled { opacity: 0.5; cursor: default; }
+.saved-routes .move { grid-column: 1 / -1; justify-self: start; margin: 0 0 4px; }
 .outing .legend { list-style: none; margin: 0 0 12px; padding: 0; display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 0.85rem; }
 .outing .swatch { display: inline-block; width: 18px; height: 6px; margin-right: 6px; vertical-align: middle; border-radius: 3px; }
-.swatch.off-road { background: #2e7d32; }
-.swatch.traffic-free { background: #1f78c8; }
-.swatch.connector { background: #8a8f8c; }
-.swatch.track { height: 2px; background: #1f2a24; }
-.swatch.gap { background: #d62828; box-shadow: 0 0 0 2px #fff, 0 0 0 3px var(--paper-edge); }
+.swatch.off-road { background: var(--ground-off-road); }
+.swatch.traffic-free { background: var(--ground-traffic-free); }
+.swatch.connector { background: var(--ground-connector); }
+.swatch.loop { background: var(--hi-vis); }
+.swatch.track { height: 2px; background: var(--ink); }
+.swatch.gap { background: var(--map-gap); box-shadow: 0 0 0 2px var(--white), 0 0 0 3px var(--paper-edge); }
 .outing .gaps { margin: 8px 0 0; padding-left: 20px; font-variant-numeric: tabular-nums; }
 .outing .gaps li { padding: 2px 0; }
 .panel code { font-size: 0.85rem; background: var(--paper-edge); padding: 1px 4px; border-radius: 3px; }
 
 /* How Wend Your Way works: an ordinary scrolling page in the field-map palette */
 .how {
-    --off-road: #2e7d32; --traffic-free: #1f78c8; --connector: #8a8f8c; --gap: #d62828;
     max-width: 72rem; margin: 0 auto; box-sizing: border-box;
     padding: 24px max(16px, env(safe-area-inset-right, 0px)) 64px max(16px, env(safe-area-inset-left, 0px));
     display: grid; gap: 36px; line-height: 1.6;
@@ -450,22 +450,16 @@ html, body { margin: 0; height: 100%; background: var(--paper); }
 .how .lede { font-size: 1.1rem; color: var(--ink-soft); }
 .how .back { justify-self: start; color: var(--forest); font-weight: 600; text-decoration: none; }
 .how .back:hover { text-decoration: underline; }
-.how a:focus-visible { outline: 2px solid var(--hi-vis); outline-offset: 2px; }
 .how code { font-family: Consolas, "Cascadia Mono", monospace; font-size: 0.92em; }
 .how .ground-key { list-style: none; margin: 12px 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px 18px; }
 .how .ground-key li { display: inline-flex; align-items: center; gap: 8px; }
 .how .ground-key .swatch { width: 24px; height: 5px; border-radius: 3px; }
-.how .swatch.off-road { background: var(--off-road); }
-.how .swatch.traffic-free { background: var(--traffic-free); }
-.how .swatch.connector { background: var(--connector); }
-.how .swatch.loop { background: var(--hi-vis); }
-.how .swatch.gap { background: var(--gap); }
 .how figure { margin: 0; }
-.how .diagram-scroll { overflow-x: auto; border: 1px solid var(--paper-edge); border-radius: var(--radius); background: #fffdf8; }
+.how .diagram-scroll { overflow-x: auto; border: 1px solid var(--paper-edge); border-radius: var(--radius); background: var(--paper-light); }
 .how .diagram { display: block; width: 100%; min-width: 760px; height: auto; }
 .how figcaption { margin-top: 10px; color: var(--ink-soft); max-width: 44rem; }
 .how .jobs { display: grid; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); gap: 16px; }
-.how .jobs article { background: #fffdf8; border: 1px solid var(--paper-edge); border-radius: var(--radius); padding: 14px 16px; min-width: 0; }
+.how .jobs article { background: var(--paper-light); border: 1px solid var(--paper-edge); border-radius: var(--radius); padding: 14px 16px; min-width: 0; }
 .how .jobs p { margin: 0; }
 .how dl { display: grid; grid-template-columns: max-content 1fr; gap: 6px 18px; margin: 0; }
 .how dt { font-weight: 700; }
@@ -493,7 +487,6 @@ html, body { margin: 0; height: 100%; background: var(--paper); }
     box-sizing: border-box; width: 100%; padding: 9px 14px; font: inherit; font-size: 0.95rem; color: var(--ink);
     background: var(--paper); border: 1px solid var(--paper-edge); border-radius: var(--radius); box-shadow: var(--shadow);
 }
-.place-search input:focus { outline: 2px solid var(--forest-light); outline-offset: 0; }
 .place-search .found {
     position: absolute; left: 0; right: 0; z-index: 20; margin-top: 6px; overflow: hidden;
     background: var(--paper); border: 1px solid var(--paper-edge); border-radius: var(--radius); box-shadow: var(--shadow);
@@ -504,24 +497,24 @@ html, body { margin: 0; height: 100%; background: var(--paper); }
 .place-search li:hover, .place-search li.highlighted { background: var(--paper-edge); }
 .place-search li.highlighted { box-shadow: inset 3px 0 0 var(--hi-vis); }
 .place-search .none { margin: 0; padding: 10px 14px; font-size: 0.85rem; color: var(--ink-soft); }
-.place-search .credit { margin: 0; padding: 6px 14px 8px; border-top: 1px solid var(--paper-edge); font-size: 0.68rem; line-height: 1.35; color: var(--ink-soft); }
+.place-search .credit { margin: 0; padding: 6px 14px 8px; border-top: 1px solid var(--paper-edge); font-size: 0.72rem; line-height: 1.35; color: var(--ink-soft); }
 
 /* Cafés and toilets (T067): small, quiet beside the car parks' P, each its own colour */
 /* Gravel hotspots (T072): a forest badge with the km of riding, beneath the car parks and Loops */
 .hotspot-marker span {
     display: inline-block; transform: translate(-50%, -50%); padding: 3px 7px; border-radius: 12px;
-    background: var(--forest); color: #fff; border: 2px solid #fff; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
-    font: 700 0.75rem/1.2 inherit; white-space: nowrap; cursor: pointer;
+    background: var(--forest); color: var(--white); border: 2px solid var(--white); box-shadow: var(--shadow-pin);
+    font: 700 0.72rem/1.2 inherit; white-space: nowrap; cursor: pointer;
 }
 .hotspot-marker span::after { content: " km"; font-weight: 600; }
 .amenity-marker span {
     display: flex; align-items: center; justify-content: center; width: 20px; height: 20px; box-sizing: border-box;
-    border: 1.5px solid #fff; border-radius: 50%; box-shadow: 0 1px 2px rgb(0 0 0 / 0.3);
-    font: 700 8px/1 system-ui, sans-serif; color: #fff;
+    border: 1.5px solid var(--white); border-radius: 50%; box-shadow: var(--shadow-pin);
+    font: 700 8px/1 system-ui, sans-serif; color: var(--white);
 }
-.amenity-marker.cafe span { background: #8d5b3a; }
-.amenity-marker.toilets span { background: #3d6f9e; }
-.amenity-marker svg { width: 13px; height: 13px; fill: none; stroke: #fff; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.amenity-marker.cafe span { background: var(--cafe); }
+.amenity-marker.toilets span { background: var(--toilets); }
+.amenity-marker svg { width: 13px; height: 13px; fill: none; stroke: var(--white); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 
 /* Unconfirmed access (T068): flagged in hi-vis, a thing to check before riding */
 .breakdown tr.unconfirmed th, .breakdown tr.unconfirmed td { color: var(--hi-vis); }
@@ -535,24 +528,20 @@ html, body { margin: 0; height: 100%; background: var(--paper); }
     color: var(--ink); font: inherit; font-size: 0.85rem; font-weight: 600; white-space: nowrap; cursor: pointer;
 }
 .outing-filters button:hover { background: var(--paper-edge); }
-.outing-filters button[aria-pressed="true"] { background: var(--forest); border-color: var(--forest); color: #fff; }
+.outing-filters button[aria-pressed="true"] { background: var(--forest); border-color: var(--forest); color: var(--white); }
 .outing-filters .outing-count { margin-left: auto; align-self: center; font-size: 0.85rem; color: var(--ink-soft); white-space: nowrap; }
 .outing-search {
     box-sizing: border-box; width: 100%; margin-bottom: 10px; padding: 6px 10px;
-    border: 1px solid var(--paper-edge); border-radius: 6px; background: #fff; color: var(--ink); font: inherit; font-size: 0.9rem;
+    border: 1px solid var(--paper-edge); border-radius: 6px; background: var(--white); color: var(--ink); font: inherit; font-size: 0.9rem;
 }
 
 /* Renaming an Outing (T111): the name box over its buttons, styled as they are. */
 .outing .rename-outing-form { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-bottom: 8px; }
 .outing .rename-outing-form .new-name {
     flex: 1 1 100%; min-width: 0; padding: 5px 8px; border: 1px solid var(--paper-edge); border-radius: 6px;
-    background: #fff; color: var(--ink); font: inherit; font-size: 0.9rem;
+    background: var(--white); color: var(--ink); font: inherit; font-size: 0.9rem;
 }
-.outing .rename-outing-form button {
-    display: inline-block; width: auto; padding: 5px 10px; border: 1px solid var(--paper-edge); border-radius: 6px; background: transparent;
-    color: var(--ink); font: inherit; font-size: 0.85rem; font-weight: 600; white-space: nowrap; cursor: pointer;
-}
-.outing .rename-outing-form .save-name { background: var(--forest); border-color: var(--forest); color: #fff; }
+.outing .rename-outing-form .save-name { padding: 5px 10px; font-size: 0.85rem; white-space: nowrap; }
 
 /* A long job under way (T138), over the top of the map wherever you are: what, how long, what's safe. */
 /* With it, any database changes held back for a job (T149), one under the other. */
@@ -562,11 +551,11 @@ html, body { margin: 0; height: 100%; background: var(--paper); }
 }
 .job-under-way, .held-back {
     display: flex; align-items: center; gap: 10px; padding: 8px 14px; border-radius: 8px;
-    background: var(--forest); color: #fff; font-size: 0.85rem; line-height: 1.35; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+    background: var(--forest); color: var(--white); font-size: 0.85rem; line-height: 1.35; box-shadow: var(--shadow-band);
 }
-.held-back { background: #5a4a1e; }
+.held-back { background: var(--held); }
 .job-under-way .spinner {
-    flex: none; width: 14px; height: 14px; border-radius: 50%; border: 2px solid rgba(255, 255, 255, 0.35); border-top-color: var(--hi-vis);
+    flex: none; width: 14px; height: 14px; border-radius: 50%; border: 2px solid rgb(255 255 255 / 0.35); border-top-color: var(--hi-vis);
     animation: job-spin 0.9s linear infinite;
 }
 @keyframes job-spin { to { transform: rotate(360deg); } }
@@ -574,32 +563,31 @@ html, body { margin: 0; height: 100%; background: var(--paper); }
 /* An export being made (T139): its button's spinner, as the job line's. */
 .pager .bar button .spinner {
     display: inline-block; width: 13px; height: 13px; border-radius: 50%; vertical-align: middle;
-    border: 2px solid rgba(255, 255, 255, 0.35); border-top-color: #fff; animation: job-spin 0.9s linear infinite;
+    border: 2px solid rgb(255 255 255 / 0.35); border-top-color: var(--white); animation: job-spin 0.9s linear infinite;
 }
 .pager .bar button.preparing { cursor: progress; }
 /* The others, off till it's done (T139 review): seen to be off. */
-.pager .export[aria-disabled="true"]:not(.preparing), .pager .phone[aria-disabled="true"]:not(.preparing) { opacity: 0.55; cursor: default; filter: none; }
 /* Read by a screen reader, not seen. */
 .visually-hidden { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
 
 /* Explain? (T157, #161): the route's notes on the map, a label above each place with a dot on the route. */
 .note-marker span {
     position: absolute; left: 0; bottom: 7px; transform: translateX(-50%); padding: 2px 7px; border-radius: 6px;
-    background: #fff; color: var(--ink); border: 1.5px solid var(--ink-soft); box-shadow: 0 1px 3px rgb(0 0 0 / 0.3);
+    background: var(--white); color: var(--ink); border: 1.5px solid var(--ink-soft); box-shadow: var(--shadow-pin);
     font: 600 0.72rem/1.25 system-ui, sans-serif; white-space: nowrap; pointer-events: none;
 }
 .note-marker::after {
     content: ""; position: absolute; left: -4px; top: -4px; width: 8px; height: 8px; border-radius: 50%;
-    background: #fff; border: 2px solid var(--ink-soft); box-sizing: border-box;
+    background: var(--white); border: 2px solid var(--ink-soft); box-sizing: border-box;
 }
 .note-marker.green span { border-color: var(--forest-light); color: var(--forest); }
 .note-marker.green::after { border-color: var(--forest-light); }
 .note-marker.main-road span { border-color: var(--hi-vis); }
 .note-marker.main-road::after { border-color: var(--hi-vis); }
-.note-marker.crossing span { border-color: #1f78c8; }
-.note-marker.crossing::after { border-color: #1f78c8; }
-.note-marker.obstacle span { border-color: #8d5b3a; }
-.note-marker.obstacle::after { border-color: #8d5b3a; }
+.note-marker.crossing span { border-color: var(--ground-traffic-free); }
+.note-marker.crossing::after { border-color: var(--ground-traffic-free); }
+.note-marker.obstacle span { border-color: var(--cafe); }
+.note-marker.obstacle::after { border-color: var(--cafe); }
 
 /* The first-Loop tour (T158): its card at the top of the map, centred as the Loop card is, and the control each step is about standing out. */
 .tour {
@@ -613,18 +601,9 @@ html, body { margin: 0; height: 100%; background: var(--paper); }
 .tour .count { font-size: 0.72rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--hi-vis); margin-bottom: 4px; }
 .tour .says { font-size: 0.95rem; line-height: 1.45; color: var(--ink); text-wrap: pretty; }
 .tour .actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 10px; }
-.tour button { border: 0; border-radius: 6px; padding: 6px 12px; font: inherit; font-size: 0.85rem; cursor: pointer; }
-.tour .show-me { background: var(--hi-vis); color: #fff; font-weight: 600; }
-.tour .show-me:hover { background: #cf4e09; }
-.tour .quiet { background: transparent; color: var(--ink-soft); }
-.tour .quiet:hover { background: var(--paper-edge); color: var(--ink); }
-.tour button:focus-visible { outline: 2px solid var(--hi-vis); outline-offset: 2px; }
+.tour .show-me { padding: 5px 12px; font-size: 0.85rem; }
 /* Outlined, orange only under the pointer, as Back to my map is (T164). */
-.panel .take-tour {
-    margin: 12px 0; padding: 7px 14px; border: 1px solid var(--hi-vis); border-radius: 6px; background: transparent; color: var(--hi-vis);
-    font: inherit; font-size: 0.9rem; font-weight: 600; cursor: pointer;
-}
-.panel .take-tour:hover { background: var(--hi-vis); color: #fff; }
+.panel .take-tour { margin: 0 0 16px; }
 .planner[data-tour="start"] .field.ends,
 .planner[data-tour="go"] .distance-go .go,
 .planner[data-tour="page"] .pager .page,
@@ -635,19 +614,16 @@ html, body { margin: 0; height: 100%; background: var(--paper); }
 .planner[data-tour="keep"] .pager .phone {
     outline: 3px solid var(--hi-vis); outline-offset: 3px; border-radius: 6px; animation: tour-here 1.6s ease-in-out infinite;
 }
-@keyframes tour-here { 50% { outline-color: rgb(232 89 12 / 0.35); } }
+@keyframes tour-here { 50% { outline-color: color-mix(in srgb, var(--hi-vis) 35%, transparent); } }
 @media (prefers-reduced-motion: reduce) { .planner[data-tour] * { animation: none !important; } }
 
 /* No map of your own yet (T162): said at the top of the Request panel, and the practice map offered. */
-.panel .no-map { margin: 0 0 16px; padding: 10px 12px; border-left: 4px solid var(--hi-vis); border-radius: 6px; background: var(--paper-edge); font-size: 0.88rem; line-height: 1.45; }
+.panel .no-map { margin: 0 0 16px; padding: 10px 12px; border-left: 4px solid var(--hi-vis); border-radius: var(--radius-control); background: var(--paper-edge); font-size: 0.85rem; line-height: 1.45; }
 .panel .no-map p { margin: 0; }
 .panel .no-map p + p, .panel .no-map button { margin-top: 8px; }
-.panel .no-map .how { font-size: 0.82rem; color: var(--ink-soft); }
+.open-how { font-size: 0.8rem; color: var(--ink-soft); }
 .panel .practice { font-size: 0.85rem; line-height: 1.45; color: var(--ink-soft); }
 /* To the practice map and back (T163). */
-.panel .practice-help { margin: 12px 0; }
+.panel .practice-help { margin: 0 0 16px; }
 .panel .practice-help p { margin: 0 0 8px; }
-.panel .switch-map { padding: 7px 14px; border: 1px solid var(--hi-vis); border-radius: 6px; background: transparent; color: var(--hi-vis); font: inherit; font-size: 0.9rem; font-weight: 600; cursor: pointer; }
-.panel .no-map .switch-map { border: 0; background: var(--hi-vis); color: #fff; }
-.panel .switch-map:hover { background: var(--hi-vis); color: #fff; }
 .panel .switching { font-size: 0.85rem; color: var(--ink-soft); }

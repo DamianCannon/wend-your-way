@@ -389,7 +389,7 @@ public class ReviewingOutings
         screen.WaitForElement(".outings li button").Click();
         screen.WaitForElement(".outing .delete-outing").Click();
         screen.Find(".outing .keep").Click();
-        Assert.That(screen.FindAll(".outing .as-route button").Select(b => b.TextContent.Trim()), Is.EqualTo(new[] { "To Route", "GPX", "Rename", "Delete" }));
+        Assert.That(screen.FindAll(".outing .as-route button").Select(b => b.TextContent.Trim()), Is.EqualTo(new[] { "To route", "GPX", "Rename", "Delete" }));
     }
 
     [Test]
