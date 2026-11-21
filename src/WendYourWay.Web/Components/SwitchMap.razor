@@ -1,0 +1,61 @@
+@using WendYourWay.Web.Planning
+@inject IJSRuntime JS
+@inject PlannerSettings Settings
+@implements IAsyncDisposable
+@* To the practice map and back in the same window (T163, #167; user: "I'd rather just have a button in
+   the help panel that switches to the practice map (and back again)"): the launcher's window asked to
+   switch; in a browser, where there's none, what NotInWindow says. *@
+
+@if (_inWindow is true)
+{
+    @if (_switching)
+    {
+        <p class="switching" role="status">@(Settings.Practice ? "Going back to your own map…" : "Getting the practice map ready…")</p>
+    }
+    else
+    {
+        <button type="button" class="switch-map" @onclick="SwitchAsync">@(Settings.Practice ? "Back to my map" : Label)</button>
+    }
+}
+else if (_inWindow is false)
+{
+    @NotInWindow
+}
+
+@code {
+    /// <summary>What the button says on your own map.</summary>
+    [Parameter] public string Label { get; set; } = "Switch to the practice map";
+
+    /// <summary>What's said in a browser, where the map can't be switched from here.</summary>
+    [Parameter] public RenderFragment? NotInWindow { get; set; }
+
+    private IJSObjectReference? _host;
+    private bool? _inWindow;
+    private bool _switching;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender) return;
+        _host = await JS.InvokeAsync<IJSObjectReference>("import", "./js/host.js");
+        _inWindow = await _host.InvokeAsync<bool>("inWindow");
+        StateHasChanged();
+    }
+
+    private async Task SwitchAsync()
+    {
+        _switching = true;
+        await _host!.InvokeVoidAsync("switchMap", Settings.Practice ? "own" : "practice");
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        try
+        {
+            if (_host is not null) await _host.DisposeAsync();
+        }
+        catch (JSDisconnectedException)
+        {
+            // The window has gone to the other map, and the module with it.
+        }
+    }
+}

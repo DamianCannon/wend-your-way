@@ -29,8 +29,8 @@ Then one of two ways in. Either way, **try it first on the practice map**: a sma
 and around that comes with the app and is ready in seconds, so you can plan Loops (and take the first-Loop
 tour) before building your own region. It has a database of its own: nothing done there touches your own
 map or runs, and it's emptied each time it opens. With Docker, `docker compose --profile practice up -d practice`
-opens it on <http://127.0.0.1:5020>; on Windows, the **Wend Your Way – practice map** shortcut (made with the
-others, below), or `dotnet run -c Release --project src/WendYourWay.Cli -- practice` then the planner with
+opens it on <http://127.0.0.1:5020>; on Windows, **Switch to the practice map** in the Help panel (and **Back to my
+map** there), the **Wend Your Way – practice map** shortcut (made with the others, below), or `dotnet run -c Release --project src/WendYourWay.Cli -- practice` then the planner with
 `--Practice=true`.
 
 ### With Docker (Windows, macOS or Linux)

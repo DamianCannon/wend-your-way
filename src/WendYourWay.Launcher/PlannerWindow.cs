@@ -15,10 +15,16 @@ internal sealed class PlannerWindow : Form
     private readonly WebView2 _view = new() { Dock = DockStyle.Fill };
     private readonly Uri _address;
     private readonly string _folder;
+    // The app's addresses: its own map's and the practice map's (T163), each kept in this window.
+    private readonly HashSet<string> _ours;
 
-    public PlannerWindow(Uri address, Icon icon, string folder)
+    /// <summary>Raised when the page asks to switch the map (T163): to "practice", or "own".</summary>
+    public event Func<string, Task>? SwitchAsked;
+
+    public PlannerWindow(Uri address, Icon icon, string folder, IEnumerable<Uri>? alsoOurs = null)
     {
         (_address, _folder) = (address, folder);
+        _ours = [address.Authority, .. (alsoOurs ?? []).Select(u => u.Authority)];
         Text = "Wend Your Way";
         Icon = icon;
         StartPosition = FormStartPosition.Manual;
@@ -50,14 +56,22 @@ internal sealed class PlannerWindow : Form
         };
         web.NavigationStarting += (_, e) =>
         {
-            if (Uri.TryCreate(e.Uri, UriKind.Absolute, out var to) && to.Authority != _address.Authority && to.Scheme is "http" or "https")
+            if (Uri.TryCreate(e.Uri, UriKind.Absolute, out var to) && !_ours.Contains(to.Authority) && to.Scheme is "http" or "https")
             {
                 e.Cancel = true;
                 OpenOutside(e.Uri);
             }
         };
+        // The page asking to switch the map (T163): the launcher starts it, then this window goes there.
+        web.WebMessageReceived += async (_, e) =>
+        {
+            if (WendYourWay.Launching.MapSwitch.Parse(e.TryGetWebMessageAsString()) is { } to && SwitchAsked is { } asked) await asked(to);
+        };
         web.Navigate(_address.ToString());
     }
+
+    /// <summary>The window to another of the app's addresses: the practice map's, or back (T163).</summary>
+    public void Go(Uri address) => _view.CoreWebView2?.Navigate(address.ToString());
 
     private static void OpenOutside(string uri)
     {

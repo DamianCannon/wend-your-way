@@ -45,11 +45,18 @@
         <p class="later">@Current.Later</p>
         @* Taken again any time (T158). *@
         <button type="button" class="take-tour" @onclick="OnTour">Take the first-loop tour</button>
-        @if (!Settings.Practice)
-        {
-            @* The practice map (T161, T162), to try it on or show it without touching your own. *@
-            <p class="later practice-help">To try Wend Your Way on a practice map of Richmond Park, without touching your own: @Offer.HowToOpen.</p>
-        }
+        @* The practice map (T161), to try it on or show it without touching your own: switched to and back (T163). *@
+        <div class="practice-help">
+            <p class="later">@(Settings.Practice ? "This is the practice map of Richmond Park. Your own map is as you left it." : "Try Wend Your Way on a practice map of Richmond Park, without touching your own.")</p>
+            <SwitchMap>
+                <NotInWindow>
+                    @if (!Settings.Practice)
+                    {
+                        <p class="later how">To open it: @Offer.HowToOpen.</p>
+                    }
+                </NotInWindow>
+            </SwitchMap>
+        </div>
         <p class="later"><a href="how-it-works">How Wend Your Way works</a>: the parts, how they connect, and what it's built on.</p>
     }
     else

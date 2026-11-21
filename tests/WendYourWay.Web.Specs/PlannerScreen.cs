@@ -23,6 +23,9 @@ internal sealed class PlannerScreen : IDisposable
     {
         Map = Context.JSInterop.SetupModule("./js/map.js");
         Map.Mode = JSRuntimeMode.Loose;
+        //  The launcher's window, or not (T163): not, unless a spec says so.
+        Host = Context.JSInterop.SetupModule("./js/host.js");
+        Host.Mode = JSRuntimeMode.Loose;
         var services = Context.Services;
         services.AddSingleton(MapTiles.Of("https://tiles.example/{z}/{x}/{y}.png", "Tiles"));
         services.AddSingleton(new PlannerSettings(Home: null));
@@ -48,6 +51,9 @@ internal sealed class PlannerScreen : IDisposable
 
     /// <summary>The map's JavaScript module, loose: every call answered, each one kept to look at.</summary>
     public BunitJSModuleInterop Map { get; }
+
+    /// <summary>The launcher's window as the page asks it (T163): in it or not, and asked to switch the map.</summary>
+    public BunitJSModuleInterop Host { get; }
 
     public FakeLastRequest LastRequest { get; } = new();
     public FakeSavedRoutes SavedRoutes { get; } = new();

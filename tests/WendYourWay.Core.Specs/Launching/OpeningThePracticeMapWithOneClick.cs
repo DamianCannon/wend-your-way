@@ -12,9 +12,11 @@ public class OpeningThePracticeMapWithOneClick
     public void The_app_is_told_it_s_the_practice_map_at_an_address_of_its_own() =>
         Assert.That(Practice.AppArguments([]), Is.EqualTo(new[] { "--Practice=true", "--urls", "http://127.0.0.1:5020" }));
 
-    [Test]
-    public void An_address_given_by_hand_is_kept() =>
-        Assert.That(Practice.AppArguments(["--urls", "http://127.0.0.1:5021"]), Is.EqualTo(new[] { "--urls", "http://127.0.0.1:5021", "--Practice=true" }));
+    //  Beside the app on your own map (T163): an address given by hand is that one's, not the practice map's.
+    [TestCase("--urls", "http://127.0.0.1:5019")]
+    [TestCase("--urls=http://127.0.0.1:5019")]
+    public void An_address_given_by_hand_is_the_app_s_own_not_the_practice_map_s(params string[] given) =>
+        Assert.That(Practice.AppArguments([.. given, "--Home:Latitude=51.5"]), Is.EqualTo(new[] { "--Home:Latitude=51.5", "--Practice=true", "--urls", "http://127.0.0.1:5020" }));
 
     [Test]
     public void Its_address_is_the_one_it_s_opened_at() =>
@@ -34,4 +36,23 @@ public class OpeningThePracticeMapWithOneClick
     [Test]
     public void It_s_opened_once_by_a_name_of_its_own() =>
         Assert.That(Practice.Once(practising: true), Is.Not.EqualTo(Practice.Once(practising: false)));
+}
+
+/// <summary>The page asking the window to switch the map (T163, #167): what the launcher takes from it.</summary>
+public class SwitchingTheMapInTheWindow
+{
+    [TestCase("""{"switchTo":"practice"}""", "practice")]
+    [TestCase("""{"switchTo":"own"}""", "own")]
+    public void A_switch_says_where_to(string message, string to) =>
+        Assert.That(MapSwitch.Parse(message), Is.EqualTo(to));
+
+    [TestCase("""{"switchTo":"somewhere"}""")]
+    [TestCase("""{"other":"practice"}""")]
+    [TestCase("""["practice"]""")]
+    [TestCase("""{"switchTo":1}""")]
+    [TestCase("practice")]
+    [TestCase("")]
+    [TestCase(null)]
+    public void Anything_else_isn_t_one(string? message) =>
+        Assert.That(MapSwitch.Parse(message), Is.Null);
 }

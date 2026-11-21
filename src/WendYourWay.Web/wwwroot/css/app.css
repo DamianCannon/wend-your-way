@@ -642,6 +642,11 @@ html, body { margin: 0; height: 100%; background: var(--paper); }
 .panel .no-map p { margin: 0; }
 .panel .no-map p + p, .panel .no-map button { margin-top: 8px; }
 .panel .no-map .how { font-size: 0.82rem; color: var(--ink-soft); }
-.panel .try-practice { padding: 7px 14px; border: 0; border-radius: 6px; background: var(--hi-vis); color: #fff; font: inherit; font-weight: 600; cursor: pointer; }
-.panel .try-practice:hover { background: #cf4e09; }
 .panel .practice { font-size: 0.85rem; line-height: 1.45; color: var(--ink-soft); }
+/* To the practice map and back (T163). */
+.panel .practice-help { margin: 12px 0; }
+.panel .practice-help p { margin: 0 0 8px; }
+.panel .switch-map { padding: 7px 14px; border: 1px solid var(--hi-vis); border-radius: 6px; background: transparent; color: var(--hi-vis); font: inherit; font-size: 0.9rem; font-weight: 600; cursor: pointer; }
+.panel .no-map .switch-map { border: 0; background: var(--hi-vis); color: #fff; }
+.panel .switch-map:hover { background: var(--hi-vis); color: #fff; }
+.panel .switching { font-size: 0.85rem; color: var(--ink-soft); }
