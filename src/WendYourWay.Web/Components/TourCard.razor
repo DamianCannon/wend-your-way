@@ -5,10 +5,10 @@
 
 @if (View is { } tour)
 {
-    <section class="tour" aria-label="First-Loop tour" aria-live="polite">
+    <section class="tour" aria-label="First-loop tour" aria-live="polite">
         @if (tour.Step is not (TourStep.Offered or TourStep.Done))
         {
-            <p class="count">Your first Loop · @tour.Number of @FirstLoopTour.Steps</p>
+            <p class="count">Your first loop · @tour.Number of @FirstLoopTour.Steps</p>
         }
         <p class="says">@tour.Words</p>
         <div class="actions">

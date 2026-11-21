@@ -255,3 +255,27 @@ public class TakingTheTour
         Assert.That((said.Select(s => s.Item1).Distinct().Count(), said.Select(s => s.Item2).Distinct().Count(), said.All(s => s.Item1.Length > 0 && s.Item2 is not null), _session.Tour!.Step), Is.EqualTo((6, 6, true, TourStep.Done)));
     }
 }
+
+/// <summary>The tour's words in plain sentence case (T160, #164; user: "capitalisation in the text is a bit wayward").</summary>
+public class WordingTheTour
+{
+    private static readonly string[] Capitalised = ["Loop", "Loops", "Distance", "Off-road", "Crossing", "Crossings", "Breakdown", "Nudge", "Connector", "Main"];
+
+    //  Mid-sentence, the app's terms are words like any other; only the controls are named as the screen shows them.
+    [Test]
+    public void No_step_capitalises_a_term_mid_sentence()
+    {
+        var tour = new FirstLoopTour();
+        tour.Offer();
+        var said = new List<string> { tour.View!.Words };
+        tour.Begin();
+        for (var i = 0; i < FirstLoopTour.Steps; i++)
+        {
+            said.Add(tour.View!.Words);
+            tour.Skip();
+        }
+        said.Add(tour.View!.Words);
+        var midSentence = said.SelectMany(s => System.Text.RegularExpressions.Regex.Matches(s, @"(?<![.?:]\s|^)\b[A-Z][\w-]*").Select(m => m.Value));
+        Assert.That(midSentence.Intersect(Capitalised), Is.Empty);
+    }
+}

@@ -55,14 +55,14 @@ public sealed class FirstLoopTour
 
     private static string Words(TourStep step) => step switch
     {
-        TourStep.Offered => "New here? Plan your first Loop with a short tour, one step at a time.",
-        TourStep.Start => "Click the map where you'd like to start, or choose a car park, or search in the Start box. Loops are found from there at once.",
-        TourStep.Go => "Loops are on their way. Change the Distance, then press Go to find Loops that long instead.",
-        TourStep.Page => "Up to five Loops come, best first. Page through them with ‹ and › on the card at the bottom.",
-        TourStep.Breakdown => "Open the card with its arrow to see what this Loop adds up to: climbing, Off-road, Crossings. Explain? shows where they are on the map.",
+        TourStep.Offered => "New here? Plan your first loop with a short tour, one step at a time.",
+        TourStep.Start => "Click the map where you'd like to start, choose a car park, or search in the Start box. Loops are found from there straight away.",
+        TourStep.Go => "Loops are on their way. Change the distance, then press Go to find loops that long instead.",
+        TourStep.Page => "Up to five loops come, best first. Page through them with ‹ and › on the card at the bottom.",
+        TourStep.Breakdown => "Open the card with its arrow to see what this loop adds up to: its climbing, how much is off-road, the roads it crosses. Explain? shows where they are on the map.",
         TourStep.Nudge => "Not keen on a bit of it? Drag the route to where it should go, or click it and choose Avoid this time. Undo puts it back.",
-        TourStep.Keep => "Like it? Save it with the bookmark, export GPX for OS Maps or TCX for a watch, or QR to send it to your phone.",
-        _ => "That's your first Loop. Take the tour again from Help any time.",
+        TourStep.Keep => "Like it? Save it with the bookmark, export a GPX for OS Maps or a TCX for a watch, or press QR to send it to your phone.",
+        _ => "That's your first loop. Take the tour again from Help any time.",
     };
 
     // Which control the step is about, for the page to make it stand out.

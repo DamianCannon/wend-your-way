@@ -17,7 +17,7 @@ public class ShowingTheTour : PlannerPageSpecs
     {
         var screen = Open(KenwoodHouse);
         screen.Find(".tour .show-me").Click();
-        screen.WaitForAssertion(() => Assert.That((screen.Find(".tour .count").TextContent, Here(screen)), Is.EqualTo(("Your first Loop · 1 of 6", "start"))));
+        screen.WaitForAssertion(() => Assert.That((screen.Find(".tour .count").TextContent, Here(screen)), Is.EqualTo(("Your first loop · 1 of 6", "start"))));
     }
 
     [Test]
