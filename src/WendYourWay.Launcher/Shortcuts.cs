@@ -18,27 +18,26 @@ internal static class Shortcuts
             Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory), "Wend Your Way.lnk"),
         ];
         foreach (var path in made) Make(launcher, path);
-        // The practice map (T161), from the Start menu: Richmond Park, in a window of its own.
-        var practice = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Programs), "Wend Your Way – practice map.lnk");
-        Make(launcher, practice, WendYourWay.Launching.Practice.Flag, "Try Wend Your Way on a practice map of Richmond Park");
-        made = [.. made, practice];
-        // Its shortcuts from before the rename (T140), whose launcher has moved: gone, not left broken.
+        // Its shortcuts from before the rename (T140), whose launcher has moved, and the practice map's own
+        // (T161), switched to from Help instead (T163, user: "remove the shortcut"): gone, not left behind.
         foreach (var folder in new[] { Environment.SpecialFolder.Programs, Environment.SpecialFolder.DesktopDirectory })
         {
-            var former = Path.Combine(Environment.GetFolderPath(folder), "CutThrough.lnk");
-            if (File.Exists(former)) File.Delete(former);
+            foreach (var former in new[] { "CutThrough.lnk", "Wend Your Way – practice map.lnk" })
+            {
+                var path = Path.Combine(Environment.GetFolderPath(folder), former);
+                if (File.Exists(path)) File.Delete(path);
+            }
         }
         return made;
     }
 
-    private static void Make(string launcher, string path, string arguments = "", string description = "Plan running and riding Loops off the beaten track")
+    private static void Make(string launcher, string path)
     {
         var link = (IShellLinkW)new ShellLink();
         link.SetPath(launcher);
-        link.SetArguments(arguments);
         link.SetWorkingDirectory(Path.GetDirectoryName(launcher)!);
         link.SetIconLocation(launcher, 0);
-        link.SetDescription(description);
+        link.SetDescription("Plan running and riding Loops off the beaten track");
         var properties = (IPropertyStore)link;
         var key = new PropertyKey(new Guid("9F4C2855-9F79-4B39-A8D0-E1D42DE1D5F3"), 5);
         var value = new PropVariant { Type = 31, Value = Marshal.StringToCoTaskMemUni(NativeMethods.AppId) };

@@ -254,7 +254,7 @@ try {
     Done "PostGIS enabled in '$TestDbName'"
 
     # The practice map's database (T161): Richmond Park and around, to try Wend Your Way on first
-    # (`wend practice` builds it; the "Wend Your Way – practice map" shortcut opens it).
+    # (`wend practice` builds it; Help's Switch to the practice map opens it).
     $PracticeDbName = "${DbName}_practice"
     if ((Sql 'postgres' "select 1 from pg_database where datname = '$PracticeDbName'") -eq '1') {
         Done "Database '$PracticeDbName' already exists"
