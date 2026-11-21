@@ -58,21 +58,52 @@ public static class PracticeMap
         }
     }
 
+    // What the app made in the database, dropped: its schemas, and in public its functions, tables and
+    // types (the migrations' journal among them); never an extension's (PostGIS's), nor the database's own.
+    // Not `drop owned`, which PostgreSQL refuses for a superuser, as Docker's role is.
+    private const string DropTheApps = """
+        do $$
+        declare r record;
+        begin
+          for r in select nspname from pg_namespace
+                   where nspowner = current_user::regrole and nspname <> 'public' and nspname not like 'pg\_%' and nspname <> 'information_schema'
+          loop
+            execute format('drop schema %I cascade', r.nspname);
+          end loop;
+          for r in select p.oid::regprocedure as name from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+                   where n.nspname = 'public' and p.proowner = current_user::regrole
+                     and not exists (select 1 from pg_depend d where d.objid = p.oid and d.deptype = 'e')
+          loop
+            execute format('drop function if exists %s cascade', r.name);
+          end loop;
+          for r in select c.oid::regclass as name, c.relkind from pg_class c join pg_namespace n on n.oid = c.relnamespace
+                   where n.nspname = 'public' and c.relowner = current_user::regrole and c.relkind in ('r', 'p', 'v', 'm')
+                     and not exists (select 1 from pg_depend d where d.objid = c.oid and d.deptype = 'e')
+          loop
+            execute format('drop %s if exists %s cascade',
+              case r.relkind when 'v' then 'view' when 'm' then 'materialized view' else 'table' end, r.name);
+          end loop;
+          for r in select t.oid::regtype as name from pg_type t join pg_namespace n on n.oid = t.typnamespace
+                   where n.nspname = 'public' and t.typowner = current_user::regrole and t.typtype in ('e', 'c', 'd') and t.typelem = 0
+                     and (t.typrelid = 0 or (select relkind from pg_class where oid = t.typrelid) = 'c')
+                     and not exists (select 1 from pg_depend d where d.objid = t.oid and d.deptype = 'e')
+          loop
+            execute format('drop type if exists %s cascade', r.name);
+          end loop;
+        end $$
+        """;
+
     /// <summary>
-    /// Builds it, over whatever was there: everything the app's role owns in the database dropped,
-    /// migrated, the extract loaded, and its Network built (no byways: none are near it).
+    /// Builds it, over whatever was there: what the app made in the database dropped, migrated, the
+    /// extract loaded, and its Network built (no byways: none are near it).
     /// </summary>
     public static async Task BuildAsync(string connectionString, string osm2pgsqlExe, string extract, CancellationToken cancellationToken = default)
     {
         Guard(connectionString);
         await using (var dataSource = Database.CreateDataSource(connectionString))
         {
-            var role = new NpgsqlConnectionStringBuilder(connectionString).Username;
-            await using var drop = dataSource.CreateCommand($"drop owned by \"{role}\"");
+            await using var drop = dataSource.CreateCommand(DropTheApps);
             await drop.ExecuteNonQueryAsync(cancellationToken);
-            // Where the role is the superuser (Docker's), PostGIS was its own, and went too: put back.
-            await using var postgis = dataSource.CreateCommand("create extension if not exists postgis");
-            await postgis.ExecuteNonQueryAsync(cancellationToken);
         }
         Migrations.Apply(connectionString);
         OsmImport.Run(osm2pgsqlExe, connectionString, extract, cancellationToken: cancellationToken);
