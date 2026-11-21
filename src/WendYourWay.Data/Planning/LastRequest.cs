@@ -23,6 +23,9 @@ public sealed record RequestSettings(LatLon? Start, double DistanceKm, double Hi
 
     /// <summary>Whether Explain? was on (T157): the route's notes on the map. Off when kept before there was one.</summary>
     public bool Explain { get; init; }
+
+    /// <summary>Whether the first-Loop tour (T158) has been offered and answered: offered once. Not when kept before there was one.</summary>
+    public bool TourOffered { get; init; }
 }
 
 /// <summary>Keeps the last Request's settings.</summary>

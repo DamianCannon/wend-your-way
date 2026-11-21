@@ -154,7 +154,7 @@
                 }
             </button>
             <button type="button" class="expand" aria-expanded="@(_open ? "true" : "false")"
-                    aria-label="@(_open ? "Hide the Breakdown" : "Show the Breakdown")" @onclick="() => _open = !_open">
+                    aria-label="@(_open ? "Hide the Breakdown" : "Show the Breakdown")" @onclick="ToggleBreakdownAsync">
                 <svg viewBox="0 0 24 24" aria-hidden="true"><path d="@(_open ? "M6.5 9.5L12 15l5.5-5.5" : "M6.5 14.5L12 9l5.5 5.5")" /></svg>
             </button>
         </div>
@@ -394,6 +394,15 @@
     }
 
     private bool _open;
+
+    /// <summary>Raised as the card opens into the Breakdown (T158: the tour's step).</summary>
+    [Parameter] public EventCallback OnBreakdown { get; set; }
+
+    private async Task ToggleBreakdownAsync()
+    {
+        _open = !_open;
+        if (_open) await OnBreakdown.InvokeAsync();
+    }
 
     // How far a Request has got, in its own numbers, with a meter once there's a total (T054).
     private RenderFragment Progressing(PlanningProgress progress) => @<div class="progress">

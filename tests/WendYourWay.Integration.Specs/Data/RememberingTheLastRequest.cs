@@ -66,6 +66,15 @@ public class RememberingTheLastRequest
         Assert.That((await _last.LoadAsync())!.OffRoadLean, Is.EqualTo(-0.5));
     }
 
+    //  T157 and T158: Explain? as last set, and the first-Loop tour answered, so it's offered once.
+    [Test]
+    public async Task Explain_and_the_tour_answered_are_kept_too()
+    {
+        await _last.SaveAsync(new RequestSettings(null, 12, 0.5) { Explain = true, TourOffered = true });
+        var loaded = (await _last.LoadAsync())!;
+        Assert.That((loaded.Explain, loaded.TourOffered), Is.EqualTo((true, true)));
+    }
+
     //  Kept by T056, before there was an Off-road Lean.
     [Test]
     public async Task Settings_kept_before_the_Off_road_Lean_load_with_it_at_its_centre()

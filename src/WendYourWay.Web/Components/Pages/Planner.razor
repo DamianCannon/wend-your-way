@@ -16,10 +16,10 @@
 
 <PageTitle>Wend Your Way</PageTitle>
 
-<div class="planner">
+<div class="planner" data-tour="@Session.Tour?.Here">
     <JobUnderWayLine />
     <MapView @ref="_map" Centre="Settings.Home" OnClick="Session.StartChosenOnMapAsync" OnPageKey="Session.PageAsync" OnStartClicked="Session.StartClickedAsync" OnViewChanged="Session.ViewChangedAsync" OnRouteDragged="Session.NudgeAsync" OnAvoid="Session.NudgeAsync" OnStopRemoved="Session.NudgeAsync" OnAvoidRemoved="Session.NudgeAsync" OnInclude="Session.NudgeAsync" OnUndoKey="Session.UndoAsync" OnRedoKey="Session.RedoAsync" OnBlock="Session.BlockAsync" OnUnblock="Session.UnblockAsync" OnStartDragged="Session.StartDraggedAsync" OnFinishDragged="Session.FinishDraggedAsync" OnFinishRemoved="Session.FinishAtStartAsync" />
-    <SidePanel OnOpen="Session.PanelOpenedAsync">
+    <SidePanel @ref="_side" OnOpen="Session.PanelOpenedAsync" OnTour="TakeTourAsync">
         <Request>
             @* A Run or a Gravel Ride (T068): choosing one finds its Loops, as a start chosen does. *@
             <div class="activity" role="group" aria-label="Activity">
@@ -69,7 +69,7 @@
                         <span class="hint distance-hint">blank: shortest to greenest</span>
                     }
                 </label>
-                <button type="button" class="go" disabled="@(Session.Start is null || Session.Finding)" @onclick="Session.GoAsync">Go</button>
+                <button type="button" class="go" disabled="@(Session.Start is null || Session.Finding)" @onclick="Session.GoPressedAsync">Go</button>
             </div>
             <label class="field">
                 <span class="label">Hills</span>
@@ -131,8 +131,10 @@
     </SidePanel>
     @if (!Session.OutingShown)
     {
-        <PagerCard View="Session.Pager" OnPage="Session.PageAsync" OnExport="ExportAsync" OnExportTcx="ExportTcxAsync" OnPhone="Session.PhoneAsync" OnPhoneClosed="() => Session.PhoneAsked = false" OnPlace="Session.MarkPlaceAsync" OnToggleRoute="Session.ToggleRouteAsync" OnExplain="Session.ToggleExplainAsync" OnUndo="Session.UndoAsync" OnRedo="Session.RedoAsync" OnSave="Session.SaveAsync" />
+        <PagerCard View="Session.Pager" OnPage="Session.PageAsync" OnExport="ExportAsync" OnExportTcx="ExportTcxAsync" OnPhone="Session.PhoneAsync" OnPhoneClosed="() => Session.PhoneAsked = false" OnPlace="Session.MarkPlaceAsync" OnToggleRoute="Session.ToggleRouteAsync" OnExplain="Session.ToggleExplainAsync" OnBreakdown="Session.BreakdownOpenedAsync" OnUndo="Session.UndoAsync" OnRedo="Session.RedoAsync" OnSave="Session.SaveAsync" />
     }
+    @* The first-Loop tour (T158): offered once, taken again from Help. *@
+    <TourCard View="Session.Tour" OnShowMe="TakeTourAsync" OnNoThanks="Session.NoTourAsync" OnSkip="Session.SkipTourStepAsync" OnEnd="Session.EndTourAsync" />
 </div>
 
 @code {
@@ -140,6 +142,7 @@
     private PlannerSession Session { get; set; } = null!;
     private MapView _map = null!;
     private PlaceSearchBox _startSearch = null!;
+    private SidePanel _side = null!;
     private IJSObjectReference? _download;
 
     private static readonly (Activity Activity, string Name)[] Activities = [(Activity.Run, "Run"), (Activity.GravelRide, "Gravel Ride"), (Activity.TrailRide, "Trail Ride")];
@@ -159,6 +162,13 @@
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (firstRender) await Session.MapReadyAsync(_map);
+    }
+
+    // The tour taken (T158) where a click sets a start: the Request panel open.
+    private async Task TakeTourAsync()
+    {
+        await _side.ShowRequestAsync();
+        await Session.TakeTourAsync();
     }
 
     // A place chosen in the Start box; one that doesn't move the start, the box shows the start again.

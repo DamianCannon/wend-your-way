@@ -96,6 +96,7 @@ the laptop from sleeping meanwhile. Its words go to `data/logs/launcher-<date>.l
 
 **Today:**
 
+- **The first-Loop tour**, offered the first time it opens and in Help any time, has you plan your first Loop a step at a time: choose a start, change the Distance and press Go, page through the Loops, open the Breakdown (or press Explain?), Nudge it, and save or export it. Each step moves on when you do it; any can be skipped.
 - **Choose a start** by clicking the map, choosing one of the car parks around the part of the map in view, or searching for a postcode. Loops are found at once. Searching for a place name ("Box Hill", "Epping Forest", "EN4") takes the map there instead, to see its car parks.
 - **Car parks around here** lists the best ten places to park beside large Off-road networks for your Distance, with Loop 1 from the first five worked out to compare ("10.6 km · 97% green · 121 m up"). Every one in view is marked P on the map; turn them off, like the cafés and toilets, in the map's layers button.
 - **Distance** from 1 to 100 km, with Go beside it. The **Hills** and **Off-road** sliders re-rank the Loops as you drag them.

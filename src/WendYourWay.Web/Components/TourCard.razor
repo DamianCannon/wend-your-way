@@ -1,0 +1,44 @@
+@using WendYourWay.Web.Planning
+@* The first-Loop tour's card (T158, #162), at the top of the map: the step, how far through, and
+   what to do; each step moved on by doing it. Its own card, not the Loop card's, which steps aside
+   for an Outing. *@
+
+@if (View is { } tour)
+{
+    <section class="tour" aria-label="First-Loop tour" aria-live="polite">
+        @if (tour.Step is not (TourStep.Offered or TourStep.Done))
+        {
+            <p class="count">Your first Loop · @tour.Number of @FirstLoopTour.Steps</p>
+        }
+        <p class="says">@tour.Words</p>
+        <div class="actions">
+            @switch (tour.Step)
+            {
+                case TourStep.Offered:
+                    <button type="button" class="show-me" @onclick="OnShowMe">Show me</button>
+                    <button type="button" class="quiet" @onclick="OnNoThanks">No thanks</button>
+                    break;
+                case TourStep.Done:
+                    <button type="button" class="show-me" @onclick="OnEnd">Done</button>
+                    break;
+                default:
+                    <button type="button" class="quiet" @onclick="OnSkip">Skip this step</button>
+                    <button type="button" class="quiet" @onclick="OnEnd">End the tour</button>
+                    break;
+            }
+        </div>
+    </section>
+}
+
+@code {
+    /// <summary>Where the tour has got to, or null for none.</summary>
+    [Parameter] public TourView? View { get; set; }
+
+    [Parameter] public EventCallback OnShowMe { get; set; }
+
+    [Parameter] public EventCallback OnNoThanks { get; set; }
+
+    [Parameter] public EventCallback OnSkip { get; set; }
+
+    [Parameter] public EventCallback OnEnd { get; set; }
+}
