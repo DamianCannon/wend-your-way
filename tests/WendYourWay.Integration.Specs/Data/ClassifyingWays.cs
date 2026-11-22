@@ -51,6 +51,10 @@ public static class ClassifyingWays
         [TestCase("""{"highway":"service","access":"private"}""", "connector", Description = "private roads still carry residents' cars")]
         [TestCase("""{"highway":"track","motor_vehicle":"no"}""", "off_road", Description = "only roads lose their traffic; a track keeps its ground")]
         [TestCase("""{"highway":"footway"}""", "traffic_free", Description = "an untagged footway is assumed paved")]
+        [TestCase("""{"highway":"footway","designation":"public_footpath"}""", "off_road",
+            Description = "a field footpath mapped as a footway: OS says unmade for 20.1 of 24.4 km (T174, #178)")]
+        [TestCase("""{"highway":"footway","designation":"public_footpath","surface":"asphalt"}""", "traffic_free", Description = "a surface tag still decides")]
+        [TestCase("""{"highway":"footway","designation":"public_footpath","footway":"sidewalk"}""", "connector")]
         [TestCase("""{"highway":"footway","footway":"crossing"}""", "traffic_free")]
         [TestCase("""{"highway":"pedestrian"}""", "traffic_free")]
         [TestCase("""{"highway":"cycleway"}""", "traffic_free")]

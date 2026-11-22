@@ -63,8 +63,10 @@ begin
     when tagged_unpaved(p_tags) then false
     when v_surface is not null then true
     -- No surface tag: paths, tracks, bridleways and byways are usually unsurfaced, footways,
-    -- pedestrian ways, cycleways and steps usually paved. Beside a road, only a tag will do
-    -- (group_same_ground, T038).
+    -- pedestrian ways, cycleways and steps usually paved, except a public footpath mapped as a
+    -- footway: mostly across fields (OS said unmade for 20.1 of 24.4 km, T174). Beside a road,
+    -- only a tag will do (group_same_ground, T038).
+    when v_highway = 'footway' and p_tags ->> 'designation' = 'public_footpath' then false
     else v_highway not in ('path', 'track', 'bridleway', 'byway')
   end;
 
