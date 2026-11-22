@@ -144,9 +144,13 @@ public sealed partial class MapKeys(IKeyStore store, IConfiguration configuratio
     /// <summary>What's said when keys can't be saved.</summary>
     public const string CantSave = "Keys can't be saved here until the database is brought up to date. Any set outside the app still work.";
 
-    /// <summary>The app's configuration with the saved keys over it: what the maps are drawn with.</summary>
+    /// <summary>
+    /// The keys in use, saved ones over those outside: what the maps are drawn with. Their values alone,
+    /// not the app's configuration wrapped, so one made for each page holds nothing of it once done with.
+    /// </summary>
     public IConfiguration WithSaved() =>
-        new ConfigurationBuilder().AddConfiguration(configuration).AddInMemoryCollection(_saved.Select(k => KeyValuePair.Create(k.Key, (string?)k.Value))).Build();
+        new ConfigurationBuilder().AddInMemoryCollection(KnownKey.All.SelectMany(k => k.Plan is { } plan ? [k.Name, plan] : new[] { k.Name })
+            .Select(name => KeyValuePair.Create(name, Value(name)))).Build();
 
     [LoggerMessage(Level = LogLevel.Warning, Message = "The saved API keys couldn't be read ({Problem}): those set outside the app are used.")]
     private static partial void CantRead(ILogger logger, string problem);
