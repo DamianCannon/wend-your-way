@@ -6,6 +6,7 @@ using WendYourWay.Data.Planning;
 using WendYourWay.Web.Components;
 using WendYourWay.Web.Components.Pages;
 using WendYourWay.Web.Planning;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace WendYourWay.Web.Specs;
@@ -45,6 +46,9 @@ internal sealed class PlannerScreen : IDisposable
         services.AddSingleton<IAdmin>(Admin);
         services.AddSingleton<IPracticeOffer>(PracticeOffer);
         services.AddSingleton<TimeProvider>(Time);
+        //  The API keys (T169): saved in KeyStore, and set outside the app as KeysOutside says.
+        services.AddSingleton(_ => new MapKeys(KeyStore, new ConfigurationBuilder().AddInMemoryCollection(KeysOutside).Build(),
+            Microsoft.Extensions.Logging.Abstractions.NullLogger<MapKeys>.Instance));
     }
 
     public BunitContext Context { get; } = new();
@@ -67,6 +71,12 @@ internal sealed class PlannerScreen : IDisposable
     public FakeMapUpdater MapUpdater { get; } = new();
     public FakePracticeOffer PracticeOffer { get; } = new();
     public FakeAdmin Admin { get; } = new();
+
+    /// <summary>The API keys saved in the app (T169).</summary>
+    public FakeKeyStore KeyStore { get; } = new();
+
+    /// <summary>The API keys set outside the app, in user-secrets or .env (T169).</summary>
+    public Dictionary<string, string?> KeysOutside { get; } = new(StringComparer.Ordinal);
 
     /// <summary>The time, as a spec sets it (T138).</summary>
     public SpecTime Time { get; } = new();

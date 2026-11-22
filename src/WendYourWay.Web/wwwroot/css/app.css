@@ -49,16 +49,16 @@ button:disabled, button[aria-disabled="true"]:not(.preparing) { opacity: 0.5; cu
 /* Three kinds of button (T165, user: Explain? "the orange background like the other buttons"; the
    tour's "only goes orange when the mouse is over it"). Solid orange: an action. */
 .go, .avoid-this, .pager .explain, .pager .export, .pager .phone, .tour .show-me,
-.saved-routes .confirm-delete, .outings .outing .as-route .confirm-delete, .panel .admin .confirm button.job.yes,
+.saved-routes .confirm-delete, .outings .outing .as-route .confirm-delete, .panel .admin .confirm button.job.yes, .panel .admin .keys .save,
 .panel .no-map .switch-map, .outing .rename-outing-form .save-name {
     border: 1px solid var(--hi-vis); border-radius: var(--radius-control); background: var(--hi-vis); color: var(--white);
     font: inherit; font-weight: 600; cursor: pointer;
 }
 :is(.go, .avoid-this, .pager .explain, .pager .export, .pager .phone, .tour .show-me, .saved-routes .confirm-delete,
-    .outings .outing .as-route .confirm-delete, .panel .admin .confirm button.job.yes, .panel .no-map .switch-map,
+    .outings .outing .as-route .confirm-delete, .panel .admin .confirm button.job.yes, .panel .admin .keys .save, .panel .no-map .switch-map,
     .outing .rename-outing-form .save-name):hover:enabled { background: var(--hi-vis-dark); border-color: var(--hi-vis-dark); color: var(--white); }
 :is(.go, .avoid-this, .pager .explain, .pager .export, .pager .phone, .tour .show-me, .saved-routes .confirm-delete,
-    .outings .outing .as-route .confirm-delete, .panel .admin .confirm button.job.yes, .panel .no-map .switch-map,
+    .outings .outing .as-route .confirm-delete, .panel .admin .confirm button.job.yes, .panel .admin .keys .save, .panel .no-map .switch-map,
     .outing .rename-outing-form .save-name):focus-visible { outline-color: var(--forest); }
 /* Outlined orange, filled under the pointer: a secondary action in a panel. */
 .panel .take-tour, .panel .switch-map, .panel .map-update button.update, .panel .admin button.job, .saved-routes .move,
@@ -70,12 +70,12 @@ button:disabled, button[aria-disabled="true"]:not(.preparing) { opacity: 0.5; cu
     .outings .outing .as-route button, .outing .rename-outing-form button, .pager .to-phone .close-phone):hover:enabled,
 .import-gpx:hover:not(.busy) { background: var(--hi-vis); color: var(--white); }
 /* Quiet: a cancel, or an action in a list's row. */
-.tour .quiet, .pager form.saving .cancel, .panel .admin .confirm button.no, .panel .admin .backup-list button.restore,
+.tour .quiet, .pager form.saving .cancel, .panel .admin .confirm button.no, .panel .admin .keys .entering .no, .panel .admin .keys .delete, .panel .admin .backup-list button.restore,
 .saved-routes .rename, .saved-routes .delete, .saved-routes .keep, .outings .outing .as-route .keep, .outing .rename-outing-form .keep-name {
     padding: 4px 8px; border: 0; border-radius: var(--radius-control); background: transparent; color: var(--ink-soft);
     font: inherit; font-size: 0.85rem; cursor: pointer;
 }
-:is(.tour .quiet, .pager form.saving .cancel, .panel .admin .confirm button.no, .panel .admin .backup-list button.restore,
+:is(.tour .quiet, .pager form.saving .cancel, .panel .admin .confirm button.no, .panel .admin .keys .entering .no, .panel .admin .keys .delete, .panel .admin .backup-list button.restore,
     .saved-routes .rename, .saved-routes .delete, .saved-routes .keep, .outings .outing .as-route .keep,
     .outing .rename-outing-form .keep-name):hover:enabled { background: var(--paper-edge); color: var(--ink); }
 
@@ -157,6 +157,23 @@ button:disabled, button[aria-disabled="true"]:not(.preparing) { opacity: 0.5; cu
 .panel .admin .backup-list .when { min-width: 0; font-variant-numeric: tabular-nums; }
 .panel .admin .confirm { margin-top: 8px; padding: 8px 10px; border: 1px solid var(--hi-vis); border-radius: 6px; }
 .panel .admin .confirm .question { margin: 0; }
+/* The API keys (T169): each one's name and need, what it gives, how it is now; its box and buttons under. */
+.panel .admin .keys .key { padding: 8px 0; border-top: 1px solid var(--line); font-size: 0.85rem; }
+.panel .admin .keys .key p { margin: 2px 0; }
+.panel .admin .keys .name { display: flex; align-items: baseline; gap: 8px; }
+.panel .admin .keys .label { font-weight: 600; color: var(--ink); }
+.panel .admin .keys .need { font-size: 0.72rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-soft); }
+.panel .admin .keys .gives, .panel .admin .keys .cant { color: var(--ink-soft); }
+.panel .admin .keys .actions, .panel .admin .keys .entering { display: flex; align-items: center; gap: 6px; margin-top: 6px; }
+.panel .admin .keys .actions button.job { margin-top: 0; }
+.panel .admin .keys .entry {
+    flex: 1; min-width: 0; padding: 5px 8px; font: inherit; color: var(--ink);
+    background: var(--white); border: 1px solid var(--paper-edge); border-radius: var(--radius-control);
+}
+.panel .admin .keys .save { padding: 5px 10px; font-size: 0.85rem; }
+.panel .admin .keys .plan { display: flex; align-items: flex-start; gap: 6px; margin-top: 6px; color: var(--ink-soft); }
+.panel .admin .keys .plan input { accent-color: var(--hi-vis); margin: 2px 0 0; }
+.panel .admin .keys .changed { margin-top: 8px; }
 .distance-input { display: flex; align-items: center; gap: 8px; }
 .lean-input { display: flex; align-items: center; gap: 8px; font-size: 0.85rem; color: var(--ink-soft); }
 .lean-input input { flex: 1; min-width: 0; accent-color: var(--hi-vis); }

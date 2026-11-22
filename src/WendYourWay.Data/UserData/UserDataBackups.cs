@@ -270,9 +270,10 @@ public static class UserDataBackups
         return (string?)await query.ExecuteScalarAsync(cancellationToken) ?? "";
     }
 
-    // The app's tables that hold no user data (T129): the record of the jobs run, as they were run.
-    // Neither backed up nor emptied by a restore, which writes its own row there.
-    private static readonly string[] NotTheUsers = ["map_updates"];
+    // The app's tables that hold no user data (T129): the record of the jobs run, as they were run, and
+    // the map services' API keys (T169), which stay on this computer. Neither backed up nor emptied by a
+    // restore, which writes its own row in the first.
+    private static readonly string[] NotTheUsers = ["map_updates", "api_keys"];
 
     internal static async Task<List<string>> TablesAsync(NpgsqlDataSource dataSource, CancellationToken cancellationToken)
     {

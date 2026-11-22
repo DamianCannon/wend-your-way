@@ -24,7 +24,9 @@ builder.WebHost.UseStaticWebAssets();
 builder.Services.AddRazorComponents().AddInteractiveServerComponents();
 // Settings are read from the app's final configuration when first needed, not while it's still
 // being assembled, so every source (user-secrets, environment, a test's overrides) has its say.
-builder.Services.AddSingleton(services => MapTiles.From(services.GetRequiredService<IConfiguration>()));
+// The maps, drawn with the API keys saved in the Admin panel over those set outside the app (T169):
+// made afresh for each page, so a key saved there shows when the page is reloaded.
+builder.Services.AddScoped(services => MapTiles.From(services.GetRequiredService<WendYourWay.Web.Planning.MapKeys>().WithSaved()));
 builder.Services.AddSingleton(services => PlannerSettings.From(services.GetRequiredService<IConfiguration>()));
 
 // The Network, in the app's own database (scripts/setup.ps1, `wend network build`).
@@ -32,6 +34,10 @@ builder.Services.AddSingleton(services => PlannerSettings.From(services.GetRequi
 static string ConnectionString(IConfiguration configuration) =>
     PlannerSettings.IsPractice(configuration) ? PracticeMap.ConnectionStringOf(OwnDatabase(configuration)) : OwnDatabase(configuration);
 static string OwnDatabase(IConfiguration configuration) => configuration.GetConnectionString("WendYourWay") ?? Database.DefaultConnectionString;
+// The API keys (T169), in the user's own database whichever map is open: the practice one is emptied each time.
+builder.Services.AddSingleton(services => new WendYourWay.Web.Planning.MapKeys(
+    new WendYourWay.Web.Planning.DatabaseKeyStore(new ApiKeys(Database.CreateDataSource(OwnDatabase(services.GetRequiredService<IConfiguration>())))),
+    services.GetRequiredService<IConfiguration>(), services.GetRequiredService<ILogger<WendYourWay.Web.Planning.MapKeys>>()));
 builder.Services.AddSingleton(services => Database.CreateDataSource(ConnectionString(services.GetRequiredService<IConfiguration>())));
 builder.Services.AddSingleton<INetworkSlices, PostgisNetworkSlices>();
 builder.Services.AddSingleton<MapGeometry>();
@@ -108,7 +114,9 @@ if (!practice && !started.JobRunning && UserDataBackups.FolderOf(backups, Connec
     _ = app.Services.GetRequiredService<WendYourWay.Web.Planning.WorkUnderWay>().Run(() =>
         UserDataBackups.AutomaticallyAsync(ConnectionString(app.Configuration), backups, line => Log.BackedUp(app.Logger, line), CancellationToken.None));
 
-if (string.IsNullOrEmpty(app.Configuration["Thunderforest:ApiKey"])) Log.NoTileKey(app.Logger);
+var keys = app.Services.GetRequiredService<WendYourWay.Web.Planning.MapKeys>();
+await keys.LoadAsync();
+if (string.IsNullOrEmpty(keys.WithSaved()["Thunderforest:ApiKey"])) Log.NoTileKey(app.Logger);
 if (app.Services.GetRequiredService<TerrainFolder>().Grid is null) Log.NoTerrain(app.Logger);
 
 app.UseAntiforgery();

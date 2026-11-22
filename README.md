@@ -62,6 +62,8 @@ powershell -ExecutionPolicy Bypass -File .\scripts\setup.ps1
 dotnet run -c Release --project src/WendYourWay.Cli -- byways get
 dotnet run -c Release --project src/WendYourWay.Cli -- network build --region surrey
 
+# the map keys can be added, changed and deleted in the Admin panel's API keys instead (kept in your database,
+# never in git or the backups); a key saved there wins over one set here
 # once: the Thunderforest key, and where Requests start until you click elsewhere (kept out of git)
 dotnet user-secrets set Thunderforest:ApiKey <key> --project src/WendYourWay.Web
 dotnet user-secrets set Home:Latitude <latitude> --project src/WendYourWay.Web
@@ -141,7 +143,7 @@ the laptop from sleeping meanwhile. Its words go to `data/logs/launcher-<date>.l
 | `wend backup [folder]` | Backs up your own data (Outings, stars, Saved Routes, Marks, settings) to `wend-your-way-<date-time>.dump`, with a `.json` beside it saying when, which version of the database, and how many rows. 10 are kept, spread over a month (the newest 3, then one a day, then one a week). Imports, scoring and builds back up by themselves when they finish, and the app does when it starts if the last backup is a day old. | The folder: the one given, else `WEND_BACKUP_FOLDER`, else "Wend Your Way Backups" in your OneDrive. Another database than the app's own (London's, say) gets a folder of its own inside it; a `*_test` database is never backed up by itself. |
 | `wend restore <backup.dump>` | Puts a backup's data back in place of what's there, after backing up what's there first; refuses one from a newer Wend Your Way. Reports each table's rows, backed up and restored, and fails if any differ. Run as a job: it waits its turn if another (an update, an import) is running. The Admin panel lists the last ten backups and restores one, asking first, and has "Back up now". | `--log <file>` also writes what it says to a file. |
 
-The planner, `dotnet run -c Release --project src/WendYourWay.Web`, reads these settings: from `dotnet user-secrets` (kept out of git), or on its command line as `--Name=value`, which wins.
+The planner, `dotnet run -c Release --project src/WendYourWay.Web`, reads these settings: from `dotnet user-secrets` (kept out of git), or on its command line as `--Name=value`, which wins. The map keys (`Thunderforest:ApiKey`, `OsMaps:ApiKey`, `OsMaps:Premium`) can also be saved in the Admin panel's **API keys**, which lists each one, what it gives and where to get one; a key saved there wins over these, is kept in your database, and is never backed up.
 
 | Setting | What it is |
 |---|---|

@@ -77,6 +77,20 @@ public class BackingUpTheUsersData
         Assert.That((backup.Manifest.Rows.ContainsKey("map_updates"), await sources.ExecuteScalarAsync()), Is.EqualTo((false, (object)"before,after")));
     }
 
+    //  T169: the API keys are kept out of the backups, and a restore leaves them as they are.
+    [Test]
+    public async Task The_API_keys_arent_backed_up_and_a_restore_leaves_them()
+    {
+        var keys = new ApiKeys(_dataSource);
+        await keys.SaveAsync("OsMaps:ApiKey", "before-test-key");
+        var backup = await UserDataBackups.BackupAsync(TestDatabase.ConnectionString, _folder);
+        await keys.SaveAsync("OsMaps:ApiKey", "after-test-key");
+        await UserDataBackups.RestoreAsync(TestDatabase.ConnectionString, backup.DumpPath, _folder);
+        var kept = await keys.AllAsync();
+        await keys.DeleteAsync("OsMaps:ApiKey");
+        Assert.That((backup.Manifest.Rows.ContainsKey("api_keys"), kept["OsMaps:ApiKey"]), Is.EqualTo((false, "after-test-key")));
+    }
+
     //  Found at T132: the jobs' numbering was put back with the rest, so the next job's clashed.
     [Test]
     public async Task After_a_restore_the_next_job_has_a_number_of_its_own()

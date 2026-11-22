@@ -1,0 +1,123 @@
+@* The map services' API keys in the Admin panel (T169, #173; user: "manage their API keys in order to know
+   which ones are required and for them to be added, changed and deleted"): each one's need, what it gives
+   and where it's got; added, changed and deleted here. Only a key's last four characters ever reach the
+   page: the box that changes one starts empty. *@
+@using WendYourWay.Web.Planning
+@inject MapKeys Keys
+@inject NavigationManager Navigation
+
+<section class="keys">
+    <h3>API keys</h3>
+    @if (!Keys.CanSave)
+    {
+        <p class="cant">@MapKeys.CantSave</p>
+    }
+    @foreach (var key in _states)
+    {
+        var name = key.Key.Name;
+        <div class="key" data-key="@name">
+            <p class="name"><span class="label">@key.Key.Label</span> <span class="need">@key.Key.Need</span></p>
+            <p class="gives">@key.Key.Gives Get @key.Key.WhereSaid at <a href="@key.Key.Where" target="_blank" rel="noopener">@key.Key.Where.Host</a>.</p>
+            <p class="state">@Said(key)</p>
+            @if (_entering == name)
+            {
+                <div class="entering">
+                    <input type="password" class="entry" autocomplete="off" aria-label="@($"{key.Key.Label} key")" placeholder="Paste the key"
+                           value="@_entry" @onchange="e => _entry = e.Value as string ?? string.Empty" />
+                    <button type="button" class="save" @onclick="() => SaveAsync(name)">Save</button>
+                    <button type="button" class="no" @onclick="StopEntering">Cancel</button>
+                </div>
+            }
+            else
+            {
+                <div class="actions">
+                    <button type="button" class="job change" disabled="@(!Keys.CanSave)" @onclick="() => StartEntering(name)">@(key.From == KeyFrom.Saved ? "Change" : "Add")</button>
+                    @if (key.From == KeyFrom.Saved)
+                    {
+                        <button type="button" class="delete" disabled="@(!Keys.CanSave)" @onclick="() => (_deleting, _problem) = (name, null)">Delete</button>
+                    }
+                </div>
+            }
+            @if (_deleting == name)
+            {
+                @* Asked here, not by the browser, like every delete. *@
+                <div class="confirm" role="alertdialog">
+                    <p class="question">Delete the @key.Key.Label key saved here?@(key.AlsoOutside ? " The one set outside the app will be used instead." : "")</p>
+                    <button type="button" class="job yes" @onclick="() => DeleteAsync(name)">Yes</button>
+                    <button type="button" class="no" @onclick="() => _deleting = null">No</button>
+                </div>
+            }
+            @if (key.Key.Plan is { } plan && key.From != KeyFrom.Nowhere)
+            {
+                <label class="plan">
+                    <input type="checkbox" class="premium" checked="@key.OnPlan" disabled="@(!Keys.CanSave)"
+                           @onchange="e => SetPlanAsync(plan, e.Value is true)" />
+                    On their Premium plan: OS Outdoor drawn by OS at the closest zooms too
+                </label>
+            }
+            @if (_problemFor == name && _problem is { } problem)
+            {
+                <p class="problem" role="alert">@problem</p>
+            }
+        </div>
+    }
+    @if (_changed)
+    {
+        @* The maps are drawn as the page opens: reloaded, they come and go without a restart. *@
+        <p class="changed" role="status">Saved. The maps change when the page is reloaded. <button type="button" class="job reload" @onclick="Reload">Reload the map</button></p>
+    }
+</section>
+
+@code {
+    private IReadOnlyList<KeyState> _states = [];
+    private string? _entering;
+    private string _entry = string.Empty;
+    private string? _deleting;
+    private string? _problem;
+    private string? _problemFor;
+    private bool _changed;
+
+    // Read again as the panel opens: another window may have changed them.
+    protected override async Task OnInitializedAsync()
+    {
+        await Keys.LoadAsync();
+        _states = Keys.States();
+    }
+
+    private static string Said(KeyState key) => key.From switch
+    {
+        KeyFrom.Saved => $"Saved here, ending {key.Ending}.",
+        KeyFrom.Outside => $"Set outside the app (user-secrets or .env), ending {key.Ending}.",
+        _ => "Not set.",
+    };
+
+    private void StartEntering(string name) => (_entering, _entry, _deleting, _problem) = (name, string.Empty, null, null);
+
+    private void StopEntering() => (_entering, _entry) = (null, string.Empty);
+
+    private async Task SaveAsync(string name)
+    {
+        var problem = await Keys.SaveAsync(name, _entry);
+        if (Done(name, problem)) StopEntering();
+    }
+
+    private async Task DeleteAsync(string name)
+    {
+        _deleting = null;
+        Done(name, await Keys.DeleteAsync(name));
+    }
+
+    private async Task SetPlanAsync(string plan, bool on) =>
+        Done(KnownKey.All.Single(k => k.Plan == plan).Name, await Keys.SetPlanAsync(plan, on));
+
+    // Said, and the keys read again; whether it went.
+    private bool Done(string name, string? problem)
+    {
+        (_problem, _problemFor) = (problem, name);
+        _states = Keys.States();
+        _changed |= problem is null;
+        return problem is null;
+    }
+
+    private void Reload() => Navigation.Refresh(forceReload: true);
+}

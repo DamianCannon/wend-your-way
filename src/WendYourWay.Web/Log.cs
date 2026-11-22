@@ -4,8 +4,8 @@ namespace WendYourWay.Web;
 internal static partial class Log
 {
     [LoggerMessage(Level = LogLevel.Warning, Message =
-        "No Thunderforest API key: its maps (Outdoors, OpenCycleMap) are left out. Set one with " +
-        "`dotnet user-secrets set Thunderforest:ApiKey <key> --project src/WendYourWay.Web`.")]
+        "No Thunderforest API key: its maps (Outdoors, OpenCycleMap) are left out. Add one in the Admin panel's API keys, " +
+        "or with `dotnet user-secrets set Thunderforest:ApiKey <key> --project src/WendYourWay.Web`.")]
     public static partial void NoTileKey(ILogger logger);
 
     [LoggerMessage(Level = LogLevel.Warning, Message =
