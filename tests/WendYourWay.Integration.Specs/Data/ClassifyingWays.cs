@@ -109,6 +109,25 @@ public static class ClassifyingWays
             Assert.That(await Ask("run_access", tags), Is.EqualTo(access));
     }
 
+    //  T181 (#185): a road with a real pavement to walk on, 30 mph or under with pavements both sides,
+    //  where a Main Road costs a Run less.
+    [TestFixture]
+    [NonParallelizable]
+    public class Pavements
+    {
+        [TestCase("""{"highway":"primary","maxspeed":"30 mph","sidewalk":"both"}""", "true")]
+        [TestCase("""{"highway":"primary","maxspeed":"20 mph","sidewalk":"separate"}""", "true", Description = "pavements mapped as ways of their own")]
+        [TestCase("""{"highway":"primary","maxspeed":"30 mph","sidewalk:both":"yes"}""", "true")]
+        [TestCase("""{"highway":"primary","maxspeed":"30 mph","sidewalk:left":"yes","sidewalk:right":"separate"}""", "true")]
+        [TestCase("""{"highway":"primary","maxspeed":"48","sidewalk":"both"}""", "true", Description = "48 km/h")]
+        [TestCase("""{"highway":"primary","maxspeed":"40 mph","sidewalk":"both"}""", "false", Description = "too fast")]
+        [TestCase("""{"highway":"primary","maxspeed":"30 mph","sidewalk":"left"}""", "false", Description = "one side only")]
+        [TestCase("""{"highway":"primary","maxspeed":"30 mph"}""", "false", Description = "pavements not tagged")]
+        [TestCase("""{"highway":"primary","sidewalk":"both"}""", "false", Description = "speed not tagged")]
+        public async Task Then_it_has_a_real_pavement_or_not(string tags, string pavement) =>
+            Assert.That(await Ask("has_pavement", tags), Is.EqualTo(pavement));
+    }
+
     //  Which land open ground crosses (T039), and which it never does: private land, and since T175
     //  (#179) land for customers only, such as a pub garden or a golf club's.
     [TestFixture]

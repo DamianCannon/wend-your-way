@@ -95,6 +95,7 @@ public sealed class NetworkSlice
             {
                 Obstacles = s.Obstacles,
                 Carriageway = s.Carriageway,
+                Pavement = s.Pavement,
                 Busy = s.Busy,
                 FromBearing = s.FromBearing,
                 ToBearing = s.ToBearing,

@@ -73,3 +73,19 @@ begin
   return case when v_paved then 'traffic_free'::ground_kind else 'off_road'::ground_kind end;
 end;
 $$;
+
+-- A road with a real pavement to walk on (T181): 30 mph or under (48 km/h), with pavements on both
+-- sides, tagged on the road or mapped as ways of their own. Where a Main Road costs a Run less.
+create or replace function has_pavement(p_tags jsonb)
+returns boolean
+language sql
+immutable
+as $$
+  select coalesce(coalesce(
+           case when p_tags ->> 'maxspeed' ~ '^\d+ mph$' then split_part(p_tags ->> 'maxspeed', ' ', 1)::int <= 30
+                when p_tags ->> 'maxspeed' ~ '^\d+$' then (p_tags ->> 'maxspeed')::int <= 48
+                else false end, false)
+     and (p_tags ->> 'sidewalk' in ('both', 'separate')
+          or p_tags ->> 'sidewalk:both' in ('yes', 'separate')
+          or (p_tags ->> 'sidewalk:left' in ('yes', 'separate') and p_tags ->> 'sidewalk:right' in ('yes', 'separate'))), false)
+$$;

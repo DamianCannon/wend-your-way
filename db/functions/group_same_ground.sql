@@ -82,13 +82,18 @@ begin
   update network_next.segments s
      set ground = case when mostly.stays then s.ground else 'connector' end,
          main_road = not mostly.stays and mostly.main_share >= 0.5,
+         -- A pavement of its own beside Main Roads with real pavements (T181) is one: most of its Main Road
+         -- metres beside them.
+         pavement = not mostly.stays and mostly.main_share >= 0.5 and coalesce(mostly.paved_share >= 0.5, false),
          corridor = case when mostly.stays then s.corridor end
     -- Each path joined to its way once, after grouping: osm.ways has no index on way_id, and a
     -- lookup per path took hours on London (T038).
-    from (select m.id, m.main_share, p.ground = 'off_road' and tagged_unpaved(w.tags) as stays
+    from (select m.id, m.main_share, m.paved_share, p.ground = 'off_road' and tagged_unpaved(w.tags) as stays
             from (select t.id,
                          coalesce(sum(t.weight) filter (where r.main_road), 0)
-                           / nullif(sum(t.weight) filter (where t.road_id is not null), 0) as main_share
+                           / nullif(sum(t.weight) filter (where t.road_id is not null), 0) as main_share,
+                         coalesce(sum(t.weight) filter (where r.main_road and r.pavement), 0)
+                           / nullif(sum(t.weight) filter (where r.main_road), 0) as paved_share
                     from tmp_beside t
                     left join network_next.segments r on r.id = t.road_id
                    group by t.id

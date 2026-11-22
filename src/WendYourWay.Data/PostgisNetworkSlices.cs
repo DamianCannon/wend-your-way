@@ -52,7 +52,7 @@ public sealed class PostgisNetworkSlices(NpgsqlDataSource dataSource, TimeProvid
                    s.length_m, s.ground::text, {access}::text,
                    s.main_road, s.greenery, s.corridor, s.waterside,
                    s.crossing, s.crossing_main_road, s.crossing_share, s.bridge_over_water, s.ascent_m, s.descent_m,
-                   coalesce(s.carriageway, false), coalesce(s.busy, false), s.from_bearing, s.to_bearing, s.gap
+                   coalesce(s.carriageway, false), coalesce(s.busy, false), s.from_bearing, s.to_bearing, s.gap, s.pavement
               from network.segments s
              where ST_DWithin(s.geom, ST_SetSRID(ST_MakePoint(@x, @y), 27700), @radius)
                {usable}
@@ -96,6 +96,8 @@ public sealed class PostgisNetworkSlices(NpgsqlDataSource dataSource, TimeProvid
                     FromBearing = reader.IsDBNull(23) ? null : reader.GetFloat(23),
                     ToBearing = reader.IsDBNull(24) ? null : reader.GetFloat(24),
                     MapGap = reader.IsDBNull(25) ? MapGapKind.None : reader.GetString(25) == "joined" ? MapGapKind.Joined : MapGapKind.Possible,
+                    // A real pavement (T181) is a Run's: on a bike it's the road.
+                    Pavement = activity == WendYourWay.Core.Loops.Activity.Run && reader.GetBoolean(26),
                 });
                 // A possible gap (T146) is used only when the user includes it: not by any search.
                 if (stored[^1].MapGap == MapGapKind.Possible) stored[^1] = stored[^1] with { Access = AccessKind.Forbidden };

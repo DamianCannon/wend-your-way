@@ -128,6 +128,12 @@ public sealed record Segment(
     public bool Carriageway { get; init; }
 
     /// <summary>
+    /// Whether it's a Main Road with a real pavement to walk on (T181): 30 mph or under, with pavements on
+    /// both sides, or a pavement beside such a road. Only in a Run's slice: on a bike it's the road.
+    /// </summary>
+    public bool Pavement { get; init; }
+
+    /// <summary>
     /// Whether its road is busy (T145): a trunk road, four lanes or more, or a dual carriageway, where a
     /// crossing with no crossing point is never chosen while there's another way. On a crossing link, its road's.
     /// </summary>
@@ -216,6 +222,9 @@ public sealed record StoredSegment(
 
     /// <summary>Whether it's a Main Road's carriageway itself (T145).</summary>
     public bool Carriageway { get; init; }
+
+    /// <summary>Whether it's a Main Road with a real pavement (T181).</summary>
+    public bool Pavement { get; init; }
 
     /// <summary>Whether its road is busy (T145).</summary>
     public bool Busy { get; init; }

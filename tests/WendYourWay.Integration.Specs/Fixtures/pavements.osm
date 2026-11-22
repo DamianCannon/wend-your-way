@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Pavements fixture (T181): a 30 mph primary road with its pavement mapped 5.5 m to its north (the
+  road tagged sidewalk=separate), a residential street off it, a footpath south to a 40 mph primary
+  with pavements tagged on both sides, near Richmond (the ways are invented; only the place is real).
+  osm2pgsql needs all nodes before all ways, each sorted by ID. 0.00001° of latitude here is about 1.11 m.
+-->
+<osm version="0.6" generator="hand">
+  <node id="1" lat="51.4600" lon="-0.3050"/>
+  <node id="2" lat="51.4600" lon="-0.3020"/>
+  <node id="3" lat="51.4600" lon="-0.2990"/>
+  <node id="4" lat="51.4630" lon="-0.3020"/>
+  <node id="5" lat="51.4570" lon="-0.3020"/>
+  <node id="10" lat="51.46005" lon="-0.3050"/>
+  <node id="11" lat="51.46005" lon="-0.2990"/>
+  <node id="20" lat="51.4570" lon="-0.3050"/>
+  <node id="21" lat="51.4570" lon="-0.2990"/>
+  <way id="100">
+    <nd ref="1"/><nd ref="2"/><nd ref="3"/>
+    <tag k="highway" v="primary"/>
+    <tag k="maxspeed" v="30 mph"/>
+    <tag k="sidewalk" v="separate"/>
+  </way>
+  <way id="101">
+    <nd ref="2"/><nd ref="4"/>
+    <tag k="highway" v="residential"/>
+    <tag k="maxspeed" v="20 mph"/>
+    <tag k="sidewalk" v="both"/>
+  </way>
+  <way id="102">
+    <nd ref="2"/><nd ref="5"/>
+    <tag k="highway" v="footway"/>
+    <tag k="surface" v="grass"/>
+  </way>
+  <way id="110">
+    <nd ref="10"/><nd ref="11"/>
+    <tag k="highway" v="footway"/>
+    <tag k="footway" v="sidewalk"/>
+  </way>
+  <way id="200">
+    <nd ref="20"/><nd ref="5"/><nd ref="21"/>
+    <tag k="highway" v="primary"/>
+    <tag k="maxspeed" v="40 mph"/>
+    <tag k="sidewalk" v="both"/>
+  </way>
+</osm>

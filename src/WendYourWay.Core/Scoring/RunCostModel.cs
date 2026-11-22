@@ -52,7 +52,7 @@ public sealed class RunCostModel(ScoringWeights weights, IReadOnlySet<int>? used
         {
             GroundKind.OffRoad => weights.OffRoadPerMetre * OffRoadFactor(weights),
             GroundKind.TrafficFree => weights.TrafficFreePerMetre,
-            GroundKind.Connector => mainRoad ? weights.MainRoadCostPerMetre : weights.ConnectorPerMetre,
+            GroundKind.Connector => !mainRoad ? weights.ConnectorPerMetre : segment.Pavement ? weights.PavedMainRoadCostPerMetre : weights.MainRoadCostPerMetre,
             _ => throw new ArgumentOutOfRangeException(nameof(segment), segment.Ground, "Unknown ground."),
         };
         // Never along a Main Road (R2.1): green beside it doesn't make it better.

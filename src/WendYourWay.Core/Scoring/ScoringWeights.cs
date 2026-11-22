@@ -131,6 +131,16 @@ public sealed record ScoringWeights(
     public double MainRoadCostPerMetre => Math.Max(MainRoadPerMetre, ConnectorPerMetre);
 
     /// <summary>
+    /// A Main Road's cost per metre where it has a real pavement, 30 mph or under (T181): a short hop along it
+    /// beside a park beats a long way round, but it's still twice a quiet street. Never dearer than a Main
+    /// Road without one, nor cheaper than an ordinary Connector.
+    /// </summary>
+    public double PavedMainRoadPerMetre { get; init; } = 6.0;
+
+    /// <inheritdoc cref="PavedMainRoadPerMetre"/>
+    public double PavedMainRoadCostPerMetre => Math.Min(MainRoadCostPerMetre, Math.Max(PavedMainRoadPerMetre, ConnectorPerMetre));
+
+    /// <summary>
     /// Guesses, guarded by the user's rated Loops (T032, T033): Traffic-free nearly as good as
     /// Off-road (a long tarmac greenwalk "is worth a lot", user), and Flow lifting a Loop wholly in
     /// long green stretches by half; a Main Road five times an ordinary road (user, 2026-10-19); a
