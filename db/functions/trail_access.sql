@@ -33,7 +33,9 @@ begin
   end if;
 
   -- For customers only counts as private (T175): by the motor tag that applies, most specific first.
-  if coalesce(p_tags ->> 'motorcycle', p_tags ->> 'motor_vehicle', p_tags ->> 'vehicle', p_tags ->> 'access', '') = 'customers' then
+  -- A byway open to all traffic keeps its motor right (T179).
+  if coalesce(p_tags ->> 'motorcycle', p_tags ->> 'motor_vehicle', p_tags ->> 'vehicle', p_tags ->> 'access', '') = 'customers'
+     and v_designation !~ '^(byway_open_to_all_traffic|public_byway)' then
     return 'forbidden';
   end if;
 

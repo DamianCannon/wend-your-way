@@ -23,6 +23,11 @@ begin
   -- An explicit foot tag decides; otherwise a general prohibition applies to walkers too.
   -- access=destination and similar restrict vehicles, not feet.
   -- For customers only counts as private (T175): passing through isn't being one.
+  -- Except on a public right of way (T179): a footpath through a pub garden or a golf club stays the public's.
+  if coalesce(v_foot, v_access) = 'customers'
+     and p_tags ->> 'designation' in ('public_footpath', 'public_bridleway', 'restricted_byway', 'byway_open_to_all_traffic') then
+    return 'allowed';
+  end if;
   if v_foot in ('no', 'private', 'customers') then
     return 'forbidden';
   end if;

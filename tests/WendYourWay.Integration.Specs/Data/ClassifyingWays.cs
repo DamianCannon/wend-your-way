@@ -100,6 +100,11 @@ public static class ClassifyingWays
         [TestCase("""{"highway":"service","access":"customers"}""", "forbidden")]
         [TestCase("""{"highway":"path","access":"customers","foot":"designated"}""", "allowed", Description = "a public footpath through it")]
         [TestCase("""{"highway":"path","access":"customers","foot":"yes"}""", "allowed")]
+        //  T179 (#183): a public right of way keeps the public's right through a pub garden or a golf club.
+        [TestCase("""{"highway":"footway","designation":"public_footpath","foot":"customers"}""", "allowed", Description = "a public footpath through a pub garden")]
+        [TestCase("""{"highway":"track","designation":"public_bridleway","access":"customers"}""", "allowed")]
+        [TestCase("""{"highway":"track","designation":"byway_open_to_all_traffic","access":"customers"}""", "allowed")]
+        [TestCase("""{"highway":"footway","designation":"permissive_footpath","foot":"customers"}""", "forbidden", Description = "permission isn't a right")]
         public async Task Then_a_Run_may_or_may_not_use_it(string tags, string access) =>
             Assert.That(await Ask("run_access", tags), Is.EqualTo(access));
     }
@@ -114,6 +119,7 @@ public static class ClassifyingWays
         [TestCase("""{"leisure":"park","access":"private"}""", "blocked")]
         [TestCase("""{"leisure":"park","access":"customers"}""", "blocked")]
         [TestCase("""{"landuse":"grass","access":"customers"}""", "blocked")]
+        [TestCase("""{"leisure":"park","foot":"customers"}""", "blocked", Description = "T179: on foot, for customers only")]
         public async Task Then_the_land_is_crossed_or_not(string tags, string kind) =>
             Assert.That(await Ask("open_ground_class", tags), Is.EqualTo(kind));
     }
@@ -159,6 +165,10 @@ public static class ClassifyingWays
         [TestCase("""{"highway":"track","bicycle":"customers"}""", "forbidden")]
         [TestCase("""{"highway":"service","access":"customers"}""", "forbidden")]
         [TestCase("""{"highway":"track","access":"customers","bicycle":"permissive"}""", "allowed")]
+        //  T179 (#183): a bridleway or byway keeps its riders' right; a footpath never had one.
+        [TestCase("""{"highway":"track","designation":"public_bridleway","access":"customers"}""", "allowed")]
+        [TestCase("""{"highway":"track","designation":"restricted_byway","bicycle":"customers"}""", "allowed")]
+        [TestCase("""{"highway":"footway","designation":"public_footpath","access":"customers"}""", "forbidden")]
         public async Task Then_a_Gravel_Ride_may_or_may_not_use_it(string tags, string access) =>
             Assert.That(await Ask("ride_access", tags), Is.EqualTo(access));
     }

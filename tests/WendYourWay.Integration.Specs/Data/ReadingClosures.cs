@@ -177,6 +177,11 @@ public static class ReadingClosures
         public async Task Then_a_way_for_customers_only_is_ridden_only_where_a_motor_tag_allows_it(string tags, string access) =>
             Assert.That(await Access(tags, onByway: false), Is.EqualTo(access));
 
+        //  T179 (#183): a byway open to all traffic keeps its motor right, customers or not.
+        [Test]
+        public async Task Then_a_byway_through_land_for_customers_may_still_be_ridden() =>
+            Assert.That(await Access("""{"highway":"track","designation":"byway_open_to_all_traffic","access":"customers"}""", onByway: true), Is.EqualTo("allowed"));
+
         [TestCase("""{"highway":"trunk"}""", Description = "AC4: an A-road joins byways")]
         [TestCase("""{"highway":"primary"}""")]
         [TestCase("""{"highway":"secondary"}""")]

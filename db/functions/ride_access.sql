@@ -24,6 +24,10 @@ begin
 
   -- A bicycle tag decides: "dismount" means walking it, which is a Push, not riding.
   -- For customers only counts as private (T175).
+  -- Except where riders have a public right (T179): a bridleway or byway through a golf club stays theirs.
+  if coalesce(v_bicycle, v_access) = 'customers' and v_designation in ('public_bridleway', 'restricted_byway', 'byway_open_to_all_traffic') then
+    return 'allowed';
+  end if;
   if v_bicycle in ('no', 'private', 'dismount', 'customers') then
     return 'forbidden';
   end if;
