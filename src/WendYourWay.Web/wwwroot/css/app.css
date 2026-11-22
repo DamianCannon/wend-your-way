@@ -658,3 +658,6 @@ button:disabled, button[aria-disabled="true"]:not(.preparing) { opacity: 0.5; cu
 .route-card li { display: grid; gap: 1px; }
 .route-card .kind { font-size: 0.75rem; color: var(--ink-soft); }
 .route-card .links { font-size: 0.8rem; }
+
+/* The overlays not drawn over OS Explorer, said under the switcher's list (T168). */
+.leaflet-control-layers .not-offered { max-width: 15rem; margin-top: 0.4rem; padding-top: 0.4rem; border-top: 1px solid var(--line); color: var(--ink-soft); font-size: 0.85em; }

@@ -70,7 +70,7 @@ dotnet user-secrets set Home:Latitude <latitude> --project src/WendYourWay.Web
 dotnet user-secrets set Home:Longitude <longitude> --project src/WendYourWay.Web
 # optional: an Ordnance Survey key (free OS Data Hub plan) adds OS Outdoor to the map switcher
 dotnet user-secrets set OsMaps:ApiKey <key> --project src/WendYourWay.Web
-# optional: on OS Data Hub's Premium plan, OS Outdoor is drawn to zoom 20 (the free plan stops at 16)
+# optional: on OS Data Hub's Premium plan, OS Outdoor is drawn to zoom 20 (the free plan stops at 16), and OS Explorer is offered
 dotnet user-secrets set OsMaps:Premium true --project src/WendYourWay.Web
 
 # optional: place names and postcodes for the search box, from OS Open Names (unzipped; read in place)
@@ -118,6 +118,7 @@ the laptop from sleeping meanwhile. Its words go to `data/logs/launcher-<date>.l
 - **Off-road networks** layer (map switcher) shows where the good green ground is.
 - **Aerial photos** and **Signed trails** (map switcher): whether a path is a real track, and the waymarked walking, cycling and MTB routes. Rest the pointer on a signed route for its name, code and links (Waymarked Trails, OpenStreetMap, its website), from your own map data.
 - **Open access land** (map switcher): England's CRoW access land from Natural England, where you may go off the paths.
+- **OS Explorer** (map switcher, on OS Data Hub's Premium plan): OS's Leisure map, the Explorer-style 1:25 000 at zooms 14–16 (OS's smaller scales further out), drawn to zoom 17. OS serves it on Britain's own grid only, so the map switches grid while it's chosen, keeping the Loop, the view and everything else in place; Off-road networks, Signed trails and OS paths are web-grid tiles and aren't drawn over it (the switcher says so) and come back with any other map.
 - **OS paths** (map switcher, on OS Data Hub's Premium plan, with the OS NGD API – Tiles added to the key's project): Ordnance Survey's paths in violet from zoom 17, to spot those OpenStreetMap lacks.
 
 **Planned:** a Heading control, Novelty (unfamiliar ground) and Gravel Rides, car park details (fees, closing times), point-to-point routes, Trail Rides.
@@ -152,7 +153,7 @@ The planner, `dotnet run -c Release --project src/WendYourWay.Web`, reads these 
 | `Home:Latitude`, `Home:Longitude` | Where Requests start until you click elsewhere. Kept in user-secrets; never committed. |
 | `Thunderforest:ApiKey` | The Thunderforest map key (free hobby key from thunderforest.com): the Outdoors and OpenCycleMap pictures. |
 | `OsMaps:ApiKey` | Optional: an Ordnance Survey key (OS Data Hub's free plan) adds OS Outdoor to the map switcher. |
-| `OsMaps:Premium` | Optional: `true` on OS Data Hub's Premium plan draws OS Outdoor to zoom 20, within its free monthly allowance; otherwise it stops at 16, the free plan's limit, and is enlarged. It also offers OS paths, from OS NGD's vector tiles (add the OS NGD API – Tiles to the key's project). |
+| `OsMaps:Premium` | Optional: `true` on OS Data Hub's Premium plan draws OS Outdoor to zoom 20, within its free monthly allowance; otherwise it stops at 16, the free plan's limit, and is enlarged. It also offers OS Explorer (OS's Leisure map, on Britain's grid) and OS paths, from OS NGD's vector tiles (add the OS NGD API – Tiles to the key's project). |
 | `Terrain:Folder` | OS Terrain 50 tiles for elevation profiles, if not in `data/terrain50/asc`. |
 | `ConnectionStrings:WendYourWay` | Another database: London's, say, `Host=localhost;Port=5432;Database=cutthrough_london;Username=cutthrough`. |
 | `Backup:Folder` | Where the app's own daily backup goes, if not "Wend Your Way Backups" in your OneDrive. |

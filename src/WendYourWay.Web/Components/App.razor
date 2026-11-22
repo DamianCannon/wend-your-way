@@ -23,6 +23,11 @@
     </div>
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
             integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+    @* Britain's grid, for OS Explorer, cut on EPSG:27700 alone (T168). *@
+    <script src="https://unpkg.com/proj4@2.23.0/dist/proj4.js"
+            integrity="sha384-KGba/0m6kKhwuERvWz69nrarKaRxkcEwit9R9pqp5+lKuLqW7TQDkWhbqEMCvo9/" crossorigin="anonymous"></script>
+    <script src="https://unpkg.com/proj4leaflet@1.0.2/src/proj4leaflet.js"
+            integrity="sha384-aDnBHDK9AhLbrYhThBxEVMriFbix8Sz2059IlD3HbZhz7+WNmz+pSkOcI7MY72cE" crossorigin="anonymous"></script>
     <script src="_framework/blazor.web.js"></script>
     <script type="module" src="@Assets["js/pager.js"]"></script>
     <script type="module" src="@Assets["js/select-on-focus.js"]"></script>

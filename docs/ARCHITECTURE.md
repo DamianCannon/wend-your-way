@@ -748,6 +748,7 @@ tests/
 | Four projects | One developer; Core's purity is the boundary that matters | Seven projects (ceremony without benefit) |
 | Dapper + SQL migrations (DbUp) | Fits the plpgsql-first house style; SQL stays visible | EF Core (fights plpgsql functions and PostGIS-heavy SQL) |
 | Leaflet + Thunderforest Outdoors | Raster tiles in a path-friendly style need nothing heavier | MapLibre (vector-first); self-hosted Protomaps (paths not emphasised) |
+| OS Explorer by switching the live map to British National Grid in place, one zoom per web zoom (ADR 0008) | OS serves its 1:25 000 on that grid alone; no zoom number elsewhere changes | Recreating the map on the other grid; warping OS tiles onto the web grid |
 | Native installs, no Docker | Docker's Linux VM would eat several GB of a 16 GB laptop | Docker Desktop |
 | Great Britain PBF, Scotland clipped in PostGIS | One file; a clip is needed anyway, since Geofabrik's England and Wales extracts overlap their borders | England + Wales extracts, which osm2pgsql reads together (about 15% smaller) |
 | Lighting not modelled | The user doesn't run or ride where it matters | `lit=*` penalty after sunset |

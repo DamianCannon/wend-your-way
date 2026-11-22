@@ -72,6 +72,49 @@ public class ShowingTheMap
     public void On_OS_s_free_plan_OS_Outdoor_is_enlarged_past_zoom_16() =>
         Assert.That(OsOutdoorsDeepestZoom(null), Is.EqualTo(16));
 
+    //  OS Explorer (T168, #172): OS's Leisure map, the Explorer-style 1:25 000, served on Britain's grid
+    //  alone. Its zoom z is drawn at the map's z + 7, so its deepest (9, premium) is the map's 16, and its
+    //  first (0) the map's 7.
+    private TileLayer? OsExplorer(string? osKey, string? osPremium) =>
+        TilesFor("test-key", osKey, osPremium).Layers.SingleOrDefault(l => l.Name == "OS Explorer");
+
+    [Test]
+    public void On_OS_s_Premium_plan_OS_Explorer_is_offered_on_Britain_s_grid()
+    {
+        var explorer = OsExplorer("os-key", "true")!;
+        Assert.That((explorer.Url, explorer.Grid, explorer.MinZoom, explorer.MaxNativeZoom), Is.EqualTo((
+            "https://api.os.uk/maps/raster/v1/zxy/Leisure_27700/{z}/{x}/{y}.png?key=os-key", "EPSG:27700", (int?)7, 16)));
+    }
+
+    //  Enlarged past OS's deepest only so far: closer, its lettering is a blur (the spike: "soft and huge").
+    [Test]
+    public void OS_Explorer_is_drawn_no_closer_than_zoom_17() =>
+        Assert.That(OsExplorer("os-key", "true")!.MaxZoom, Is.EqualTo(17));
+
+    [Test]
+    public void OS_Explorer_comes_after_OS_Outdoor() =>
+        Assert.That(TilesFor("test-key", "os-key", "true").Layers.Select(l => l.Name).Take(3),
+            Is.EqualTo(new[] { "Thunderforest Outdoors", "OS Outdoor", "OS Explorer" }));
+
+    //  Its 1:25 000 and 1:50 000 are premium.
+    [Test]
+    public void On_OS_s_free_plan_OS_Explorer_is_left_out() =>
+        Assert.That(OsExplorer("os-key", null), Is.Null);
+
+    [Test]
+    public void Without_an_OS_key_OS_Explorer_is_left_out() =>
+        Assert.That(OsExplorer(null, "true"), Is.Null);
+
+    //  Every other map is on the web grid, drawn as far in as Leaflet goes.
+    [Test]
+    public void The_other_maps_are_on_the_web_grid() =>
+        Assert.That(TilesFor("test-key", "os-key", "true").Layers.Where(l => l.Name != "OS Explorer").Select(l => (l.Grid, l.MaxZoom)),
+            Has.All.EqualTo(((string?)null, 20)));
+
+    [Test]
+    public void OS_Explorer_credits_Ordnance_Survey_and_OpenStreetMap() =>
+        Assert.That(OsExplorer("os-key", "true")!.Attribution, Does.Contain("Crown copyright").And.Contain("OpenStreetMap contributors"));
+
     //  Aerial photos show whether a path is a real track, gravel or overgrown (T166, #170): Esri's
     //  World Imagery, no key.
     [Test]

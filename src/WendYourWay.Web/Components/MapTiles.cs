@@ -7,7 +7,20 @@ namespace WendYourWay.Web.Components;
 /// <param name="Url">Leaflet's tile URL template.</param>
 /// <param name="Attribution">The credit shown while it's on screen.</param>
 /// <param name="MaxNativeZoom">The deepest zoom the provider draws; Leaflet enlarges beyond it.</param>
-public sealed record TileLayer(string Name, string Url, string Attribution, int MaxNativeZoom);
+public sealed record TileLayer(string Name, string Url, string Attribution, int MaxNativeZoom)
+{
+    /// <summary>
+    /// The grid its tiles are cut on: null for the web grid (EPSG:3857) every other map uses; "EPSG:27700"
+    /// for Britain's grid (T168: OS Explorer). The map's zoom numbers stay the web grid's either way.
+    /// </summary>
+    public string? Grid { get; init; }
+
+    /// <summary>The farthest-out zoom it's drawn at (null: every zoom).</summary>
+    public int? MinZoom { get; init; }
+
+    /// <summary>The closest zoom the map goes to while it's chosen: past it, too enlarged to read.</summary>
+    public int MaxZoom { get; init; } = 20;
+}
 
 /// <summary>A see-through map drawn over whichever is chosen, turned on and off (T166).</summary>
 /// <param name="Name">What the map switcher calls it.</param>
@@ -85,6 +98,16 @@ public sealed record MapTiles(IReadOnlyList<TileLayer> Layers)
             layers.Add(new TileLayer("OS Outdoor",
                 $"https://api.os.uk/maps/raster/v1/zxy/Outdoor_3857/{{z}}/{{x}}/{{y}}.png?key={Uri.EscapeDataString(os)}",
                 $"Contains OS data © Crown copyright and database rights {DateTime.UtcNow.Year}. Loops: {OpenStreetMapCredit}", deepest));
+        }
+        if (!string.IsNullOrEmpty(os) && premium)
+        {
+            // OS Leisure, the Explorer-style 1:25 000 (its zooms 7–9; its 5–6 premium too), on
+            // Britain's grid only (T168). Its zoom z is drawn at the map's zoom z + 7, about the same ground
+            // resolution (7 m a pixel against the web grid's 5.9 at 52°N), so its 9 is the map's 16, enlarged once.
+            layers.Add(new TileLayer("OS Explorer",
+                $"https://api.os.uk/maps/raster/v1/zxy/Leisure_27700/{{z}}/{{x}}/{{y}}.png?key={Uri.EscapeDataString(os)}",
+                $"Contains OS data © Crown copyright and database rights {DateTime.UtcNow.Year}. Loops: {OpenStreetMapCredit}", 16)
+            { Grid = "EPSG:27700", MinZoom = 7, MaxZoom = 17 });
         }
         if (!string.IsNullOrEmpty(thunderforest))
         {

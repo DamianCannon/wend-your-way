@@ -300,6 +300,70 @@ function drawOffRoad(context, data, zoom) {
     }
 }
 
+// The grids maps are cut on (T168). Every map but OS Explorer is on the web grid (EPSG:3857); OS
+// Leisure, the Explorer-style 1:25 000, only on Britain's (EPSG:27700), so choosing it puts the live map
+// on that grid, and choosing another puts it back. Britain's grid is given a zoom for every web zoom,
+// each about the web zoom's ground resolution (OS's zoom z at the map's z + 7: its 7 m a pixel against
+// the web grid's 5.9 at 52°N on zoom 14), so every zoom number in the app keeps its meaning.
+const britishGrid = "EPSG:27700";
+const osOrigin = [-238375, 1376256];
+let britishCrs;
+const crsFor = grid => grid === britishGrid
+    ? britishCrs ??= new L.Proj.CRS(britishGrid,
+        "+proj=tmerc +lat_0=49 +lon_0=-2 +k=0.9996012717 +x_0=400000 +y_0=-100000 +ellps=airy +towgs84=446.448,-125.157,542.06,0.15,0.247,0.842,-20.489 +units=m +no_defs",
+        { origin: osOrigin, resolutions: Array.from({ length: 21 }, (_, z) => 896 / 2 ** (z - 7)), bounds: L.bounds([osOrigin[0], 0], [900000, osOrigin[1]]) })
+    : L.CRS.EPSG3857;
+const onBritishGrid = () => map.options.crs === britishCrs && britishCrs !== undefined;
+
+// A map choosable under the Loop: added on a map on another grid, it moves the map to its own first,
+// at the same centre and zoom, and the map goes no closer than it's readable (OS Explorer: 17).
+// Before it's added (beforeAdd): once it listens to the map, the reset would reach it unready.
+const GridTileLayer = L.TileLayer.extend({
+    beforeAdd(on) {
+        if (!useGrid(on, this.options.grid, this.options.maxZoom)) on.setMaxZoom(this.options.maxZoom);
+    }
+});
+
+// The overlays cut on the web grid alone (Off-road networks, Signed trails, OS paths): off while the
+// map is on Britain's grid, and back when it's not; their choice in the switcher stays as it was.
+let webOnly = [];
+let parked = [];
+let switching = false;
+let overlaysOffered = () => { };
+
+// Moves the map to the grid, if it isn't on it already (false if it was), going no closer than maxZoom.
+// Setting a live map's crs isn't Leaflet's documented API (1.9.4): recheck on upgrading (ADR 0008).
+function useGrid(on, grid, maxZoom) {
+    const crs = crsFor(grid);
+    if (on.options.crs === crs) return false;
+    const centre = on.getCenter();
+    const zoom = Math.min(on.getZoom(), maxZoom);
+    on.options.maxZoom = maxZoom;
+    switching = true;
+    try {
+        if (grid === britishGrid)
+            for (const layer of webOnly) if (on.hasLayer(layer)) { on.removeLayer(layer); parked.push(layer); }
+        on.options.crs = crs;
+        on.setView(centre, zoom, { reset: true });
+        if (grid !== britishGrid) { parked.forEach(layer => on.addLayer(layer)); parked = []; }
+    } finally {
+        switching = false;
+    }
+    on.fire("zoomlevelschange");
+    // After the switcher's click is done: offering the overlays again rebuilds its list, and a click
+    // whose radio button has left the page isn't known as the switcher's any more, so the map takes it
+    // as a click on the map, moving the start there.
+    setTimeout(overlaysOffered);
+    decorate();
+    return true;
+}
+
+// An overlay turned on as the map opens: parked if it's web-grid only and the map is on Britain's.
+function turnOn(layer) {
+    if (webOnly.includes(layer) && onBritishGrid()) parked.push(layer);
+    else layer.addTo(map);
+}
+
 // Until when a move is the map fitting a Loop or an Outing, not the user's.
 let fittingUntil = 0;
 const fitting = () => { fittingUntil = Date.now() + 1000; };
@@ -311,23 +375,30 @@ function reportView() {
 
 /** Creates the map in `element`, centred on `centre` (or London), and reports clicks to `dotNet`. */
 export function create(element, tiles, centre, dotNet) {
+    webOnly = [];
+    parked = [];
+    // Every map the app offers, the one chosen last (or the first) on screen, and a switcher when
+    // there's a choice. Each credits its maker while it's shown. The map opens on the chosen one's grid.
+    const names = tiles.layers.map(layer => layer.name);
+    const chosen = tiles.layers.find(layer => layer.name === chosenMap()) ?? tiles.layers[0];
     // No keyboard panning: the arrow keys page through the Loops (R10.5).
-    map = L.map(element, { zoomControl: false, keyboard: false }).setView(centre ? point(centre) : london, 14);
+    map = L.map(element, { zoomControl: false, keyboard: false, crs: crsFor(chosen.grid) }).setView(centre ? point(centre) : london, 14);
     L.control.zoom({ position: "topright" }).addTo(map);
     L.control.scale({ position: "bottomright", imperial: false }).addTo(map);
     map.on("zoomend", drawNotes);
-    // Every map the app offers, the one chosen last (or the first) on screen, and a switcher when
-    // there's a choice. Each credits its maker while it's shown.
     const layers = {};
     for (const layer of tiles.layers)
-        layers[layer.name] = L.tileLayer(layer.url, {
-            attribution: layer.attribution, maxZoom: 20, maxNativeZoom: layer.maxNativeZoom, subdomains: "abc"
+        layers[layer.name] = new GridTileLayer(layer.url, {
+            attribution: layer.attribution, maxZoom: layer.maxZoom, maxNativeZoom: layer.maxNativeZoom, subdomains: "abc",
+            grid: layer.grid, minZoom: layer.minZoom ?? 0,
+            // OS's zoom z on Britain's grid is the map's z + 7; OS Leisure covers Britain alone.
+            ...(layer.grid === britishGrid ? { zoomOffset: -7, bounds: L.latLngBounds([49.388, -10.834], [62.266, 7.551]) } : {})
         });
-    const names = Object.keys(layers);
-    layers[names.includes(chosenMap()) ? chosenMap() : names[0]].addTo(map);
+    layers[chosen.name].addTo(map);
     // The Off-road networks (T022b), over whichever map, on if they were last time.
     const offRoad = offRoadNetworks();
-    if (rememberedOverlay(offRoadName)) offRoad.addTo(map);
+    webOnly.push(offRoad);
+    if (rememberedOverlay(offRoadName)) turnOn(offRoad);
     const amenities = cafesAndToilets();
     if (rememberedOverlay(amenitiesName)) amenities.addTo(map);
     // The Gravel hotspots (T072): on until turned off, all of them at every zoom.
@@ -342,7 +413,8 @@ export function create(element, tiles, centre, dotNet) {
         const group = L.layerGroup(overlay.urls.map(url => L.tileLayer(url, {
             attribution: overlay.attribution, maxZoom: 20, maxNativeZoom: overlay.maxNativeZoom, zIndex: 2
         })));
-        if (rememberedOverlay(overlay.name)) group.addTo(map);
+        webOnly.push(group);
+        if (rememberedOverlay(overlay.name)) turnOn(group);
         tiledOverlays[overlay.name] = group;
     }
     // Pointing at a signed route names it (T176), while an overlay of them is on.
@@ -364,17 +436,35 @@ export function create(element, tiles, centre, dotNet) {
     const vectorOverlays = {};
     for (const overlay of tiles.vectors ?? []) {
         const layer = new VectorOverlayLayer(overlay);
-        if (rememberedOverlay(overlay.name)) layer.addTo(map);
+        webOnly.push(layer);
+        if (rememberedOverlay(overlay.name)) turnOn(layer);
         vectorOverlays[overlay.name] = layer;
     }
     const readForTheView = [amenities, ...Object.values(areaOverlays)];
-    L.control.layers(names.length > 1 ? layers : {}, { [offRoadName]: offRoad, ...tiledOverlays, ...areaOverlays, ...vectorOverlays, [amenitiesName]: amenities, [hotspotsName]: hotspots, [carParksName]: carParks }, { position: "topright" }).addTo(map);
+    const overlays = { [offRoadName]: offRoad, ...tiledOverlays, ...areaOverlays, ...vectorOverlays, [amenitiesName]: amenities, [hotspotsName]: hotspots, [carParksName]: carParks };
+    let offered = [];
+    const switcher = L.control.layers(names.length > 1 ? layers : {}, {}, { position: "topright" }).addTo(map);
+    // The overlays offered for the grid the map is on (T168): on Britain's, none cut on the web grid,
+    // and a word under the list saying which are missing and why, so they're not looked for.
+    const notOffered = L.DomUtil.create("div", "not-offered", switcher.getContainer().querySelector(".leaflet-control-layers-list"));
+    const webOnlyNames = Object.keys(overlays).filter(name => webOnly.includes(overlays[name]));
+    notOffered.textContent = `${webOnlyNames.join(", ")}: not drawn over OS Explorer, on Britain's own grid.`;
+    overlaysOffered = () => {
+        switching = true;
+        offered.forEach(layer => switcher.removeLayer(layer));
+        offered = [];
+        for (const [name, layer] of Object.entries(overlays))
+            if (!(webOnly.includes(layer) && onBritishGrid())) { switcher.addOverlay(layer, name); offered.push(layer); }
+        switching = false;
+        notOffered.hidden = !onBritishGrid() || webOnlyNames.length === 0;
+    };
+    overlaysOffered();
     map.on("overlayadd", e => { if (readForTheView.includes(e.layer)) e.layer.refresh(); });
     map.on("moveend", () => readForTheView.forEach(layer => layer.refresh()));
     readForTheView.forEach(layer => layer.refresh());
     map.on("baselayerchange", e => rememberMap(e.name));
-    map.on("overlayadd", e => rememberOverlay(e.name, true));
-    map.on("overlayremove", e => rememberOverlay(e.name, false));
+    map.on("overlayadd", e => { if (!switching) rememberOverlay(e.name, true); });
+    map.on("overlayremove", e => { if (!switching) rememberOverlay(e.name, false); });
     map.attributionControl.setPrefix('<a href="https://leafletjs.com">Leaflet</a>');
     owner = dotNet;
     // A click that closes a popup only closes it: the popups have no close button, so clicking
@@ -778,7 +868,9 @@ function decorate() {
     if (!measured) return;
     if (decorations) decorations.remove();
     if (!routeShown) return;
-    const metresPerPixel = 40075016.686 * Math.cos(map.getCenter().lat * Math.PI / 180) / (256 * 2 ** map.getZoom());
+    // Measured on the map, so on any grid (T168): 100 px across its middle.
+    const middle = map.getSize().divideBy(2);
+    const metresPerPixel = map.distance(map.containerPointToLatLng(middle), map.containerPointToLatLng(middle.add([100, 0]))) / 100;
 
     const layers = [];
     const arrowEvery = arrowEveryPixels * metresPerPixel;
