@@ -5,6 +5,7 @@
 @inject MapTiles Tiles
 
 <div class="map" @ref="_element"></div>
+<MapKey Shown="_keyShown" Collapsed="_keyCollapsed" OnCollapsedChanged="CollapseKeyAsync" />
 
 @code {
     /// <summary>Where the map opens; central London when not given.</summary>
@@ -182,6 +183,26 @@
 
     [JSInvokable]
     public Task AvoidClicked(double latitude, double longitude) => OnAvoid.InvokeAsync(new AvoidNudge(new LatLon(latitude, longitude)));
+
+    private IReadOnlyCollection<string> _keyShown = [];
+    private bool _keyCollapsed;
+
+    /// <summary>
+    /// What's on screen, for the key (T177): the overlays on, by name, and the route's parts; and whether
+    /// the key was left collapsed.
+    /// </summary>
+    [JSInvokable]
+    public void KeyShown(string[] shown, bool collapsed)
+    {
+        (_keyShown, _keyCollapsed) = (shown, collapsed);
+        StateHasChanged();
+    }
+
+    private async Task CollapseKeyAsync(bool collapsed)
+    {
+        _keyCollapsed = collapsed;
+        await Call("rememberKeyCollapsed", collapsed);
+    }
 
     // Waits until the map exists: a caller's first render can come before this component's.
     private async Task Call(string function, params object?[] arguments)

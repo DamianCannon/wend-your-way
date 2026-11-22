@@ -49,7 +49,9 @@ const rememberMap = name => { try { localStorage.setItem(chosenMapKey, name); } 
 // green Segment coloured by its network's size; zoomed out, a dot for each network of 10 km or
 // more. Bands: under 10 km, 10–30, 30–100, 100–300, over 300.
 const offRoadName = "Off-road networks";
-const offRoadColours = ["rgba(110, 120, 115, 0.45)", "#9ccc65", "#4caf50", "#2e7d32", "#0f4d24"];
+const offRoadColours = [
+    colour("--off-road-1", "rgba(110, 120, 115, 0.45)"), colour("--off-road-2", "#9ccc65"), colour("--off-road-3", "#4caf50"),
+    colour("--off-road-4", "#2e7d32"), colour("--off-road-5", "#0f4d24")];
 
 const overlayKey = name => "cutthrough.overlay." + name;
 const rememberedOverlay = (name, byDefault = false) => {
@@ -364,6 +366,38 @@ function turnOn(layer) {
     else layer.addTo(map);
 }
 
+// The key to the map (T177): told what's on screen, in its words, as that changes (once for a burst of
+// changes), and whether it was left collapsed, remembered in this browser.
+const keyCollapsedKey = "cutthrough.key.collapsed";
+let keyedOverlays = {};
+let keyReport;
+function reportKey() {
+    if (!owner || keyReport) return;
+    keyReport = setTimeout(() => {
+        keyReport = undefined;
+        const shown = [];
+        if (shownLoop && loopLayer && map.hasLayer(loopLayer)) {
+            shown.push("loop");
+            if (shownLoop.anchors?.length) shown.push("stops");
+            if (shownLoop.avoids?.length) shown.push("avoids");
+            if (shownLoop.mapGaps?.length) shown.push("map-gaps");
+            if (shownLoop.possibleMapGaps?.length) shown.push("possible-gaps");
+            if (shownLoop.gaps?.length) shown.push("not-on-map");
+        }
+        if (marksLayer?.getLayers().length) shown.push("blocked");
+        if (outingLayer) shown.push("outing");
+        for (const [name, layer] of Object.entries(keyedOverlays)) if (map.hasLayer(layer)) shown.push(name);
+        let collapsed = false;
+        try { collapsed = localStorage.getItem(keyCollapsedKey) === "true"; } catch { /* open */ }
+        owner.invokeMethodAsync("KeyShown", shown, collapsed);
+    });
+}
+
+/** Keeps whether the key is collapsed (T177), for next time. */
+export function rememberKeyCollapsed(collapsed) {
+    try { localStorage.setItem(keyCollapsedKey, String(collapsed)); } catch { /* not kept */ }
+}
+
 // Until when a move is the map fitting a Loop or an Outing, not the user's.
 let fittingUntil = 0;
 const fitting = () => { fittingUntil = Date.now() + 1000; };
@@ -467,6 +501,9 @@ export function create(element, tiles, centre, dotNet) {
     map.on("overlayremove", e => { if (!switching) rememberOverlay(e.name, false); });
     map.attributionControl.setPrefix('<a href="https://leafletjs.com">Leaflet</a>');
     owner = dotNet;
+    keyedOverlays = overlays;
+    map.on("overlayadd overlayremove", reportKey);
+    reportKey();
     // A click that closes a popup only closes it: the popups have no close button, so clicking
     // away is how they go, and that mustn't move the start (user, 2026-11-07).
     let popupClosedAt = 0;
@@ -629,6 +666,7 @@ export function showLoop(loop, fit = true) {
         map.fitBounds(L.latLngBounds(line), { paddingTopLeft: [visibleLeft() + 40, 40], paddingBottomRight: [60, 110] });
     }
     decorate();
+    reportKey();
 }
 
 /**
@@ -641,6 +679,7 @@ export function showRoute(shown) {
     drawNotes();
     if (shown) decorate();
     else if (decorations) decorations.remove();
+    reportKey();
 }
 
 // The route's line taking Nudges (T076): dragged from where it's grabbed to where it's dropped, the
@@ -781,6 +820,7 @@ export function showMarks(marks) {
         });
         return line;
     })).addTo(map);
+    reportKey();
 }
 
 // The OSM way under the piece of the Loop's line nearest a place, if it's known (0 on Open ground).
@@ -842,6 +882,7 @@ export function clearLoop() {
     if (decorations) decorations.remove();
     if (loopLayer) loopLayer.remove();
     loopLayer = decorations = measured = undefined;
+    reportKey();
 }
 
 // The line's points with the distance travelled to each, so positions along it are cheap.
@@ -935,10 +976,12 @@ export function showOuting(outing) {
     ]).addTo(map);
     fitting();
     map.fitBounds(L.latLngBounds(track), { paddingTopLeft: [visibleLeft() + 40, 40], paddingBottomRight: [40, 40] });
+    reportKey();
 }
 
 /** Takes the last Outing off the map. */
 export function clearOuting() {
     if (outingLayer) outingLayer.remove();
     outingLayer = undefined;
+    reportKey();
 }
