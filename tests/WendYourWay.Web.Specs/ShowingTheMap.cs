@@ -27,10 +27,10 @@ public class ShowingTheMap
     [TearDown]
     public void Dispose() => _context.Dispose();
 
-    private MapTiles TilesFor(string? thunderforestKey, string? osKey = null)
+    private MapTiles TilesFor(string? thunderforestKey, string? osKey = null, string? osPremium = null)
     {
         var configuration = new ConfigurationBuilder()
-            .AddInMemoryCollection(new Dictionary<string, string?> { ["Thunderforest:ApiKey"] = thunderforestKey, ["OsMaps:ApiKey"] = osKey })
+            .AddInMemoryCollection(new Dictionary<string, string?> { ["Thunderforest:ApiKey"] = thunderforestKey, ["OsMaps:ApiKey"] = osKey, ["OsMaps:Premium"] = osPremium })
             .Build();
         _context.Services.AddSingleton(MapTiles.From(configuration));
         _context.Render<MapView>();
@@ -57,6 +57,20 @@ public class ShowingTheMap
     public void With_an_Ordnance_Survey_key_OS_Outdoor_is_offered_second() =>
         Assert.That(TilesFor("test-key", "os-key").Layers[1].Url,
             Is.EqualTo("https://api.os.uk/maps/raster/v1/zxy/Outdoor_3857/{z}/{x}/{y}.png?key=os-key"));
+
+    private int OsOutdoorsDeepestZoom(string? osPremium) =>
+        TilesFor("test-key", "os-key", osPremium).Layers.Single(l => l.Name == "OS Outdoor").MaxNativeZoom;
+
+    //  On OS's Premium plan its closer zooms (17–20) are within the free allowance (T167, #171): drawn
+    //  by OS, not enlarged from zoom 16.
+    [Test]
+    public void On_OS_s_Premium_plan_OS_Outdoor_is_drawn_by_OS_at_every_zoom() =>
+        Assert.That(OsOutdoorsDeepestZoom("true"), Is.EqualTo(20));
+
+    //  The free plan serves no tiles past zoom 16: enlarged from there, never blank.
+    [Test]
+    public void On_OS_s_free_plan_OS_Outdoor_is_enlarged_past_zoom_16() =>
+        Assert.That(OsOutdoorsDeepestZoom(null), Is.EqualTo(16));
 
     //  A Loop is OpenStreetMap data whatever the map under it (R8.3).
     [Test]

@@ -68,6 +68,8 @@ dotnet user-secrets set Home:Latitude <latitude> --project src/WendYourWay.Web
 dotnet user-secrets set Home:Longitude <longitude> --project src/WendYourWay.Web
 # optional: an Ordnance Survey key (free OS Data Hub plan) adds OS Outdoor to the map switcher
 dotnet user-secrets set OsMaps:ApiKey <key> --project src/WendYourWay.Web
+# optional: on OS Data Hub's Premium plan, OS Outdoor is drawn to zoom 20 (the free plan stops at 16)
+dotnet user-secrets set OsMaps:Premium true --project src/WendYourWay.Web
 
 # optional: place names and postcodes for the search box, from OS Open Names (unzipped; read in place)
 dotnet run -c Release --project src/WendYourWay.Cli -- places import <path to opname_csv_gb>
@@ -145,6 +147,7 @@ The planner, `dotnet run -c Release --project src/WendYourWay.Web`, reads these 
 | `Home:Latitude`, `Home:Longitude` | Where Requests start until you click elsewhere. Kept in user-secrets; never committed. |
 | `Thunderforest:ApiKey` | The Thunderforest map key (free hobby key from thunderforest.com): the Outdoors and OpenCycleMap pictures. |
 | `OsMaps:ApiKey` | Optional: an Ordnance Survey key (OS Data Hub's free plan) adds OS Outdoor to the map switcher. |
+| `OsMaps:Premium` | Optional: `true` on OS Data Hub's Premium plan draws OS Outdoor to zoom 20, within its free monthly allowance; otherwise it stops at 16, the free plan's limit, and is enlarged. |
 | `Terrain:Folder` | OS Terrain 50 tiles for elevation profiles, if not in `data/terrain50/asc`. |
 | `ConnectionStrings:WendYourWay` | Another database: London's, say, `Host=localhost;Port=5432;Database=cutthrough_london;Username=cutthrough`. |
 | `Backup:Folder` | Where the app's own daily backup goes, if not "Wend Your Way Backups" in your OneDrive. |

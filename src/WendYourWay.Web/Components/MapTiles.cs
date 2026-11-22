@@ -12,7 +12,7 @@ public sealed record TileLayer(string Name, string Url, string Attribution, int 
 /// <summary>
 /// The maps the user can choose between under the Loop, first shown first: different ones suit
 /// different Activities (user, 2026-10-19). Only pictures: routing, scoring and GPX never use them.
-/// Keys live in `dotnet user-secrets` (Thunderforest:ApiKey, OsMaps:ApiKey), never in git; a map
+/// Keys live in `dotnet user-secrets` (Thunderforest:ApiKey, OsMaps:ApiKey, and OsMaps:Premium), never in git; a map
 /// whose key isn't set is left out.
 /// </summary>
 public sealed record MapTiles(IReadOnlyList<TileLayer> Layers)
@@ -39,10 +39,12 @@ public sealed record MapTiles(IReadOnlyList<TileLayer> Layers)
         }
         if (!string.IsNullOrEmpty(os))
         {
-            // Ordnance Survey's free (OpenData) tiles stop at zoom 16; deeper ones are Premium.
+            // Ordnance Survey's free (OpenData) plan serves tiles to zoom 16; on its Premium plan (OsMaps:Premium),
+            // 17–20 too, within the free monthly allowance (T167). Leaflet enlarges past the deepest.
+            var deepest = string.Equals(configuration["OsMaps:Premium"], "true", StringComparison.OrdinalIgnoreCase) ? 20 : 16;
             layers.Add(new TileLayer("OS Outdoor",
                 $"https://api.os.uk/maps/raster/v1/zxy/Outdoor_3857/{{z}}/{{x}}/{{y}}.png?key={Uri.EscapeDataString(os)}",
-                $"Contains OS data © Crown copyright and database rights {DateTime.UtcNow.Year}. Loops: {OpenStreetMapCredit}", 16));
+                $"Contains OS data © Crown copyright and database rights {DateTime.UtcNow.Year}. Loops: {OpenStreetMapCredit}", deepest));
         }
         if (!string.IsNullOrEmpty(thunderforest))
         {
