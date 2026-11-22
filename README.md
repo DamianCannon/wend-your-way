@@ -117,6 +117,7 @@ the laptop from sleeping meanwhile. Its words go to `data/logs/launcher-<date>.l
 - **Stars:** the Outings list and Saved Routes show the app's stars for each (one to five: a Run's as Loops are ranked, its score with what off-road ground and climbing add, banded to match how you rate, the lowest tenth of your Runs 1 star and the top 30% 5 stars; a ride's a fifth of your rides each) beside your own, which you give with a click. Where you and the app are two stars or more apart, it stands out. **GPX** under the Outing shown downloads its own track, to overlay in OpenStreetMap's editor where it left the map. **Rename** gives it a better name (kept through a re-import, and used when it's made a route and exported). **Delete** (asked first) removes an Outing you don't want, a duplicate say: it stops counting as ground you've covered, and no later Strava export or GPX import brings it back; the next in the list is shown, to go through them quickly. Above the list, **All**, **★5**, **★4–5** and **Not rated** filter the Outings by your own stars, and a name box finds any by part of its name.
 - **Off-road networks** layer (map switcher) shows where the good green ground is.
 - **Aerial photos** and **Signed trails** (map switcher): whether a path is a real track, and the waymarked walking, cycling and MTB routes.
+- **Open access land** (map switcher): England's CRoW access land from Natural England, where you may go off the paths.
 
 **Planned:** a Heading control, Novelty (unfamiliar ground) and Gravel Rides, car park details (fees, closing times), point-to-point routes, Trail Rides.
 
@@ -189,7 +190,7 @@ Two pipelines fill one database, and the planner reads from it:
 
 The map, the place names and your history live in separate schemas (`network`, `places` and `app`), linked by OSM identity rather than database keys, so rebuilding the map never touches your data. Greenery, Corridors, Open ground, climbing (from OS Terrain 50) and Access (who may use each way: a Run, a Gravel Ride, a Trail Ride) are built; Hazard and Obscurity are designed but not built yet.
 
-**Built on:** C# on .NET 10, Blazor Server, PostgreSQL 17 + PostGIS 3.6, osm2pgsql 2.3, Npgsql and DbUp, Garmin's FIT SDK, Leaflet 1.9 with a choice of map tiles (Thunderforest Outdoors and OpenCycleMap, Ordnance Survey's Outdoor style, CyclOSM, OpenTopoMap, Esri's aerial photos, and Waymarked Trails' signed trails: the only online services, switched on the map), and OpenStreetMap data from Geofabrik. Tests: NUnit and bUnit. No routing engine: costs change with every Request, which precomputed routers can't follow.
+**Built on:** C# on .NET 10, Blazor Server, PostgreSQL 17 + PostGIS 3.6, osm2pgsql 2.3, Npgsql and DbUp, Garmin's FIT SDK, Leaflet 1.9 with a choice of map tiles (Thunderforest Outdoors and OpenCycleMap, Ordnance Survey's Outdoor style, CyclOSM, OpenTopoMap, Esri's aerial photos, Waymarked Trails' signed trails, and Natural England's open access land: the only online services, switched on the map), and OpenStreetMap data from Geofabrik. Tests: NUnit and bUnit. No routing engine: costs change with every Request, which precomputed routers can't follow.
 
 The app has the same explanation at `/how-it-works` (from the Help panel). See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for depth, and [CONTEXT.md](CONTEXT.md) for the vocabulary.
 

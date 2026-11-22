@@ -107,6 +107,49 @@ function cafesAndToilets() {
     return layer;
 }
 
+// Areas read for the view (T170: Open access land): off until turned on, and remembered; from their
+// zoom in, read as the map stops moving, simplified to about a pixel. A wash under the Loop, never in
+// the way of a click.
+const accessFill = colour("--access-land", "#e3b505");
+const accessEdge = colour("--access-land-edge", "#b08900");
+
+function areaOverlay(overlay) {
+    const layer = L.geoJSON(null, {
+        pane: "areas", interactive: false,
+        style: { color: accessEdge, weight: 1, opacity: 0.8, fillColor: accessFill, fillOpacity: 0.22 }
+    });
+    let reading = 0;
+    layer.refresh = () => {
+        const run = ++reading;
+        if (!map.hasLayer(layer) || map.getZoom() < overlay.fromZoom) { layer.clearLayers(); return; }
+        const b = map.getBounds();
+        const query = new URLSearchParams({
+            where: "1=1", geometry: `${b.getWest()},${b.getSouth()},${b.getEast()},${b.getNorth()}`,
+            geometryType: "esriGeometryEnvelope", inSR: "4326", spatialRel: "esriSpatialRelIntersects",
+            outFields: "OBJECTID", outSR: "4326", maxAllowableOffset: String(360 / (256 * 2 ** map.getZoom())),
+            geometryPrecision: "6", orderByFields: "OBJECTID", f: "geojson"
+        });
+        // A page at a time: a busy view (London's commons, zoomed out) holds more than one answer's 2,000.
+        const page = offset => {
+            query.set("resultOffset", String(offset));
+            return fetch(`${overlay.query}?${query}`).then(response => response.ok ? response.json() : null);
+        };
+        (async () => {
+            const features = [];
+            for (let pages = 0, offset = 0; pages < 5; pages++) {
+                const found = await page(offset);
+                if (run !== reading || !found?.features) return;
+                features.push(...found.features);
+                if (!found.properties?.exceededTransferLimit) break;
+                offset += found.features.length;
+            }
+            layer.clearLayers();
+            layer.addData({ type: "FeatureCollection", features });
+        })().catch(() => { /* none shown */ });
+    };
+    return layer;
+}
+
 // Gravel hotspots (T072): large Off-road networks a bike may use, each marked with its km and
 // named on pointing; clicking one starts there, as a click on the map does, and finds its Loops
 // (user, 2026-11-06: showing it alone looked like nothing happened).
@@ -194,10 +237,23 @@ export function create(element, tiles, centre, dotNet) {
         if (rememberedOverlay(overlay.name)) group.addTo(map);
         tiledOverlays[overlay.name] = group;
     }
-    L.control.layers(names.length > 1 ? layers : {}, { [offRoadName]: offRoad, ...tiledOverlays, [amenitiesName]: amenities, [hotspotsName]: hotspots, [carParksName]: carParks }, { position: "topright" }).addTo(map);
-    map.on("overlayadd", e => { if (e.layer === amenities) amenities.refresh(); });
-    map.on("moveend", () => amenities.refresh());
-    amenities.refresh();
+    // The areas read for the view (T170: Open access land), in a pane of their own over the map and
+    // under the Loop, taking no clicks.
+    const areasPane = map.createPane("areas");
+    areasPane.style.zIndex = 350;
+    areasPane.style.pointerEvents = "none";
+    const areaOverlays = {};
+    for (const overlay of tiles.areas ?? []) {
+        const layer = areaOverlay(overlay);
+        layer.options.attribution = overlay.attribution;
+        if (rememberedOverlay(overlay.name)) layer.addTo(map);
+        areaOverlays[overlay.name] = layer;
+    }
+    const readForTheView = [amenities, ...Object.values(areaOverlays)];
+    L.control.layers(names.length > 1 ? layers : {}, { [offRoadName]: offRoad, ...tiledOverlays, ...areaOverlays, [amenitiesName]: amenities, [hotspotsName]: hotspots, [carParksName]: carParks }, { position: "topright" }).addTo(map);
+    map.on("overlayadd", e => { if (readForTheView.includes(e.layer)) e.layer.refresh(); });
+    map.on("moveend", () => readForTheView.forEach(layer => layer.refresh()));
+    readForTheView.forEach(layer => layer.refresh());
     map.on("baselayerchange", e => rememberMap(e.name));
     map.on("overlayadd", e => rememberOverlay(e.name, true));
     map.on("overlayremove", e => rememberOverlay(e.name, false));

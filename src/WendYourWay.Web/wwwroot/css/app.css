@@ -22,6 +22,9 @@
     --map-gap: #d62828;
     --cafe: #8d5b3a;
     --toilets: #3d6f9e;
+    /* Open access land (T170): a straw wash, as paper maps colour it, edged a shade darker. */
+    --access-land: #e3b505;
+    --access-land-edge: #b08900;
     --held: #5a4a1e;
     --star-off: #b8ad98;
     --star-on-dark: #ffb380;

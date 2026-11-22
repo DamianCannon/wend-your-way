@@ -98,6 +98,21 @@ public class ShowingTheMap
         Assert.That(TilesFor(null).Overlays.Select(o => (o.Name, string.Join(" ", o.Urls))),
             Is.EqualTo(new[] { ("Signed trails", "https://tile.waymarkedtrails.org/hiking/{z}/{x}/{y}.png https://tile.waymarkedtrails.org/cycling/{z}/{x}/{y}.png https://tile.waymarkedtrails.org/mtb/{z}/{x}/{y}.png") }));
 
+    //  Open access land (T170, #174; user: "bring in open access land as a view"): where you may go off
+    //  the paths in England, Natural England's CRoW access layer, read for the view as GeoJSON.
+    [Test]
+    public void Open_access_land_is_Natural_Englands_read_for_the_view_from_zoom_11()
+    {
+        var area = TilesFor(null).Areas.Single();
+        Assert.That((area.Name, area.Query, area.FromZoom), Is.EqualTo(("Open access land",
+            "https://services.arcgis.com/JJzESW51TqeY9uat/arcgis/rest/services/CRoW_Act_2000_Access_Layer/FeatureServer/0/query", 11)));
+    }
+
+    [Test]
+    public void Open_access_land_credits_Natural_England_and_its_licence() =>
+        Assert.That(TilesFor(null).Areas.Single().Attribution,
+            Does.Contain("© Natural England").And.Contain("Open Government Licence").And.Contain("Crown copyright"));
+
     [Test]
     public void Every_overlay_credits_its_maker_and_OpenStreetMap() =>
         Assert.That(TilesFor(null).Overlays.Select(o => o.Attribution.Contains("OpenStreetMap contributors", StringComparison.Ordinal) && o.Attribution.Contains(Makers[o.Name], StringComparison.Ordinal)),

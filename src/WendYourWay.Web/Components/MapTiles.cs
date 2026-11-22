@@ -16,6 +16,13 @@ public sealed record TileLayer(string Name, string Url, string Attribution, int 
 /// <param name="MaxNativeZoom">The deepest zoom the provider draws; Leaflet enlarges beyond it.</param>
 public sealed record TileOverlay(string Name, IReadOnlyList<string> Urls, string Attribution, int MaxNativeZoom);
 
+/// <summary>Areas drawn over whichever map is chosen, read for the view as GeoJSON from an ArcGIS feature service (T170).</summary>
+/// <param name="Name">What the map switcher calls it.</param>
+/// <param name="Query">The feature layer's query address.</param>
+/// <param name="Attribution">The credit shown while it's on.</param>
+/// <param name="FromZoom">The zoom they're drawn from: further out, a view holds too many.</param>
+public sealed record AreaOverlay(string Name, string Query, string Attribution, int FromZoom);
+
 /// <summary>
 /// The maps the user can choose between under the Loop, first shown first: different ones suit
 /// different Activities (user, 2026-10-19). Only pictures: routing, scoring and GPX never use them.
@@ -26,6 +33,9 @@ public sealed record MapTiles(IReadOnlyList<TileLayer> Layers)
 {
     /// <summary>The overlays offered from tiles elsewhere, off until turned on (T166).</summary>
     public IReadOnlyList<TileOverlay> Overlays { get; init; } = [];
+
+    /// <summary>The areas offered, off until turned on (T170).</summary>
+    public IReadOnlyList<AreaOverlay> Areas { get; init; } = [];
 
     // Waymarked Trails' maps: signed walking, cycling and mountain-bike routes.
     private static readonly string[] TrailKinds = ["hiking", "cycling", "mtb"];
@@ -79,6 +89,10 @@ public sealed record MapTiles(IReadOnlyList<TileLayer> Layers)
         var signedTrails = new TileOverlay("Signed trails",
             TrailKinds.Select(kind => $"https://tile.waymarkedtrails.org/{kind}/{{z}}/{{x}}/{{y}}.png").ToList(),
             $"Trails © <a href=\"https://waymarkedtrails.org\">Waymarked Trails</a> (CC BY-SA), {OpenStreetMapCredit}", 18);
-        return new MapTiles(layers) { Overlays = [signedTrails] };
+        // Open access land in England (T170, #174): Natural England's CRoW access layer, under the OGL.
+        var openAccess = new AreaOverlay("Open access land",
+            "https://services.arcgis.com/JJzESW51TqeY9uat/arcgis/rest/services/CRoW_Act_2000_Access_Layer/FeatureServer/0/query",
+            "Open access land © Natural England (Open Government Licence). Contains Ordnance Survey data © Crown copyright and database right", 11);
+        return new MapTiles(layers) { Overlays = [signedTrails], Areas = [openAccess] };
     }
 }
