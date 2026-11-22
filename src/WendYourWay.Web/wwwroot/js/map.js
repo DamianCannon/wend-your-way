@@ -222,12 +222,19 @@ function routeCard(route) {
     return `<li><strong>${title}</strong><span class="kind">${routeKinds[route.kind] ?? "Route"}${level ? `, ${level}` : ""}</span><span class="links">${links}</span></li>`;
 }
 
+let routeCardPopup;
 function nameRoutesOnPointing(isOn) {
     if (!window.matchMedia?.("(hover: hover)").matches) return;
     const reach = 12;   // pixels from the pointer a route is looked for
     let resting, closing, asking = 0, overCard = false, askedAt = null;
-    const card = L.popup({ closeButton: false, autoPan: false, className: "route-card", offset: [0, -4], maxWidth: 320 });
-    const close = () => { clearTimeout(closing); closing = setTimeout(() => { if (!overCard) map.closePopup(card); }, 250); };
+    // A layer of its own, not the map's popup (T178): opening it closes no other popup, and a click on
+    // the map is never taken as closing it.
+    const card = L.popup({ closeButton: false, autoPan: false, autoClose: false, closeOnClick: false, className: "route-card", offset: [0, -4], maxWidth: 320 });
+    routeCardPopup = card;
+    const hide = () => { if (map.hasLayer(card)) map.removeLayer(card); };
+    const close = () => { clearTimeout(closing); closing = setTimeout(() => { if (!overCard) hide(); }, 250); };
+    // Another popup open (Avoid, a stop, a Blocked stretch): it's what the user is reading, so none is asked for.
+    const otherPopupOpen = () => map._container.querySelector(".leaflet-popup:not(.route-card)") !== null;
     card.on("add", () => {
         const element = card.getElement();
         element.addEventListener("mouseenter", () => { overCard = true; clearTimeout(closing); });
@@ -240,11 +247,11 @@ function nameRoutesOnPointing(isOn) {
         fetch(`signed-routes?${query}`)
             .then(response => response.ok ? response.json() : [])
             .then(routes => {
-                if (run !== asking || !isOn()) return;
+                if (run !== asking || !isOn() || otherPopupOpen()) return;
                 if (!routes.length) { close(); return; }
                 askedAt = map.latLngToContainerPoint(at);
                 card.setLatLng(at).setContent(`<ul>${routes.map(routeCard).join("")}</ul>`);
-                if (!map.hasLayer(card)) card.openOn(map);
+                if (!map.hasLayer(card)) map.addLayer(card);
                 clearTimeout(closing);
             })
             .catch(() => { /* none shown */ });
@@ -254,10 +261,12 @@ function nameRoutesOnPointing(isOn) {
         if (!isOn()) return;
         // Moved off the route the card is for: it closes unless the pointer reaches the card.
         if (map.hasLayer(card) && askedAt && askedAt.distanceTo(e.containerPoint) > reach * 2) close();
+        // Resting on the card is reading it, not asking again there.
+        if (overCard || otherPopupOpen()) return;
         resting = setTimeout(() => ask(e.latlng), 350);
     });
     map.on("mouseout", () => { clearTimeout(resting); asking++; close(); });
-    map.on("movestart zoomstart", () => { clearTimeout(resting); asking++; overCard = false; map.closePopup(card); });
+    map.on("movestart zoomstart", () => { clearTimeout(resting); asking++; overCard = false; hide(); });
 }
 
 // Gravel hotspots (T072): large Off-road networks a bike may use, each marked with its km and
@@ -400,6 +409,27 @@ export function rememberKeyCollapsed(collapsed) {
 
 // Until when a move is the map fitting a Loop or an Outing, not the user's.
 let fittingUntil = 0;
+let keyListener;
+
+/**
+ * Takes the map down as its page goes (T178): the module outlives the page (it's imported once), so
+ * whatever it held of this map is let go, and a map made later starts afresh, its pins drawn on it.
+ */
+export function dispose() {
+    if (keyListener) document.removeEventListener("keydown", keyListener);
+    clearTimeout(keyReport);
+    try { map?.remove(); } catch { /* its page has gone already */ }
+    map = startMarker = finishMarker = loopLayer = shownLoop = decorations = measured = outingLayer = undefined;
+    placeMarker = startsLayer = marksLayer = carParks = owner = notesLayer = routeCardPopup = keyListener = keyReport = undefined;
+    routeShown = true;
+    notes = [];
+    webOnly = [];
+    parked = [];
+    switching = false;
+    overlaysOffered = () => { };
+    keyedOverlays = {};
+    fittingUntil = 0;
+}
 const fitting = () => { fittingUntil = Date.now() + 1000; };
 
 function reportView() {
@@ -409,19 +439,21 @@ function reportView() {
 
 /** Creates the map in `element`, centred on `centre` (or London), and reports clicks to `dotNet`. */
 export function create(element, tiles, centre, dotNet) {
-    webOnly = [];
-    parked = [];
+    dispose();
     // Every map the app offers, the one chosen last (or the first) on screen, and a switcher when
     // there's a choice. Each credits its maker while it's shown. The map opens on the chosen one's grid.
-    const names = tiles.layers.map(layer => layer.name);
-    const chosen = tiles.layers.find(layer => layer.name === chosenMap()) ?? tiles.layers[0];
+    // A map on Britain's grid only if its grid library loaded (T178): else a remembered OS Explorer would
+    // leave the map blank on every visit.
+    const usable = tiles.layers.filter(layer => layer.grid !== britishGrid || L.Proj?.CRS);
+    const names = usable.map(layer => layer.name);
+    const chosen = usable.find(layer => layer.name === chosenMap()) ?? usable[0];
     // No keyboard panning: the arrow keys page through the Loops (R10.5).
     map = L.map(element, { zoomControl: false, keyboard: false, crs: crsFor(chosen.grid) }).setView(centre ? point(centre) : london, 14);
     L.control.zoom({ position: "topright" }).addTo(map);
     L.control.scale({ position: "bottomright", imperial: false }).addTo(map);
     map.on("zoomend", drawNotes);
     const layers = {};
-    for (const layer of tiles.layers)
+    for (const layer of usable)
         layers[layer.name] = new GridTileLayer(layer.url, {
             attribution: layer.attribution, maxZoom: layer.maxZoom, maxNativeZoom: layer.maxNativeZoom, subdomains: "abc",
             grid: layer.grid, minZoom: layer.minZoom ?? 0,
@@ -491,6 +523,9 @@ export function create(element, tiles, centre, dotNet) {
             if (!(webOnly.includes(layer) && onBritishGrid())) { switcher.addOverlay(layer, name); offered.push(layer); }
         switching = false;
         notOffered.hidden = !onBritishGrid() || webOnlyNames.length === 0;
+        // Overlays put back on leaving Britain's grid come back unannounced (the switcher had let them
+        // go), so the key is told afresh (T178).
+        reportKey();
     };
     overlaysOffered();
     map.on("overlayadd", e => { if (readForTheView.includes(e.layer)) e.layer.refresh(); });
@@ -507,7 +542,8 @@ export function create(element, tiles, centre, dotNet) {
     // A click that closes a popup only closes it: the popups have no close button, so clicking
     // away is how they go, and that mustn't move the start (user, 2026-11-07).
     let popupClosedAt = 0;
-    map.on("popupclose", () => { popupClosedAt = Date.now(); });
+    // Not the signed-trail card closing (T178): it's no popup the user clicked away.
+    map.on("popupclose", e => { if (e.popup !== routeCardPopup) popupClosedAt = Date.now(); });
     map.on("click", e => {
         if (Date.now() - popupClosedAt < 300) return;
         dotNet.invokeMethodAsync("MapClicked", e.latlng.lat, e.latlng.lng);
@@ -520,7 +556,7 @@ export function create(element, tiles, centre, dotNet) {
         settling = setTimeout(reportView, 250);
     });
     reportView();
-    document.addEventListener("keydown", e => {
+    keyListener = e => {
         // Undo and Redo (T078), as everywhere else: Ctrl+Z, and Ctrl+Y or Ctrl+Shift+Z.
         if ((e.ctrlKey || e.metaKey) && !e.altKey && !typingIn(e.target)) {
             const key = e.key.toLowerCase();
@@ -534,7 +570,8 @@ export function create(element, tiles, centre, dotNet) {
         if (!step || e.altKey || e.ctrlKey || e.metaKey || typingIn(e.target)) return;
         e.preventDefault();
         dotNet.invokeMethodAsync("PageKey", step);
-    });
+    };
+    document.addEventListener("keydown", keyListener);
 }
 
 // A box the arrow keys move within: a text box, the Hills slider, a list.

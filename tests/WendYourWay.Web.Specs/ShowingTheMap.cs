@@ -210,4 +210,17 @@ public class ShowingTheMap
             context.Dispose();
         }
     }
+
+    //  The map's script outlives the page (T178): leaving the planner takes its map down, so coming back
+    //  draws the start and finish on the new map, not the old one, and its keys aren't listened for twice.
+    [Test]
+    public async Task Leaving_the_page_takes_the_map_down()
+    {
+        _map.SetupVoid("create", _ => true).SetVoidResult();
+        _map.SetupVoid("dispose", _ => true).SetVoidResult();
+        _context.Services.AddSingleton(MapTiles.Of("https://tiles.example/{z}/{x}/{y}.png", "Tiles"));
+        var view = _context.Render<MapView>();
+        await view.InvokeAsync(() => view.Instance.DisposeAsync().AsTask());
+        Assert.That(_map.Invocations["dispose"], Has.Count.EqualTo(1));
+    }
 }
