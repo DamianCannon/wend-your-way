@@ -98,6 +98,11 @@ public class ShowingTheMap
         Assert.That(TilesFor(null).Overlays.Select(o => (o.Name, string.Join(" ", o.Urls))),
             Is.EqualTo(new[] { ("Signed trails", "https://tile.waymarkedtrails.org/hiking/{z}/{x}/{y}.png https://tile.waymarkedtrails.org/cycling/{z}/{x}/{y}.png https://tile.waymarkedtrails.org/mtb/{z}/{x}/{y}.png") }));
 
+    //  Pointing at a signed route names it (T176, #180): the overlay says its routes can be asked about.
+    [Test]
+    public void Signed_trails_routes_are_named_on_pointing_at_them() =>
+        Assert.That(TilesFor(null).Overlays.Single(o => o.Name == "Signed trails").NamesRoutes, Is.True);
+
     //  Open access land (T170, #174; user: "bring in open access land as a view"): where you may go off
     //  the paths in England, Natural England's CRoW access layer, read for the view as GeoJSON.
     [Test]

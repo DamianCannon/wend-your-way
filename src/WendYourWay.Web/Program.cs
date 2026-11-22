@@ -54,6 +54,7 @@ builder.Services.AddSingleton<ILastRequest, PostgisLastRequest>();
 builder.Services.AddSingleton<OffRoadTiles>();
 builder.Services.AddSingleton<ICarParks, PostgisCarParks>();
 builder.Services.AddSingleton<IAmenities, PostgisAmenities>();
+builder.Services.AddSingleton<ISignedRoutes, PostgisSignedRoutes>();
 builder.Services.AddSingleton<IGravelHotspots, PostgisGravelHotspots>();
 builder.Services.AddSingleton<ISavedRoutes, PostgisSavedRoutes>();
 builder.Services.AddSingleton<IMarks, PostgisMarks>();
@@ -135,6 +136,17 @@ app.MapGet("/amenities", async (double south, double west, double north, double 
         ? Results.BadRequest()
         : Results.Json((await amenities.InViewAsync(new MapBounds(south, west, north, east), cancellationToken))
             .Select(a => new { kind = a.Kind == AmenityKind.Cafe ? "cafe" : "toilets", a.Name, lat = a.At.Latitude, lon = a.At.Longitude })));
+
+// The signed routes under the pointer (T176), for the card shown while Signed trails is on: no
+// further than 200 m (PostgisSignedRoutes clamps it), so a crafted request can't read a county.
+app.MapGet("/signed-routes", async (double lat, double lon, double metres, ISignedRoutes routes, CancellationToken cancellationToken) =>
+    lat is < -90 or > 90 || lon is < -180 or > 180 || !double.IsFinite(metres)
+        ? Results.BadRequest()
+        : Results.Json((await routes.NearAsync(new LatLon(lat, lon), metres, cancellationToken)).Select(r => new
+        {
+            kind = r.Kind, @ref = r.Ref, name = r.Name, network = r.Network, website = r.Website,
+            waymarkedTrails = r.WaymarkedTrails, openStreetMap = r.OpenStreetMap,
+        })));
 
 // The Gravel hotspots (T072), for their overlay: all of them, a couple of hundred, read once.
 app.MapGet("/gravel-hotspots", async (IGravelHotspots hotspots, CancellationToken cancellationToken) =>

@@ -202,6 +202,62 @@ const VectorOverlayLayer = L.Layer.extend({
     }
 });
 
+// What's this route? (T176): while an overlay naming its routes is on, resting the pointer near one
+// shows a card of the routes there, from the map's own route relations, with links to look them up.
+// It stays while the pointer is on the route or the card, so a link can be clicked; clicks on the
+// map are untouched. Only where there's a pointer that hovers.
+const escapeHtml = text => String(text).replace(/[&<>"']/g, c => `&#${c.charCodeAt(0)};`);
+const routeKinds = { hiking: "Walking", foot: "Walking", walking: "Walking", running: "Running", bicycle: "Cycling", mtb: "MTB" };
+const routeLevels = { i: "international", n: "national", r: "regional", l: "local" };
+
+function routeCard(route) {
+    const level = routeLevels[(route.network ?? "")[0]];
+    const title = [route.ref, route.name].filter(Boolean).map(escapeHtml).join(" · ") || "Unnamed route";
+    const links = [[route.waymarkedTrails, "Waymarked Trails"], [route.openStreetMap, "OpenStreetMap"], [route.website, "Website"]]
+        .filter(([href]) => href)
+        .map(([href, label]) => `<a href="${escapeHtml(href)}" target="_blank" rel="noopener noreferrer">${label}</a>`)
+        .join(" · ");
+    return `<li><strong>${title}</strong><span class="kind">${routeKinds[route.kind] ?? "Route"}${level ? `, ${level}` : ""}</span><span class="links">${links}</span></li>`;
+}
+
+function nameRoutesOnPointing(isOn) {
+    if (!window.matchMedia?.("(hover: hover)").matches) return;
+    const reach = 12;   // pixels from the pointer a route is looked for
+    let resting, closing, asking = 0, overCard = false, askedAt = null;
+    const card = L.popup({ closeButton: false, autoPan: false, className: "route-card", offset: [0, -4], maxWidth: 320 });
+    const close = () => { clearTimeout(closing); closing = setTimeout(() => { if (!overCard) map.closePopup(card); }, 250); };
+    card.on("add", () => {
+        const element = card.getElement();
+        element.addEventListener("mouseenter", () => { overCard = true; clearTimeout(closing); });
+        element.addEventListener("mouseleave", () => { overCard = false; close(); });
+    });
+    const ask = at => {
+        const run = ++asking;
+        const metresAPixel = 40075016.686 * Math.cos(at.lat * Math.PI / 180) / 2 ** (map.getZoom() + 8);
+        const query = new URLSearchParams({ lat: at.lat.toFixed(6), lon: at.lng.toFixed(6), metres: (reach * metresAPixel).toFixed(1) });
+        fetch(`signed-routes?${query}`)
+            .then(response => response.ok ? response.json() : [])
+            .then(routes => {
+                if (run !== asking || !isOn()) return;
+                if (!routes.length) { close(); return; }
+                askedAt = map.latLngToContainerPoint(at);
+                card.setLatLng(at).setContent(`<ul>${routes.map(routeCard).join("")}</ul>`);
+                if (!map.hasLayer(card)) card.openOn(map);
+                clearTimeout(closing);
+            })
+            .catch(() => { /* none shown */ });
+    };
+    map.on("mousemove", e => {
+        clearTimeout(resting);
+        if (!isOn()) return;
+        // Moved off the route the card is for: it closes unless the pointer reaches the card.
+        if (map.hasLayer(card) && askedAt && askedAt.distanceTo(e.containerPoint) > reach * 2) close();
+        resting = setTimeout(() => ask(e.latlng), 350);
+    });
+    map.on("mouseout", () => { clearTimeout(resting); asking++; close(); });
+    map.on("movestart zoomstart", () => { clearTimeout(resting); asking++; overCard = false; map.closePopup(card); });
+}
+
 // Gravel hotspots (T072): large Off-road networks a bike may use, each marked with its km and
 // named on pointing; clicking one starts there, as a click on the map does, and finds its Loops
 // (user, 2026-11-06: showing it alone looked like nothing happened).
@@ -289,6 +345,9 @@ export function create(element, tiles, centre, dotNet) {
         if (rememberedOverlay(overlay.name)) group.addTo(map);
         tiledOverlays[overlay.name] = group;
     }
+    // Pointing at a signed route names it (T176), while an overlay of them is on.
+    const naming = (tiles.overlays ?? []).filter(o => o.namesRoutes).map(o => tiledOverlays[o.name]);
+    if (naming.length) nameRoutesOnPointing(() => naming.some(group => map.hasLayer(group)));
     // The areas read for the view (T170: Open access land), in a pane of their own over the map and
     // under the Loop, taking no clicks.
     const areasPane = map.createPane("areas");

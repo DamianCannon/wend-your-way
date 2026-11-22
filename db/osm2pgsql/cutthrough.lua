@@ -170,6 +170,11 @@ local route_ways = osm2pgsql.define_table({
         { column = 'way_id', type = 'int8', not_null = true },
         { column = 'role', type = 'text' },
     },
+    -- By route for Corridors (T037), and by way for the routes under the pointer (T176).
+    indexes = {
+        { column = 'relation_id', method = 'btree' },
+        { column = 'way_id', method = 'btree' },
+    },
 })
 
 function osm2pgsql.process_relation(object)

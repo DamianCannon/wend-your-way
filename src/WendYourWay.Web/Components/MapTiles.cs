@@ -14,7 +14,11 @@ public sealed record TileLayer(string Name, string Url, string Attribution, int 
 /// <param name="Urls">Leaflet's tile URL templates, drawn one over another.</param>
 /// <param name="Attribution">The credit shown while it's on.</param>
 /// <param name="MaxNativeZoom">The deepest zoom the provider draws; Leaflet enlarges beyond it.</param>
-public sealed record TileOverlay(string Name, IReadOnlyList<string> Urls, string Attribution, int MaxNativeZoom);
+public sealed record TileOverlay(string Name, IReadOnlyList<string> Urls, string Attribution, int MaxNativeZoom)
+{
+    /// <summary>Whether pointing at one of its routes names it, from the map's own route relations (T176).</summary>
+    public bool NamesRoutes { get; init; }
+}
 
 /// <summary>Areas drawn over whichever map is chosen, read for the view as GeoJSON from an ArcGIS feature service (T170).</summary>
 /// <param name="Name">What the map switcher calls it.</param>
@@ -101,7 +105,7 @@ public sealed record MapTiles(IReadOnlyList<TileLayer> Layers)
         // Signed walking, cycling and MTB routes (T166): Waymarked Trails, no key.
         var signedTrails = new TileOverlay("Signed trails",
             TrailKinds.Select(kind => $"https://tile.waymarkedtrails.org/{kind}/{{z}}/{{x}}/{{y}}.png").ToList(),
-            $"Trails © <a href=\"https://waymarkedtrails.org\">Waymarked Trails</a> (CC BY-SA), {OpenStreetMapCredit}", 18);
+            $"Trails © <a href=\"https://waymarkedtrails.org\">Waymarked Trails</a> (CC BY-SA), {OpenStreetMapCredit}", 18) { NamesRoutes = true };
         // Open access land in England (T170, #174): Natural England's CRoW access layer, under the OGL.
         var openAccess = new AreaOverlay("Open access land",
             "https://services.arcgis.com/JJzESW51TqeY9uat/arcgis/rest/services/CRoW_Act_2000_Access_Layer/FeatureServer/0/query",

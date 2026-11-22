@@ -649,3 +649,12 @@ button:disabled, button[aria-disabled="true"]:not(.preparing) { opacity: 0.5; cu
 .panel .practice-help { margin: 0 0 16px; }
 .panel .practice-help p { margin: 0 0 8px; }
 .panel .switching { font-size: 0.85rem; color: var(--ink-soft); }
+
+/* What's this route? (T176): the card shown on pointing at a signed route, in the panel's paper. */
+.route-card .leaflet-popup-content-wrapper { background: var(--paper); color: var(--ink); border-radius: var(--radius-control); }
+.route-card .leaflet-popup-tip { background: var(--paper); }
+.route-card .leaflet-popup-content { margin: 8px 12px; font-size: 0.85rem; line-height: 1.35; }
+.route-card ul { margin: 0; padding: 0; list-style: none; display: grid; gap: 8px; }
+.route-card li { display: grid; gap: 1px; }
+.route-card .kind { font-size: 0.75rem; color: var(--ink-soft); }
+.route-card .links { font-size: 0.8rem; }
