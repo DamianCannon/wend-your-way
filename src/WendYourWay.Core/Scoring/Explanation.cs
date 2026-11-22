@@ -10,6 +10,8 @@ public enum NoteKind
     Obstacle,
     Road,
     Green,
+    /// <summary>A stretch on ways for customers only (T182): check you may pass.</summary>
+    Customers,
 }
 
 /// <summary>Where on its Traversal a note is: where it starts, halfway along, or where it ends.</summary>
@@ -83,6 +85,7 @@ public static class Explanation
 
         long? onCrossing = null;
         (int First, double Metres, double MainRoadM, bool Carriageway)? road = null;
+        (int First, double Metres)? customers = null;
         for (var t = 0; t < traversals.Count; t++)
         {
             var segment = SegmentOf(t);
@@ -122,8 +125,13 @@ public static class Explanation
                 road = (first, metres + segment.LengthM, mainRoad + (segment.MainRoad ? segment.LengthM : 0), carriageway || (segment.MainRoad && segment.Carriageway));
             }
             else EndRoad(t - 1);
+
+            // Ways for customers only (T182): a stretch of them, said once halfway along, with its length.
+            if (segment.Customers) customers = (customers?.First ?? t, (customers?.Metres ?? 0) + segment.LengthM);
+            else EndCustomers(t - 1);
         }
         EndRoad(traversals.Count - 1);
+        EndCustomers(traversals.Count - 1);
 
         if (Flow.LongestStretch(slice, loop) is { Metres: > 0 } green)
         {
@@ -131,6 +139,14 @@ public static class Explanation
             notes.Add(new LoopNote(NoteKind.Green, t, NotePlace.Middle) { Along = along, LengthM = green.Metres });
         }
         return [.. notes.OrderBy(n => n.Traversal)];
+
+        void EndCustomers(int last)
+        {
+            if (customers is not { } c) return;
+            customers = null;
+            var (t, along) = Halfway(c.First, last);
+            notes.Add(new LoopNote(NoteKind.Customers, t, NotePlace.Middle) { Along = along, LengthM = c.Metres });
+        }
 
         void EndRoad(int last)
         {

@@ -41,6 +41,12 @@ public sealed record PlannedLoop(IReadOnlyList<LatLon> Line, LatLon Start, IRead
     public IReadOnlyList<MapGapCrossed> PossibleMapGaps { get; init; } = [];
 
     /// <summary>
+    /// Where it runs on ways for customers only (T182, #186), by the indexes of <see cref="Line"/>'s points:
+    /// drawn striped, as the user should check they may pass.
+    /// </summary>
+    public IReadOnlyList<LineStretch> CustomersOnly { get; init; } = [];
+
+    /// <summary>
     /// Why it goes the way it does (T157, #161): its Crossings, Obstacles, stretches of road and longest
     /// green stretch, each where it is, for the map to say when Explain? is on.
     /// </summary>

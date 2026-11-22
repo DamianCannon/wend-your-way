@@ -32,12 +32,7 @@ begin
     return 'forbidden';
   end if;
 
-  -- For customers only counts as private (T175): by the motor tag that applies, most specific first.
-  -- A byway open to all traffic keeps its motor right (T179).
-  if coalesce(p_tags ->> 'motorcycle', p_tags ->> 'motor_vehicle', p_tags ->> 'vehicle', p_tags ->> 'access', '') = 'customers'
-     and v_designation !~ '^(byway_open_to_all_traffic|public_byway)' then
-    return 'forbidden';
-  end if;
+  -- For customers only is ridden, striped and costed a little more (T182).
 
   -- A driveway is private unless its tags say otherwise, as for a Run.
   if v_highway = 'service' and p_tags ->> 'service' = 'driveway'

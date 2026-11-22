@@ -621,6 +621,8 @@ button:disabled, button[aria-disabled="true"]:not(.preparing) { opacity: 0.5; cu
 .note-marker.crossing::after { border-color: var(--ground-traffic-free); }
 .note-marker.obstacle span { border-color: var(--cafe); }
 .note-marker.obstacle::after { border-color: var(--cafe); }
+.note-marker.customers span { border-color: var(--hi-vis); border-style: dashed; }
+.note-marker.customers::after { border-color: var(--hi-vis); }
 
 /* The first-Loop tour (T158): its card at the top of the map, centred as the Loop card is, and the control each step is about standing out. */
 .tour {
@@ -715,6 +717,8 @@ button:disabled, button[aria-disabled="true"]:not(.preparing) { opacity: 0.5; cu
 .swatch.ground-off-road { background: var(--ground-off-road); opacity: 0.75; }
 .swatch.ground-traffic-free { background: var(--ground-traffic-free); opacity: 0.75; }
 .swatch.ground-connector { background: var(--ground-connector); opacity: 0.75; }
+/* For customers only (T182): the Loop's orange, striped white. */
+.swatch.customers { height: 6px; background: repeating-linear-gradient(90deg, var(--hi-vis) 0 5px, var(--white) 5px 9px); box-shadow: 0 0 0 1px var(--hi-vis); }
 .swatch.outing-gap { background: var(--map-gap); }
 .swatch.off-road-1 { background: var(--off-road-1); }
 .swatch.off-road-2 { background: var(--off-road-2); }

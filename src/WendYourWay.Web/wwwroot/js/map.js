@@ -399,6 +399,7 @@ function reportKey() {
             if (shownLoop.mapGaps?.length) shown.push("map-gaps");
             if (shownLoop.possibleMapGaps?.length) shown.push("possible-gaps");
             if (shownLoop.gaps?.length) shown.push("not-on-map");
+            if (shownLoop.customersOnly?.length) shown.push("customers");
         }
         if (marksLayer?.getLayers().length) shown.push("blocked");
         if (outingLayer) shown.push("outing");
@@ -698,6 +699,9 @@ export function showLoop(loop, fit = true) {
                     "Include this time", () => owner.invokeMethodAsync("GapIncluded", middle[0], middle[1])),
             ];
         }),
+        // Where it runs on ways for customers only (T182): striped white over its orange, to check you may
+        // pass. Taking no clicks, so a Nudge works there as anywhere.
+        ...(loop.customersOnly ?? []).map(s => L.polyline(line.slice(s.from, s.to + 1), { color: "#ffffff", weight: 4, opacity: 1, dashArray: "6 8", lineCap: "butt", interactive: false })),
         // Its stops, numbered, and its Avoids, each "!": clicked, each can be removed (T079).
         ...loop.anchors.map((anchor, i) => removable(L.marker(point(anchor), {
             icon: L.divIcon({ className: "anchor-marker", html: String(i + 1), iconSize: [24, 24], iconAnchor: [12, 12] }),

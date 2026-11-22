@@ -28,6 +28,7 @@ public sealed record NoteOnMap(LatLon At, string Kind, string Words, int FromZoo
             NoteKind.Crossing => new(note.At, "crossing", Crossing(n), PointsFrom),
             NoteKind.Obstacle => new(note.At, "obstacle", Obstacle(n.Obstacle), PointsFrom),
             NoteKind.Road => new(note.At, n.MainRoadM > 0 ? "road main-road" : "road", Road(n), StretchesFrom),
+            NoteKind.Customers => new(note.At, "customers", $"For customers only: {Length(n.LengthM)}, check you may pass", StretchesFrom),
             _ => new(note.At, "green", $"Longest green: {Km(n.LengthM)}", StretchesFrom),
         };
     }

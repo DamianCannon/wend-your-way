@@ -217,4 +217,22 @@ public static class ExplainingALoop
             Assert.That((crossings.Select(n => n.Crossing), crossings.Length), Is.EqualTo((new CrossingKind?[] { CrossingKind.Unmarked }, Breakdown.Of(slice, loop).Crossings)));
         }
     }
+
+    [TestFixture]
+    public class A_Loop_through_ways_for_customers_only
+    {
+        //  T182 (#186): S-A and A-B for customers only, one stretch, said once halfway along it (S-A's end), with its length.
+        private static readonly AsciiNetwork Map = AsciiNetwork.Parse("""
+            S-----A-----B
+            :           :
+            D-----------C
+            """);
+
+        private static readonly Loop Loop = Map.LoopThrough("SABCDS");
+        private static readonly IReadOnlyList<LoopNote> Notes = Explanation.Of(With(Map, s => s with { Customers = true }, "S-A", "A-B"), Loop);
+
+        [Test]
+        public void Then_the_stretch_is_noted_once_with_its_length() =>
+            Assert.That(Notes.Where(n => n.Kind == NoteKind.Customers).Select(n => (n.Traversal, n.LengthM)), Is.EqualTo(new[] { (0, Map.Slice.Segments[Map.Segment("S-A")].LengthM + Map.Slice.Segments[Map.Segment("A-B")].LengthM) }));
+    }
 }

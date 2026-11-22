@@ -2,7 +2,7 @@
 <!--
   Pavements fixture (T181): a 30 mph primary road with its pavement mapped 5.5 m to its north (the
   road tagged sidewalk=separate), a residential street off it, a footpath south to a 40 mph primary
-  with pavements tagged on both sides, near Richmond (the ways are invented; only the place is real).
+  with pavements tagged on both sides, and a footway for customers only (T182), near Richmond (the ways are invented; only the place is real).
   osm2pgsql needs all nodes before all ways, each sorted by ID. 0.00001° of latitude here is about 1.11 m.
 -->
 <osm version="0.6" generator="hand">
@@ -15,6 +15,7 @@
   <node id="11" lat="51.46005" lon="-0.2990"/>
   <node id="20" lat="51.4570" lon="-0.3050"/>
   <node id="21" lat="51.4570" lon="-0.2990"/>
+  <node id="30" lat="51.4630" lon="-0.2990"/>
   <way id="100">
     <nd ref="1"/><nd ref="2"/><nd ref="3"/>
     <tag k="highway" v="primary"/>
@@ -36,6 +37,15 @@
     <nd ref="10"/><nd ref="11"/>
     <tag k="highway" v="footway"/>
     <tag k="footway" v="sidewalk"/>
+  </way>
+  <way id="120">
+    <nd ref="4"/><nd ref="30"/>
+    <tag k="highway" v="footway"/>
+    <tag k="foot" v="customers"/>
+  </way>
+  <way id="121">
+    <nd ref="30"/><nd ref="3"/>
+    <tag k="highway" v="footway"/>
   </way>
   <way id="200">
     <nd ref="20"/><nd ref="5"/><nd ref="21"/>

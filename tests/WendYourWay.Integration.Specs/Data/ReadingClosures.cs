@@ -169,15 +169,12 @@ public static class ReadingClosures
         public async Task Then_a_lesser_way_beside_a_byway_may_not(string tags) =>
             Assert.That(await Access(tags, onByway: true), Is.EqualTo("forbidden"));
 
-        //  T175 (#179): a way for customers only counts as private, whichever motor tag says so.
-        [TestCase("""{"highway":"service","access":"customers"}""", "forbidden")]
-        [TestCase("""{"highway":"unclassified","motor_vehicle":"customers"}""", "forbidden")]
-        [TestCase("""{"highway":"track","designation":"unclassified_highway","motorcycle":"customers"}""", "forbidden")]
-        [TestCase("""{"highway":"service","access":"customers","motorcycle":"yes"}""", "allowed")]
-        public async Task Then_a_way_for_customers_only_is_ridden_only_where_a_motor_tag_allows_it(string tags, string access) =>
+        //  T182 (#186): a way for customers only is ridden as if it weren't, striped and costed a little more.
+        [TestCase("""{"highway":"service","access":"customers"}""", "allowed")]
+        [TestCase("""{"highway":"unclassified","motor_vehicle":"customers"}""", "allowed")]
+        public async Task Then_a_way_for_customers_only_may_be_ridden(string tags, string access) =>
             Assert.That(await Access(tags, onByway: false), Is.EqualTo(access));
 
-        //  T179 (#183): a byway open to all traffic keeps its motor right, customers or not.
         [Test]
         public async Task Then_a_byway_through_land_for_customers_may_still_be_ridden() =>
             Assert.That(await Access("""{"highway":"track","designation":"byway_open_to_all_traffic","access":"customers"}""", onByway: true), Is.EqualTo("allowed"));

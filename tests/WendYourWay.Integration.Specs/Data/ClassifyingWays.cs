@@ -95,16 +95,11 @@ public static class ClassifyingWays
         [TestCase("""{"highway":"service","service":"driveway","access":"permissive"}""", "allowed")]
         [TestCase("""{"highway":"service","service":"driveway","access":"yes"}""", "allowed")]
         [TestCase("""{"highway":"service","service":"alley"}""", "allowed", Description = "an alley isn't a drive")]
-        //  T175 (#179): a way for customers only counts as private.
-        [TestCase("""{"highway":"footway","foot":"customers"}""", "forbidden", Description = "a garden centre's path")]
-        [TestCase("""{"highway":"service","access":"customers"}""", "forbidden")]
-        [TestCase("""{"highway":"path","access":"customers","foot":"designated"}""", "allowed", Description = "a public footpath through it")]
-        [TestCase("""{"highway":"path","access":"customers","foot":"yes"}""", "allowed")]
-        //  T179 (#183): a public right of way keeps the public's right through a pub garden or a golf club.
-        [TestCase("""{"highway":"footway","designation":"public_footpath","foot":"customers"}""", "allowed", Description = "a public footpath through a pub garden")]
-        [TestCase("""{"highway":"track","designation":"public_bridleway","access":"customers"}""", "allowed")]
-        [TestCase("""{"highway":"track","designation":"byway_open_to_all_traffic","access":"customers"}""", "allowed")]
-        [TestCase("""{"highway":"footway","designation":"permissive_footpath","foot":"customers"}""", "forbidden", Description = "permission isn't a right")]
+        //  T182 (#186): a way for customers only is used, drawn striped and costed a little more: OSM's
+        //  tagging of it is too often wrong to rule it out (user, 2026-11-22; T175 had forbidden it).
+        [TestCase("""{"highway":"footway","foot":"customers"}""", "allowed", Description = "a garden centre's path, or a footpath tagged wrongly")]
+        [TestCase("""{"highway":"service","access":"customers"}""", "allowed")]
+        [TestCase("""{"highway":"footway","designation":"public_footpath","foot":"customers"}""", "allowed")]
         public async Task Then_a_Run_may_or_may_not_use_it(string tags, string access) =>
             Assert.That(await Ask("run_access", tags), Is.EqualTo(access));
     }
@@ -126,6 +121,20 @@ public static class ClassifyingWays
         [TestCase("""{"highway":"primary","sidewalk":"both"}""", "false", Description = "speed not tagged")]
         public async Task Then_it_has_a_real_pavement_or_not(string tags, string pavement) =>
             Assert.That(await Ask("has_pavement", tags), Is.EqualTo(pavement));
+    }
+
+    //  T182 (#186): a way for customers only, by any of its tags, to stripe and cost a little more.
+    [TestFixture]
+    [NonParallelizable]
+    public class Customers
+    {
+        [TestCase("""{"highway":"footway","foot":"customers"}""", "true")]
+        [TestCase("""{"highway":"track","bicycle":"customers"}""", "true")]
+        [TestCase("""{"highway":"service","access":"customers"}""", "true")]
+        [TestCase("""{"highway":"service","access":"customers","foot":"yes"}""", "false", Description = "open on foot: no one asks")]
+        [TestCase("""{"highway":"footway"}""", "false")]
+        public async Task Then_it_s_for_customers_only_or_not(string tags, string customers) =>
+            Assert.That(await Ask("has_customers", tags), Is.EqualTo(customers));
     }
 
     //  Which land open ground crosses (T039), and which it never does: private land, and since T175
@@ -180,13 +189,10 @@ public static class ClassifyingWays
         [TestCase("""{"highway":"service","service":"driveway"}""", "forbidden")]
         [TestCase("""{"highway":"service","service":"driveway","bicycle":"yes"}""", "allowed")]
         [TestCase("""{"highway":"service","service":"driveway","access":"yes"}""", "allowed")]
-        //  T175: a way for customers only counts as private.
-        [TestCase("""{"highway":"track","bicycle":"customers"}""", "forbidden")]
-        [TestCase("""{"highway":"service","access":"customers"}""", "forbidden")]
-        [TestCase("""{"highway":"track","access":"customers","bicycle":"permissive"}""", "allowed")]
-        //  T179 (#183): a bridleway or byway keeps its riders' right; a footpath never had one.
+        //  T182 (#186): a way for customers only is used, striped; a footpath is still no ride.
+        [TestCase("""{"highway":"track","bicycle":"customers"}""", "allowed")]
+        [TestCase("""{"highway":"service","access":"customers"}""", "allowed")]
         [TestCase("""{"highway":"track","designation":"public_bridleway","access":"customers"}""", "allowed")]
-        [TestCase("""{"highway":"track","designation":"restricted_byway","bicycle":"customers"}""", "allowed")]
         [TestCase("""{"highway":"footway","designation":"public_footpath","access":"customers"}""", "forbidden")]
         public async Task Then_a_Gravel_Ride_may_or_may_not_use_it(string tags, string access) =>
             Assert.That(await Ask("ride_access", tags), Is.EqualTo(access));

@@ -134,6 +134,12 @@ public sealed record Segment(
     public bool Pavement { get; init; }
 
     /// <summary>
+    /// Whether it's tagged for customers only (T182): used, as OSM's tagging of it is too often wrong to rule
+    /// it out, but costing a little more and drawn striped on a Loop.
+    /// </summary>
+    public bool Customers { get; init; }
+
+    /// <summary>
     /// Whether its road is busy (T145): a trunk road, four lanes or more, or a dual carriageway, where a
     /// crossing with no crossing point is never chosen while there's another way. On a crossing link, its road's.
     /// </summary>
@@ -225,6 +231,9 @@ public sealed record StoredSegment(
 
     /// <summary>Whether it's a Main Road with a real pavement (T181).</summary>
     public bool Pavement { get; init; }
+
+    /// <summary>Whether it's tagged for customers only (T182).</summary>
+    public bool Customers { get; init; }
 
     /// <summary>Whether its road is busy (T145).</summary>
     public bool Busy { get; init; }

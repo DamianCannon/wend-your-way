@@ -137,6 +137,12 @@ public sealed record ScoringWeights(
     /// </summary>
     public double PavedMainRoadPerMetre { get; init; } = 6.0;
 
+    /// <summary>
+    /// What a way for customers only costs more, as metres of Off-road (T182): a gate's worth, so a Loop takes
+    /// one where it's the natural way, and doesn't seek one out.
+    /// </summary>
+    public double CustomersM { get; init; } = 30;
+
     /// <inheritdoc cref="PavedMainRoadPerMetre"/>
     public double PavedMainRoadCostPerMetre => Math.Min(MainRoadCostPerMetre, Math.Max(PavedMainRoadPerMetre, ConnectorPerMetre));
 

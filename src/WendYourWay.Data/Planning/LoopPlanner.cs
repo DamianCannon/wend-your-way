@@ -707,7 +707,16 @@ public sealed class LoopPlanner(INetworkSlices slices, MapGeometry geometry, Sco
             MapGaps = [.. gaps.Select((t, i) => new MapGapCrossed(ends[2 * i], ends[(2 * i) + 1], slice.Segments[t.Segment].LengthM))],
             PossibleMapGaps = [.. possible.Select((p, i) => new MapGapCrossed(possibleEnds[2 * i], possibleEnds[(2 * i) + 1], p.LengthM))],
             Notes = NotesOn(slice, loop, line, of),
+            CustomersOnly = CustomersOnlyOn(slice, loop, of),
         };
+    }
+
+    // Where it runs on ways for customers only (T182), along its line as the map draws it.
+    private static IReadOnlyList<LineStretch> CustomersOnlyOn(NetworkSlice slice, Loop loop, IReadOnlyList<int> of)
+    {
+        var onTheMap = OnTheMap(slice, loop);
+        HashSet<int> customers = [.. loop.Traversals.Select((t, i) => (t, i)).Where(x => slice.Segments[x.t.Segment].Customers && onTheMap[x.i] is not null).Select(x => onTheMap[x.i]!.Value)];
+        return customers.Count == 0 ? [] : LineStretch.Where(of, customers);
     }
 
     // Why a Loop goes the way it does (T157), on its line as the map draws it.

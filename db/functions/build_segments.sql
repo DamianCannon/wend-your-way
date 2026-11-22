@@ -365,7 +365,7 @@ begin
   -- follow the ground: a slice then reads neighbouring pages, not pages from all over Great
   -- Britain (T018).
   insert into network_next.segments (osm_way_id, from_node_id, to_node_id, geom, ground, access_run, access_ride, greenery, waterside, corridor, main_road,
-                                     crossing, crossing_main_road, crossing_share, bridge_over_water, access_trail, closed_months, busy, carriageway, from_bearing, to_bearing, pavement)
+                                     crossing, crossing_main_road, crossing_share, bridge_over_water, access_trail, closed_months, busy, carriageway, from_bearing, to_bearing, pavement, customers)
   select f.way_id, f.from_node_id, f.to_node_id, f.geom, k.ground, run_access(w.tags), ride_access(w.tags), coalesce(g.greenery, 0), coalesce(g.waterside, 0),
          -- A Corridor is green ground: a road on a walking route is just a road.
          case when k.ground <> 'connector' then c.corridor end,
@@ -396,7 +396,9 @@ begin
          degrees(ST_Azimuth(ST_EndPoint(f.geom), ST_LineInterpolatePoint(f.geom, greatest(0, 1 - 5 / nullif(ST_Length(f.geom), 0))))),
          -- A Main Road with a real pavement (T181): pavements beside one get it in group_same_ground().
          coalesce(w.tags->>'highway' in ('trunk', 'trunk_link', 'primary', 'primary_link', 'secondary', 'secondary_link'), false)
-           and has_pavement(w.tags)
+           and has_pavement(w.tags),
+         -- For customers only (T182): used, striped and costed a little more.
+         has_customers(w.tags)
     from tmp_first f
     join osm.ways w on w.way_id = f.way_id
    cross join lateral (select classify_ground(w.tags) as ground) k

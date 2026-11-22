@@ -115,6 +115,11 @@ public class ReadingTheMapKey
         Assert.That(Entries(), Is.EqualTo(new[] { "OS paths", "Car parks · zoom in to see" }));
     }
 
+    //  T182 (#186): where the Loop runs on ways for customers only, striped.
+    [Test]
+    public void Ways_for_customers_only_are_keyed() =>
+        Assert.That(KeyFor("customers"), Is.EqualTo(new[] { "For customers only: check you may pass" }));
+
     [Test]
     public void Blocked_stretches_are_keyed() =>
         Assert.That(KeyFor("blocked"), Is.EqualTo(new[] { "Never used (blocked)" }));

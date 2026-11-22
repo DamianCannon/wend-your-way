@@ -169,6 +169,12 @@ public class SayingTheNotes
     public void A_Main_Road_s_carriageway_says_on_it() =>
         Assert.That(Said(A(NoteKind.Road) with { LengthM = 1250, MainRoadM = 1250 }).Words, Is.EqualTo("1.25 km of road, all on a Main Road"));
 
+    //  T182 (#186): a stretch on ways for customers only, said zoomed out like a stretch of road.
+    [Test]
+    public void A_stretch_for_customers_only_says_check_you_may_pass() =>
+        Assert.That((Said(A(NoteKind.Customers) with { LengthM = 320 }).Words, Said(A(NoteKind.Customers)).FromZoom),
+            Is.EqualTo(("For customers only: 320 m, check you may pass", NoteOnMap.StretchesFrom)));
+
     [Test]
     public void The_longest_green_stretch_as_the_card_says_it() =>
         Assert.That(Said(A(NoteKind.Green) with { LengthM = 3204 }).Words, Is.EqualTo("Longest green: 3.20 km"));

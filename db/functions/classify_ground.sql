@@ -89,3 +89,15 @@ as $$
           or p_tags ->> 'sidewalk:both' in ('yes', 'separate')
           or (p_tags ->> 'sidewalk:left' in ('yes', 'separate') and p_tags ->> 'sidewalk:right' in ('yes', 'separate'))), false)
 $$;
+
+-- A way for customers only (T182): a garden centre's path, a golf club's, a pub garden's, or a public
+-- path tagged wrongly. Used, but drawn striped and costed a little more. Open on foot (foot=yes and
+-- the like) isn't asked about.
+create or replace function has_customers(p_tags jsonb)
+returns boolean
+language sql
+immutable
+as $$
+  select coalesce(p_tags ->> 'foot', p_tags ->> 'access', '') = 'customers'
+      or coalesce(p_tags ->> 'bicycle', '') = 'customers'
+$$;
