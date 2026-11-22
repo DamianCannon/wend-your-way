@@ -113,6 +113,21 @@ public class ReadingTheMapKey
         Assert.That(Entries(), Is.EqualTo(new[] { "The Loop", "Car parks" }));
     }
 
+    //  Single entries first, then the headed groups below them, for a visual break (user: "move [them] up to the top
+    //  as they are not containers so the containers should sit below"); Cafés and toilets a group like the others.
+    [Test]
+    public void Single_entries_come_before_the_groups()
+    {
+        OnScreen(false, "Cafés and toilets", "Signed trails", "Off-road networks", "Car parks", "Gravel hotspots", "OS paths", "Open access land");
+        Assert.That(_view.FindAll(".map-key h3, .map-key li").Select(e => e.TextContent.Trim()), Is.EqualTo(new[]
+        {
+            "Open access land", "OS paths", "Gravel hotspots", "Car parks",
+            "Off-road networks", "Under 10 km", "10–30 km", "30–100 km", "100–300 km", "Over 300 km",
+            "Signed trails", "International", "National", "Regional", "Local",
+            "Cafés and toilets", "Café", "Toilets",
+        }));
+    }
+
     //  Overlays with more than one entry are headed by their name.
     [Test]
     public void An_overlay_with_several_entries_is_headed_by_its_name()
