@@ -9,6 +9,13 @@ namespace WendYourWay.Web.Components;
 /// <param name="MaxNativeZoom">The deepest zoom the provider draws; Leaflet enlarges beyond it.</param>
 public sealed record TileLayer(string Name, string Url, string Attribution, int MaxNativeZoom);
 
+/// <summary>A see-through map drawn over whichever is chosen, turned on and off (T166).</summary>
+/// <param name="Name">What the map switcher calls it.</param>
+/// <param name="Urls">Leaflet's tile URL templates, drawn one over another.</param>
+/// <param name="Attribution">The credit shown while it's on.</param>
+/// <param name="MaxNativeZoom">The deepest zoom the provider draws; Leaflet enlarges beyond it.</param>
+public sealed record TileOverlay(string Name, IReadOnlyList<string> Urls, string Attribution, int MaxNativeZoom);
+
 /// <summary>
 /// The maps the user can choose between under the Loop, first shown first: different ones suit
 /// different Activities (user, 2026-10-19). Only pictures: routing, scoring and GPX never use them.
@@ -17,6 +24,12 @@ public sealed record TileLayer(string Name, string Url, string Attribution, int 
 /// </summary>
 public sealed record MapTiles(IReadOnlyList<TileLayer> Layers)
 {
+    /// <summary>The overlays offered from tiles elsewhere, off until turned on (T166).</summary>
+    public IReadOnlyList<TileOverlay> Overlays { get; init; } = [];
+
+    // Waymarked Trails' maps: signed walking, cycling and mountain-bike routes.
+    private static readonly string[] TrailKinds = ["hiking", "cycling", "mtb"];
+
     // A Loop is OpenStreetMap data whatever the map under it, so every map credits it (R8.3).
     private const string OpenStreetMapCredit =
         "Data © <a href=\"https://www.openstreetmap.org/copyright\">OpenStreetMap contributors</a>";
@@ -58,6 +71,14 @@ public sealed record MapTiles(IReadOnlyList<TileLayer> Layers)
         layers.Add(new TileLayer("OpenTopoMap",
             "https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png",
             $"Map style © <a href=\"https://opentopomap.org\">OpenTopoMap</a> (CC-BY-SA), SRTM, {OpenStreetMapCredit}", 17));
-        return new MapTiles(layers);
+        // Aerial photos (T166, #170): whether a path is a real track, gravel or overgrown. Esri, no key.
+        layers.Add(new TileLayer("Aerial photos",
+            "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+            $"Photos © <a href=\"https://www.esri.com\">Esri</a>, Maxar, Earthstar Geographics and the GIS User Community. Loops: {OpenStreetMapCredit}", 19));
+        // Signed walking, cycling and MTB routes (T166): Waymarked Trails, no key.
+        var signedTrails = new TileOverlay("Signed trails",
+            TrailKinds.Select(kind => $"https://tile.waymarkedtrails.org/{kind}/{{z}}/{{x}}/{{y}}.png").ToList(),
+            $"Trails © <a href=\"https://waymarkedtrails.org\">Waymarked Trails</a> (CC BY-SA), {OpenStreetMapCredit}", 18);
+        return new MapTiles(layers) { Overlays = [signedTrails] };
     }
 }

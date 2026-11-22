@@ -185,7 +185,16 @@ export function create(element, tiles, centre, dotNet) {
     // The car parks around here (T070): on, as they always were, until turned off.
     carParks = L.layerGroup();
     if (rememberedOverlay(carParksName, true)) carParks.addTo(map);
-    L.control.layers(names.length > 1 ? layers : {}, { [offRoadName]: offRoad, [amenitiesName]: amenities, [hotspotsName]: hotspots, [carParksName]: carParks }, { position: "topright" }).addTo(map);
+    // The overlays from tiles elsewhere (T166: Signed trails), off until turned on, remembered.
+    const tiledOverlays = {};
+    for (const overlay of tiles.overlays ?? []) {
+        const group = L.layerGroup(overlay.urls.map(url => L.tileLayer(url, {
+            attribution: overlay.attribution, maxZoom: 20, maxNativeZoom: overlay.maxNativeZoom, zIndex: 2
+        })));
+        if (rememberedOverlay(overlay.name)) group.addTo(map);
+        tiledOverlays[overlay.name] = group;
+    }
+    L.control.layers(names.length > 1 ? layers : {}, { [offRoadName]: offRoad, ...tiledOverlays, [amenitiesName]: amenities, [hotspotsName]: hotspots, [carParksName]: carParks }, { position: "topright" }).addTo(map);
     map.on("overlayadd", e => { if (e.layer === amenities) amenities.refresh(); });
     map.on("moveend", () => amenities.refresh());
     amenities.refresh();
