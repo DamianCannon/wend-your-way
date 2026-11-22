@@ -379,14 +379,21 @@ function turnOn(layer) {
 // changes), and whether it was left collapsed, remembered in this browser.
 const keyCollapsedKey = "cutthrough.key.collapsed";
 let keyedOverlays = {};
+// The zoom each overlay is drawn from, if not every zoom (T180): on but further out, the key says to zoom in.
+// Car parks: StartsAround.CarParkZoom in the app.
+let keyedFrom = {};
 let keyReport;
 function reportKey() {
     if (!owner || keyReport) return;
     keyReport = setTimeout(() => {
         keyReport = undefined;
         const shown = [];
+        if (startMarker && map.hasLayer(startMarker)) shown.push("start");
+        if (finishMarker && map.hasLayer(finishMarker)) shown.push("finish");
         if (shownLoop && loopLayer && map.hasLayer(loopLayer)) {
             shown.push("loop");
+            if (decorations && map.hasLayer(decorations)) shown.push("km");
+            if (notesLayer?.getLayers().length) shown.push("notes");
             if (shownLoop.anchors?.length) shown.push("stops");
             if (shownLoop.avoids?.length) shown.push("avoids");
             if (shownLoop.mapGaps?.length) shown.push("map-gaps");
@@ -396,11 +403,15 @@ function reportKey() {
         if (marksLayer?.getLayers().length) shown.push("blocked");
         if (outingLayer) shown.push("outing");
         for (const [name, layer] of Object.entries(keyedOverlays)) if (map.hasLayer(layer)) shown.push(name);
+        const waiting = shown.filter(name => map.getZoom() < (keyedFrom[name] ?? 0));
         let collapsed = false;
         try { collapsed = localStorage.getItem(keyCollapsedKey) === "true"; } catch { /* open */ }
-        owner.invokeMethodAsync("KeyShown", shown, collapsed);
+        owner.invokeMethodAsync("KeyShown", shown, waiting, collapsed);
     });
 }
+
+// How much of the map's right the key covers (T180), so a Loop or an Outing is fitted clear of it.
+const keyWidth = () => Math.max(document.querySelector(".map-key")?.offsetWidth ?? 0, 30);
 
 /** Keeps whether the key is collapsed (T177), for next time. */
 export function rememberKeyCollapsed(collapsed) {
@@ -428,6 +439,7 @@ export function dispose() {
     switching = false;
     overlaysOffered = () => { };
     keyedOverlays = {};
+    keyedFrom = {};
     fittingUntil = 0;
 }
 const fitting = () => { fittingUntil = Date.now() + 1000; };
@@ -537,7 +549,9 @@ export function create(element, tiles, centre, dotNet) {
     map.attributionControl.setPrefix('<a href="https://leafletjs.com">Leaflet</a>');
     owner = dotNet;
     keyedOverlays = overlays;
-    map.on("overlayadd overlayremove", reportKey);
+    keyedFrom = { [amenitiesName]: amenitiesFromZoom, [carParksName]: 11 };
+    for (const overlay of [...(tiles.areas ?? []), ...(tiles.vectors ?? [])]) keyedFrom[overlay.name] = overlay.fromZoom;
+    map.on("overlayadd overlayremove zoomend", reportKey);
     reportKey();
     // A click that closes a popup only closes it: the popups have no close button, so clicking
     // away is how they go, and that mustn't move the start (user, 2026-11-07).
@@ -589,6 +603,7 @@ export function showStart(start) {
     const icon = L.divIcon({ className: "start-marker", iconSize: [22, 22], iconAnchor: [11, 11] });
     if (startMarker) startMarker.setLatLng(point(start));
     else startMarker = pin(point(start), icon, "Drag to move the start", "StartDragged");
+    reportKey();
 }
 
 /** Marks where a Point-to-point ends (T091): dragged, the finish moves there. */
@@ -597,12 +612,14 @@ export function showFinish(finish) {
     if (finishMarker) finishMarker.setLatLng(point(finish));
     else finishMarker = removable(pin(point(finish), icon, "Drag to move the finish, or click to remove it", "FinishDragged"),
         "Remove the finish", () => owner.invokeMethodAsync("FinishRemoved"));
+    reportKey();
 }
 
 /** Takes the finish off the map: a Loop again. */
 export function clearFinish() {
     finishMarker?.remove();
     finishMarker = undefined;
+    reportKey();
 }
 
 // A pin dragged to move what it marks; a click on it does nothing, never the map's beneath.
@@ -700,7 +717,7 @@ export function showLoop(loop, fit = true) {
     // Fitted only when it's a different route; a change to the one shown stays where the map is (T087).
     if (fit) {
         fitting();
-        map.fitBounds(L.latLngBounds(line), { paddingTopLeft: [visibleLeft() + 40, 40], paddingBottomRight: [60, 110] });
+        map.fitBounds(L.latLngBounds(line), { paddingTopLeft: [visibleLeft() + 40, 40], paddingBottomRight: [keyWidth() + 30, 110] });
     }
     decorate();
     reportKey();
@@ -835,7 +852,8 @@ function removable(marker, label, remove) {
 export function showMarks(marks) {
     if (marksLayer) marksLayer.remove();
     marksLayer = L.layerGroup(marks.map(mark => {
-        const line = L.polyline(mark.line.map(point), { color: danger, weight: 6, dashArray: "6 6", opacity: 0.9, bubblingMouseEvents: false, className: "blocked" });
+        // Dotted (T180): a gap in the map is dashed red too.
+        const line = L.polyline(mark.line.map(point), { color: danger, weight: 6, dashArray: "1 9", lineCap: "round", opacity: 0.9, bubblingMouseEvents: false, className: "blocked" });
         line.on("click", e => {
             L.DomEvent.stop(e);
             const content = L.DomUtil.create("div", "route-popup");
@@ -902,6 +920,7 @@ export function showNotes(shown) {
 function drawNotes() {
     if (notesLayer) notesLayer.remove();
     notesLayer = undefined;
+    reportKey();
     if (!map || notes.length === 0 || !routeShown) return;
     const escape = text => text.replace(/[&<>"']/g, c => `&#${c.charCodeAt(0)};`);
     const zoom = map.getZoom();
@@ -909,6 +928,7 @@ function drawNotes() {
         icon: L.divIcon({ className: `note-marker ${n.kind}`, html: `<span>${escape(n.words)}</span>`, iconSize: null }),
         keyboard: false, interactive: false, zIndexOffset: 400
     }))).addTo(map);
+    reportKey();
 }
 
 export function clearLoop() {
@@ -1012,7 +1032,7 @@ export function showOuting(outing) {
         }),
     ]).addTo(map);
     fitting();
-    map.fitBounds(L.latLngBounds(track), { paddingTopLeft: [visibleLeft() + 40, 40], paddingBottomRight: [40, 40] });
+    map.fitBounds(L.latLngBounds(track), { paddingTopLeft: [visibleLeft() + 40, 40], paddingBottomRight: [keyWidth() + 30, 40] });
     reportKey();
 }
 

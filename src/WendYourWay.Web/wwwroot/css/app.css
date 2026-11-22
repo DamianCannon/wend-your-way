@@ -25,8 +25,8 @@
     /* Open access land (T170): a straw wash, as paper maps colour it, edged a shade darker. */
     --access-land: #e3b505;
     --access-land-edge: #b08900;
-    /* OS paths (T173): violet, unlike any ground, the Loop or the access land, to pick out what OSM lacks. */
-    --os-paths: #7b3fbf;
+    /* OS paths (T173): magenta, unlike any ground, the Loop, the access land or Signed trails' local violet (T180), to pick out what OSM lacks. */
+    --os-paths: #d81b8c;
     /* Off-road networks (T022b), by the network's size: under 10 km, 10–30, 30–100, 100–300, over 300. */
     --off-road-1: rgb(110 120 115 / 0.45);
     --off-road-2: #9ccc65;
@@ -690,12 +690,28 @@ button:disabled, button[aria-disabled="true"]:not(.preparing) { opacity: 0.5; cu
 .map-key li { display: flex; align-items: center; gap: 8px; padding: 2px 0; }
 .swatch { flex: none; display: inline-block; width: 22px; height: 5px; border-radius: 2px; }
 .swatch.loop { height: 6px; background: var(--hi-vis); box-shadow: 0 0 0 2px var(--white); }
-.swatch.stop { width: 12px; height: 12px; border-radius: 50%; background: var(--forest); border: 2px solid var(--white); box-sizing: border-box; }
-.swatch.avoid { width: 12px; height: 12px; border-radius: 50%; background: var(--hi-vis); border: 2px solid var(--white); box-sizing: border-box; }
+/* Glyphed swatches (T180): the marks' own letters, so a stop, an Avoid and the start are told apart. */
+.swatch.start, .swatch.stop, .swatch.avoid, .swatch.car-park, .swatch.cafe, .swatch.toilets, .swatch.hotspot {
+    display: inline-flex; align-items: center; justify-content: center; width: 16px; height: 16px; box-sizing: border-box;
+    border: 2px solid var(--white); border-radius: 50%; color: var(--white); font: 700 9px/1 system-ui, sans-serif; box-shadow: var(--shadow-pin);
+}
+.swatch.start { background: var(--hi-vis); border-width: 3px; }
+.swatch.finish { width: 14px; height: 14px; border-radius: 3px; border: 2px solid var(--white); box-sizing: border-box;
+    background: repeating-conic-gradient(var(--ink) 0 25%, var(--white) 0 50%) 0 0 / 6px 6px; }
+.swatch.stop { background: var(--forest); }
+.swatch.stop::after { content: "1"; }
+.swatch.avoid { background: var(--hi-vis); }
+.swatch.avoid::after { content: "!"; font-weight: 800; }
+.swatch.km { width: auto; height: auto; padding: 0 4px; border: 1.5px solid var(--hi-vis); border-radius: 8px; background: var(--white); color: var(--ink); font: 700 9px/1.4 system-ui, sans-serif; }
+.swatch.km::after { content: "km"; }
+.swatch.note { width: auto; height: auto; padding: 0 4px; border-radius: 4px; background: var(--paper-light); color: var(--ink); border: 1px solid var(--ink-soft); font: 600 9px/1.4 system-ui, sans-serif; }
+.swatch.note::after { content: "Aa"; }
+.swatch.outing-track { height: 2px; background: var(--ink); }
 .swatch.map-gap { background: repeating-linear-gradient(90deg, var(--map-gap) 0 6px, var(--white) 6px 11px); }
 .swatch.possible-gap { height: 3px; background: var(--map-gap); }
 .swatch.not-on-map { background: repeating-linear-gradient(90deg, var(--ink) 0 2px, var(--white) 2px 7px); }
-.swatch.blocked { background: repeating-linear-gradient(90deg, var(--danger) 0 6px, transparent 6px 12px); }
+/* Blocked: dotted, so it isn't taken for a gap in the map's dashes (T180). */
+.swatch.blocked { height: 6px; background: radial-gradient(circle, var(--danger) 0 2.5px, transparent 3px) 0 0 / 8px 6px; }
 .swatch.ground-off-road { background: var(--ground-off-road); opacity: 0.75; }
 .swatch.ground-traffic-free { background: var(--ground-traffic-free); opacity: 0.75; }
 .swatch.ground-connector { background: var(--ground-connector); opacity: 0.75; }
@@ -711,7 +727,14 @@ button:disabled, button[aria-disabled="true"]:not(.preparing) { opacity: 0.5; cu
 .swatch.trail-local { height: 3px; background: var(--trail-local); }
 .swatch.access-land { height: 12px; background: color-mix(in srgb, var(--access-land) 22%, transparent); border: 1px solid var(--access-land-edge); box-sizing: border-box; }
 .swatch.os-paths { height: 4px; background: var(--os-paths); }
-.swatch.hotspot { width: 16px; height: 10px; border-radius: 6px; background: var(--forest); }
-.swatch.car-park { width: 12px; height: 12px; border-radius: 3px; background: var(--forest); }
-.swatch.cafe { width: 12px; height: 12px; border-radius: 50%; background: var(--cafe); }
-.swatch.toilets { width: 12px; height: 12px; border-radius: 50%; background: var(--toilets); }
+.swatch.hotspot { width: auto; padding: 0 4px; border-radius: 8px; background: var(--forest); }
+.swatch.hotspot::after { content: "km"; }
+.swatch.car-park { border-radius: 4px; background: var(--forest); }
+.swatch.car-park::after { content: "P"; }
+.swatch.cafe { background: var(--cafe); }
+/* The map's own cup (cafesAndToilets in map.js), as a mask. */
+.swatch.cafe::after { content: ""; width: 10px; height: 10px; background: var(--white); -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 9h11v5a5 5 0 0 1-5 5h-1a5 5 0 0 1-5-5zM16 10h1.5a2.5 2.5 0 0 1 0 5H16M8 3v3M11 3v3'/%3E%3C/svg%3E") center / contain no-repeat; mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 9h11v5a5 5 0 0 1-5 5h-1a5 5 0 0 1-5-5zM16 10h1.5a2.5 2.5 0 0 1 0 5H16M8 3v3M11 3v3'/%3E%3C/svg%3E") center / contain no-repeat; }
+.swatch.toilets { background: var(--toilets); }
+.swatch.toilets::after { content: "WC"; font-size: 6px; }
+.map-key .waiting { color: var(--ink-soft); font-style: italic; }
+.map-key ul.waiting .swatch { opacity: 0.45; }

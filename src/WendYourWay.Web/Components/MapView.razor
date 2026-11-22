@@ -5,7 +5,7 @@
 @inject MapTiles Tiles
 
 <div class="map" @ref="_element"></div>
-<MapKey Shown="_keyShown" Collapsed="_keyCollapsed" OnCollapsedChanged="CollapseKeyAsync" />
+<MapKey Shown="_keyShown" Waiting="_keyWaiting" Collapsed="_keyCollapsed" OnCollapsedChanged="CollapseKeyAsync" />
 
 @code {
     /// <summary>Where the map opens; central London when not given.</summary>
@@ -185,16 +185,17 @@
     public Task AvoidClicked(double latitude, double longitude) => OnAvoid.InvokeAsync(new AvoidNudge(new LatLon(latitude, longitude)));
 
     private IReadOnlyCollection<string> _keyShown = [];
+    private IReadOnlyCollection<string> _keyWaiting = [];
     private bool _keyCollapsed;
 
     /// <summary>
-    /// What's on screen, for the key (T177): the overlays on, by name, and the route's parts; and whether
-    /// the key was left collapsed.
+    /// What's on screen, for the key (T177): the overlays on, by name, and the route's parts; those of them on
+    /// but not drawn at this zoom (T180); and whether the key was left collapsed.
     /// </summary>
     [JSInvokable]
-    public void KeyShown(string[] shown, bool collapsed)
+    public void KeyShown(string[] shown, string[] waiting, bool collapsed)
     {
-        (_keyShown, _keyCollapsed) = (shown, collapsed);
+        (_keyShown, _keyWaiting, _keyCollapsed) = (shown, waiting, collapsed);
         StateHasChanged();
     }
 

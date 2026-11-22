@@ -36,7 +36,11 @@ public class ReadingTheMapKey
 
     // The map says what's on screen, and whether the key was last left collapsed.
     private void OnScreen(bool collapsed, params string[] shown) =>
-        _view.InvokeAsync(() => _view.Instance.KeyShown(shown, collapsed));
+        _view.InvokeAsync(() => _view.Instance.KeyShown(shown, [], collapsed));
+
+    // On, but not drawn at this zoom (T180): cafés from 13, say.
+    private void OnButNotDrawn(string[] shown, string[] waiting) =>
+        _view.InvokeAsync(() => _view.Instance.KeyShown(shown, waiting, false));
 
     private string[] Entries() => _view.FindAll(".map-key li").Select(li => li.TextContent.Trim()).ToArray();
 
@@ -81,6 +85,36 @@ public class ReadingTheMapKey
             "Not on the map",
         }));
 
+    //  T180 (#184): the start and finish pins, the km markers and chevrons, and Explain's notes too.
+    [Test]
+    public void The_start_finish_km_markers_and_notes_are_keyed() =>
+        Assert.That(new[] { "start", "finish", "km", "notes" }.SelectMany(KeyFor), Is.EqualTo(new[]
+        {
+            "Start", "Finish", "Every km, and which way round", "Why it goes this way (Explain?)",
+        }));
+
+    //  An overlay switched on but not drawn at this zoom says so, rather than keying what isn't there (T180).
+    [Test]
+    public void An_overlay_not_drawn_at_this_zoom_says_zoom_in()
+    {
+        OnButNotDrawn(["OS paths"], ["OS paths"]);
+        Assert.That(Entries(), Is.EqualTo(new[] { "OS paths · zoom in to see" }));
+    }
+
+    [Test]
+    public void A_group_not_drawn_at_this_zoom_says_it_in_its_heading()
+    {
+        OnButNotDrawn(["Cafés and toilets"], ["Cafés and toilets"]);
+        Assert.That(_view.Find(".map-key h3").TextContent, Is.EqualTo("Cafés and toilets · zoom in to see"));
+    }
+
+    [Test]
+    public void An_overlay_drawn_says_nothing_more()
+    {
+        OnButNotDrawn(["OS paths", "Car parks"], ["Car parks"]);
+        Assert.That(Entries(), Is.EqualTo(new[] { "OS paths", "Car parks · zoom in to see" }));
+    }
+
     [Test]
     public void Blocked_stretches_are_keyed() =>
         Assert.That(KeyFor("blocked"), Is.EqualTo(new[] { "Never used (blocked)" }));
@@ -88,7 +122,7 @@ public class ReadingTheMapKey
     //  An Outing's Segments are coloured by ground.
     [Test]
     public void An_Outing_is_keyed_by_its_ground() =>
-        Assert.That(KeyFor("outing"), Is.EqualTo(new[] { "Off-road", "Traffic-free", "Connector", "Gap" }));
+        Assert.That(KeyFor("outing"), Is.EqualTo(new[] { "Off-road", "Traffic-free", "Connector", "Your track", "Gap" }));
 
     //  Off-road networks' five shades, by the network's size (T022b).
     [Test]
