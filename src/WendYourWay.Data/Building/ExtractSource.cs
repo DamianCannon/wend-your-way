@@ -10,8 +10,9 @@ public sealed class ExtractNotDownloadedException(string message, Exception? inn
 /// Where extracts come from (T127): Geofabrik's, or one like it. An extract at `…/{name}-latest.osm.pbf`
 /// has its MD5 at the same address with `.md5` after it, and the date its data runs to in
 /// `…/{name}-updates/state.txt`. Since November 2026 (#155, T151) Geofabrik keeps each in a folder of
-/// its own, `…/{name}/{name}-latest.osm.pbf`, sending that on to the day's file with the MD5 beside
-/// that only, and the date in `…/{name}/updates/state.txt`.
+/// its own, `…/{name}/{name}-latest.osm.pbf`, sending that on to the day's file with its MD5 beside
+/// it (and, since, the `-latest` one's too, used when the day's isn't found), and the date in
+/// `…/{name}/updates/state.txt`.
 /// </summary>
 public sealed class ExtractSource
 {
@@ -79,9 +80,20 @@ public sealed class ExtractSource
             using var response = await _http.GetAsync(_extract, HttpCompletionOption.ResponseHeadersRead, stalled.Token);
             response.EnsureSuccessStatusCode();
             stalled.CancelAfter(quiet);
-            // The MD5 beside the file that came: the day's, where it was sent on to one (T151).
+            // The MD5 beside the file that came: the day's, where it was sent on to one (T151). Where
+            // that isn't found (#155, 22 November 2026), the extract's own `-latest` one: a day's turn
+            // between the two shows as a mismatch, and nothing is put in place.
             var came = response.RequestMessage?.RequestUri ?? _extract;
-            var md5 = (await _http.GetStringAsync(new Uri(came + ".md5"), stalled.Token)).Split(' ', '\t', '\n')[0].Trim().ToLowerInvariant();
+            string sums;
+            try
+            {
+                sums = await _http.GetStringAsync(new Uri(came + ".md5"), stalled.Token);
+            }
+            catch (HttpRequestException) when (came != _extract)
+            {
+                sums = await _http.GetStringAsync(new Uri(_extract + ".md5"), stalled.Token);
+            }
+            var md5 = sums.Split(' ', '\t', '\n')[0].Trim().ToLowerInvariant();
             stalled.CancelAfter(quiet);
             using var hash = IncrementalHash.CreateHash(HashAlgorithmName.MD5);
             long written = 0;

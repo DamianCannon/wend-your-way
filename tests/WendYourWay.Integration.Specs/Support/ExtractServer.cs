@@ -62,6 +62,12 @@ internal sealed class ExtractServer : IDisposable
     /// </summary>
     public bool Folders { get; init; }
 
+    /// <summary>
+    /// Set, the day's `.md5` isn't found, as Geofabrik's wasn't on 22 November 2026 (#155), though the
+    /// folder's `-latest` one, which it now keeps too, is.
+    /// </summary>
+    public bool DaysMd5Missing { get; init; }
+
     // Where the extract's bytes are, and its date.
     private string Served => Folders ? $"/{Name}/{Name}-261118.osm" : $"/{Name}-latest.osm";
 
@@ -102,7 +108,8 @@ internal sealed class ExtractServer : IDisposable
                 _ when Folders && path == $"/{Name}/{Name}-latest.osm" => (307, Array.Empty<byte>(), (int?)null),
                 _ when path == State => (200, Encoding.ASCII.GetBytes(
                     $"#Wed Nov 11 21:30:00 UTC 2026\nsequenceNumber=4960\ntimestamp={DataAt.UtcDateTime.ToString("yyyy-MM-dd'T'HH\\\\:mm\\\\:ss'Z'", CultureInfo.InvariantCulture)}\n"), (int?)null),
-                _ when path == Served + ".md5" => (200, Encoding.ASCII.GetBytes($"{WrongMd5 ?? Convert.ToHexStringLower(MD5.HashData(Extract))}  {Name}-latest.osm\n"), null),
+                _ when DaysMd5Missing && path == Served + ".md5" => (404, Encoding.ASCII.GetBytes("Not found"), (int?)null),
+                _ when (path == Served + ".md5" || (Folders && path == $"/{Name}/{Name}-latest.osm.md5")) => (200, Encoding.ASCII.GetBytes($"{WrongMd5 ?? Convert.ToHexStringLower(MD5.HashData(Extract))}  {Name}-latest.osm\n"), null),
                 _ when path == "/index-v1-nogeom.json" && Index is not null => (200, Encoding.UTF8.GetBytes(Index), null),
                 _ when path == Served => (200, CutOffAfter is { } cut ? Extract[..cut] : Extract, Extract.Length),
                 _ => (404, Encoding.ASCII.GetBytes("Not found"), null),

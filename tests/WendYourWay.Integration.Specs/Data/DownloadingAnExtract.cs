@@ -53,6 +53,27 @@ public class DownloadingAnExtract
         }
     }
 
+    //  Found on 22 November 2026 (#155): the day's MD5 not found, so CI's build failed. The folder's
+    //  `-latest` MD5, which Geofabrik now keeps too, checks it instead.
+    [Test]
+    public async Task Where_the_days_MD5_isnt_found_the_folders_latest_one_checks_it()
+    {
+        var extract = new byte[10_000];
+        Random.Shared.NextBytes(extract);
+        using var server = new ExtractServer("foldered", extract, DateTimeOffset.UnixEpoch) { Folders = true, DaysMd5Missing = true };
+        var folder = Directory.CreateTempSubdirectory("cutthrough-folders-").FullName;
+        try
+        {
+            using var http = new HttpClient();
+            var kept = await new ExtractSource(http, server.ExtractUrl).DownloadAsync(folder);
+            Assert.That(await File.ReadAllBytesAsync(kept), Is.EqualTo(extract));
+        }
+        finally
+        {
+            Directory.Delete(folder, recursive: true);
+        }
+    }
+
     [Test]
     public async Task From_Geofabriks_folders_the_date_is_read_from_the_folders_updates()
     {
