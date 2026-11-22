@@ -95,8 +95,27 @@ public static class ClassifyingWays
         [TestCase("""{"highway":"service","service":"driveway","access":"permissive"}""", "allowed")]
         [TestCase("""{"highway":"service","service":"driveway","access":"yes"}""", "allowed")]
         [TestCase("""{"highway":"service","service":"alley"}""", "allowed", Description = "an alley isn't a drive")]
+        //  T175 (#179): a way for customers only counts as private.
+        [TestCase("""{"highway":"footway","foot":"customers"}""", "forbidden", Description = "a garden centre's path")]
+        [TestCase("""{"highway":"service","access":"customers"}""", "forbidden")]
+        [TestCase("""{"highway":"path","access":"customers","foot":"designated"}""", "allowed", Description = "a public footpath through it")]
+        [TestCase("""{"highway":"path","access":"customers","foot":"yes"}""", "allowed")]
         public async Task Then_a_Run_may_or_may_not_use_it(string tags, string access) =>
             Assert.That(await Ask("run_access", tags), Is.EqualTo(access));
+    }
+
+    //  Which land open ground crosses (T039), and which it never does: private land, and since T175
+    //  (#179) land for customers only, such as a pub garden or a golf club's.
+    [TestFixture]
+    [NonParallelizable]
+    public class Open_ground_land
+    {
+        [TestCase("""{"leisure":"park"}""", "open")]
+        [TestCase("""{"leisure":"park","access":"private"}""", "blocked")]
+        [TestCase("""{"leisure":"park","access":"customers"}""", "blocked")]
+        [TestCase("""{"landuse":"grass","access":"customers"}""", "blocked")]
+        public async Task Then_the_land_is_crossed_or_not(string tags, string kind) =>
+            Assert.That(await Ask("open_ground_class", tags), Is.EqualTo(kind));
     }
 
     //  T068: where a Gravel Ride may go (SPEC R9.1, CONTEXT: Access, Unconfirmed Access). Not on
@@ -136,6 +155,10 @@ public static class ClassifyingWays
         [TestCase("""{"highway":"service","service":"driveway"}""", "forbidden")]
         [TestCase("""{"highway":"service","service":"driveway","bicycle":"yes"}""", "allowed")]
         [TestCase("""{"highway":"service","service":"driveway","access":"yes"}""", "allowed")]
+        //  T175: a way for customers only counts as private.
+        [TestCase("""{"highway":"track","bicycle":"customers"}""", "forbidden")]
+        [TestCase("""{"highway":"service","access":"customers"}""", "forbidden")]
+        [TestCase("""{"highway":"track","access":"customers","bicycle":"permissive"}""", "allowed")]
         public async Task Then_a_Gravel_Ride_may_or_may_not_use_it(string tags, string access) =>
             Assert.That(await Ask("ride_access", tags), Is.EqualTo(access));
     }

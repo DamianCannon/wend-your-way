@@ -169,6 +169,14 @@ public static class ReadingClosures
         public async Task Then_a_lesser_way_beside_a_byway_may_not(string tags) =>
             Assert.That(await Access(tags, onByway: true), Is.EqualTo("forbidden"));
 
+        //  T175 (#179): a way for customers only counts as private, whichever motor tag says so.
+        [TestCase("""{"highway":"service","access":"customers"}""", "forbidden")]
+        [TestCase("""{"highway":"unclassified","motor_vehicle":"customers"}""", "forbidden")]
+        [TestCase("""{"highway":"track","designation":"unclassified_highway","motorcycle":"customers"}""", "forbidden")]
+        [TestCase("""{"highway":"service","access":"customers","motorcycle":"yes"}""", "allowed")]
+        public async Task Then_a_way_for_customers_only_is_ridden_only_where_a_motor_tag_allows_it(string tags, string access) =>
+            Assert.That(await Access(tags, onByway: false), Is.EqualTo(access));
+
         [TestCase("""{"highway":"trunk"}""", Description = "AC4: an A-road joins byways")]
         [TestCase("""{"highway":"primary"}""")]
         [TestCase("""{"highway":"secondary"}""")]

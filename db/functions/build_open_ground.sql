@@ -13,7 +13,7 @@ language sql
 immutable
 as $$
   select case
-    when coalesce(p_tags->>'access', '') in ('private', 'no')
+    when coalesce(p_tags->>'access', '') in ('private', 'no', 'customers')
       or coalesce(p_tags->>'sport', '') in ('tennis', 'basketball', 'multi', 'bowls', 'skateboard')
       or coalesce(p_tags->>'natural', '') in ('water', 'wetland', 'wood', 'scrub')
       or coalesce(p_tags->>'waterway', '') = 'riverbank'

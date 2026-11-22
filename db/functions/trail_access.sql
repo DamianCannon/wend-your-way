@@ -32,6 +32,11 @@ begin
     return 'forbidden';
   end if;
 
+  -- For customers only counts as private (T175): by the motor tag that applies, most specific first.
+  if coalesce(p_tags ->> 'motorcycle', p_tags ->> 'motor_vehicle', p_tags ->> 'vehicle', p_tags ->> 'access', '') = 'customers' then
+    return 'forbidden';
+  end if;
+
   -- A driveway is private unless its tags say otherwise, as for a Run.
   if v_highway = 'service' and p_tags ->> 'service' = 'driveway'
      and coalesce(p_tags ->> 'motorcycle', p_tags ->> 'motor_vehicle', p_tags ->> 'access', '') not in ('yes', 'permissive', 'designated') then

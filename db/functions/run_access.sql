@@ -22,13 +22,14 @@ begin
 
   -- An explicit foot tag decides; otherwise a general prohibition applies to walkers too.
   -- access=destination and similar restrict vehicles, not feet.
-  if v_foot in ('no', 'private') then
+  -- For customers only counts as private (T175): passing through isn't being one.
+  if v_foot in ('no', 'private', 'customers') then
     return 'forbidden';
   end if;
   if v_foot in ('yes', 'designated', 'permissive') then
     return 'allowed';
   end if;
-  if v_access in ('no', 'private') then
+  if v_access in ('no', 'private', 'customers') then
     return 'forbidden';
   end if;
   -- A driveway is private unless its tags say otherwise (T081: a Loop went "down someone's drive

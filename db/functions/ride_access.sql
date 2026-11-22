@@ -23,14 +23,15 @@ begin
   end if;
 
   -- A bicycle tag decides: "dismount" means walking it, which is a Push, not riding.
-  if v_bicycle in ('no', 'private', 'dismount') then
+  -- For customers only counts as private (T175).
+  if v_bicycle in ('no', 'private', 'dismount', 'customers') then
     return 'forbidden';
   end if;
   if v_bicycle in ('yes', 'designated', 'permissive') then
     return 'allowed';
   end if;
 
-  if v_access in ('no', 'private') then
+  if v_access in ('no', 'private', 'customers') then
     return 'forbidden';
   end if;
 
