@@ -25,6 +25,8 @@
     /* Open access land (T170): a straw wash, as paper maps colour it, edged a shade darker. */
     --access-land: #e3b505;
     --access-land-edge: #b08900;
+    /* OS paths (T173): violet, unlike any ground, the Loop or the access land, to pick out what OSM lacks. */
+    --os-paths: #7b3fbf;
     --held: #5a4a1e;
     --star-off: #b8ad98;
     --star-on-dark: #ffb380;

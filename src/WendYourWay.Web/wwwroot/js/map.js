@@ -150,6 +150,58 @@ function areaOverlay(overlay) {
     return layer;
 }
 
+// Lines from one layer of vector tiles (T173: OS paths), drawn bold by MapLibre inside Leaflet: off
+// until turned on, and remembered; MapLibre is loaded the first time one is. Under the Loop, taking no
+// clicks. Vector tiles are 512 pixels (MapLibre takes no others), so MapLibre's zoom is one less than
+// Leaflet's: none are asked for before the overlay's zoom.
+const maplibre = [
+    ["https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css", "sha384-MinO0mNliZ3vwppuPOUnGa+iq619pfMhLVUXfC4LHwSCvF9H+6P/KO4Q7qBOYV5V"],
+    ["https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js", "sha384-SYKAG6cglRMN0RVvhNeBY0r3FYKNOJtznwA0v7B5Vp9tr31xAHsZC0DqkQ/pZDmj"],
+    ["https://unpkg.com/@maplibre/maplibre-gl-leaflet@0.0.22/leaflet-maplibre-gl.js", "sha384-4CB9Vtol9LN6lGgBCvmPLbUEZwilrqIvPieSRurgAXAB7FVJaLS9n8WyAIA5wjQ+"]
+];
+let maplibreLoading;
+const loadMaplibre = () => maplibreLoading ??= maplibre.reduce((ready, [url, integrity]) => ready.then(() => new Promise((resolve, reject) => {
+    const css = url.endsWith(".css");
+    const element = document.createElement(css ? "link" : "script");
+    if (css) { element.rel = "stylesheet"; element.href = url; } else element.src = url;
+    element.integrity = integrity;
+    element.crossOrigin = "anonymous";
+    element.onload = resolve;
+    element.onerror = reject;
+    document.head.appendChild(element);
+})), Promise.resolve()).catch(e => { maplibreLoading = undefined; throw e; });
+
+const osPaths = colour("--os-paths", "#7b3fbf");
+
+const VectorOverlayLayer = L.Layer.extend({
+    initialize(overlay) {
+        this._overlay = overlay;
+        L.setOptions(this, { attribution: overlay.attribution });
+    },
+    onAdd(on) {
+        const o = this._overlay;
+        loadMaplibre().then(() => {
+            if (!on.hasLayer(this) || this._drawn) return;
+            const lines = { type: "line", source: "tiles", "source-layer": o.sourceLayer, layout: { "line-cap": "round", "line-join": "round" } };
+            this._drawn = L.maplibreGL({
+                pane: "areas", interactive: false, attributionControl: false,
+                style: {
+                    version: 8,
+                    sources: { tiles: { type: "vector", tiles: [o.tiles], minzoom: o.fromZoom - 1, maxzoom: o.maxNativeZoom } },
+                    layers: [
+                        { ...lines, id: "edge", paint: { "line-color": "#ffffff", "line-width": 6, "line-opacity": 0.85 } },
+                        { ...lines, id: "lines", paint: { "line-color": osPaths, "line-width": 3.5 } }
+                    ]
+                }
+            }).addTo(on);
+        }).catch(() => { /* not drawn: tried again when next turned on */ });
+    },
+    onRemove(on) {
+        if (this._drawn) on.removeLayer(this._drawn);
+        this._drawn = null;
+    }
+});
+
 // Gravel hotspots (T072): large Off-road networks a bike may use, each marked with its km and
 // named on pointing; clicking one starts there, as a click on the map does, and finds its Loops
 // (user, 2026-11-06: showing it alone looked like nothing happened).
@@ -249,8 +301,15 @@ export function create(element, tiles, centre, dotNet) {
         if (rememberedOverlay(overlay.name)) layer.addTo(map);
         areaOverlays[overlay.name] = layer;
     }
+    // The lines from vector tiles (T173: OS paths), in the same pane.
+    const vectorOverlays = {};
+    for (const overlay of tiles.vectors ?? []) {
+        const layer = new VectorOverlayLayer(overlay);
+        if (rememberedOverlay(overlay.name)) layer.addTo(map);
+        vectorOverlays[overlay.name] = layer;
+    }
     const readForTheView = [amenities, ...Object.values(areaOverlays)];
-    L.control.layers(names.length > 1 ? layers : {}, { [offRoadName]: offRoad, ...tiledOverlays, ...areaOverlays, [amenitiesName]: amenities, [hotspotsName]: hotspots, [carParksName]: carParks }, { position: "topright" }).addTo(map);
+    L.control.layers(names.length > 1 ? layers : {}, { [offRoadName]: offRoad, ...tiledOverlays, ...areaOverlays, ...vectorOverlays, [amenitiesName]: amenities, [hotspotsName]: hotspots, [carParksName]: carParks }, { position: "topright" }).addTo(map);
     map.on("overlayadd", e => { if (readForTheView.includes(e.layer)) e.layer.refresh(); });
     map.on("moveend", () => readForTheView.forEach(layer => layer.refresh()));
     readForTheView.forEach(layer => layer.refresh());

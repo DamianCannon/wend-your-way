@@ -118,6 +118,7 @@ the laptop from sleeping meanwhile. Its words go to `data/logs/launcher-<date>.l
 - **Off-road networks** layer (map switcher) shows where the good green ground is.
 - **Aerial photos** and **Signed trails** (map switcher): whether a path is a real track, and the waymarked walking, cycling and MTB routes.
 - **Open access land** (map switcher): England's CRoW access land from Natural England, where you may go off the paths.
+- **OS paths** (map switcher, on OS Data Hub's Premium plan, with the OS NGD API – Tiles added to the key's project): Ordnance Survey's paths in violet from zoom 17, to spot those OpenStreetMap lacks.
 
 **Planned:** a Heading control, Novelty (unfamiliar ground) and Gravel Rides, car park details (fees, closing times), point-to-point routes, Trail Rides.
 
@@ -151,7 +152,7 @@ The planner, `dotnet run -c Release --project src/WendYourWay.Web`, reads these 
 | `Home:Latitude`, `Home:Longitude` | Where Requests start until you click elsewhere. Kept in user-secrets; never committed. |
 | `Thunderforest:ApiKey` | The Thunderforest map key (free hobby key from thunderforest.com): the Outdoors and OpenCycleMap pictures. |
 | `OsMaps:ApiKey` | Optional: an Ordnance Survey key (OS Data Hub's free plan) adds OS Outdoor to the map switcher. |
-| `OsMaps:Premium` | Optional: `true` on OS Data Hub's Premium plan draws OS Outdoor to zoom 20, within its free monthly allowance; otherwise it stops at 16, the free plan's limit, and is enlarged. |
+| `OsMaps:Premium` | Optional: `true` on OS Data Hub's Premium plan draws OS Outdoor to zoom 20, within its free monthly allowance; otherwise it stops at 16, the free plan's limit, and is enlarged. It also offers OS paths, from OS NGD's vector tiles (add the OS NGD API – Tiles to the key's project). |
 | `Terrain:Folder` | OS Terrain 50 tiles for elevation profiles, if not in `data/terrain50/asc`. |
 | `ConnectionStrings:WendYourWay` | Another database: London's, say, `Host=localhost;Port=5432;Database=cutthrough_london;Username=cutthrough`. |
 | `Backup:Folder` | Where the app's own daily backup goes, if not "Wend Your Way Backups" in your OneDrive. |

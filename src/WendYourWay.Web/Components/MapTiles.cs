@@ -23,6 +23,15 @@ public sealed record TileOverlay(string Name, IReadOnlyList<string> Urls, string
 /// <param name="FromZoom">The zoom they're drawn from: further out, a view holds too many.</param>
 public sealed record AreaOverlay(string Name, string Query, string Attribution, int FromZoom);
 
+/// <summary>Lines drawn bold over whichever map is chosen, from one layer of vector tiles (T173).</summary>
+/// <param name="Name">What the map switcher calls it.</param>
+/// <param name="Tiles">The vector tiles' URL template.</param>
+/// <param name="SourceLayer">The tiles' layer drawn.</param>
+/// <param name="Attribution">The credit shown while it's on.</param>
+/// <param name="FromZoom">The map's zoom it's drawn from: 512-pixel tiles fill the map one zoom deeper than their own.</param>
+/// <param name="MaxNativeZoom">The deepest of the tiles' own zooms; drawn larger beyond it.</param>
+public sealed record VectorOverlay(string Name, string Tiles, string SourceLayer, string Attribution, int FromZoom, int MaxNativeZoom);
+
 /// <summary>
 /// The maps the user can choose between under the Loop, first shown first: different ones suit
 /// different Activities (user, 2026-10-19). Only pictures: routing, scoring and GPX never use them.
@@ -36,6 +45,9 @@ public sealed record MapTiles(IReadOnlyList<TileLayer> Layers)
 
     /// <summary>The areas offered, off until turned on (T170).</summary>
     public IReadOnlyList<AreaOverlay> Areas { get; init; } = [];
+
+    /// <summary>The overlays offered from vector tiles, off until turned on (T173).</summary>
+    public IReadOnlyList<VectorOverlay> Vectors { get; init; } = [];
 
     // Waymarked Trails' maps: signed walking, cycling and mountain-bike routes.
     private static readonly string[] TrailKinds = ["hiking", "cycling", "mtb"];
@@ -52,6 +64,7 @@ public sealed record MapTiles(IReadOnlyList<TileLayer> Layers)
         ArgumentNullException.ThrowIfNull(configuration);
         var thunderforest = configuration["Thunderforest:ApiKey"];
         var os = configuration["OsMaps:ApiKey"];
+        var premium = string.Equals(configuration["OsMaps:Premium"], "true", StringComparison.OrdinalIgnoreCase);
         var layers = new List<TileLayer>();
 
         if (!string.IsNullOrEmpty(thunderforest))
@@ -64,7 +77,7 @@ public sealed record MapTiles(IReadOnlyList<TileLayer> Layers)
         {
             // Ordnance Survey's free (OpenData) plan serves tiles to zoom 16; on its Premium plan (OsMaps:Premium),
             // 17–20 too, within the free monthly allowance (T167). Leaflet enlarges past the deepest.
-            var deepest = string.Equals(configuration["OsMaps:Premium"], "true", StringComparison.OrdinalIgnoreCase) ? 20 : 16;
+            var deepest = premium ? 20 : 16;
             layers.Add(new TileLayer("OS Outdoor",
                 $"https://api.os.uk/maps/raster/v1/zxy/Outdoor_3857/{{z}}/{{x}}/{{y}}.png?key={Uri.EscapeDataString(os)}",
                 $"Contains OS data © Crown copyright and database rights {DateTime.UtcNow.Year}. Loops: {OpenStreetMapCredit}", deepest));
@@ -93,6 +106,16 @@ public sealed record MapTiles(IReadOnlyList<TileLayer> Layers)
         var openAccess = new AreaOverlay("Open access land",
             "https://services.arcgis.com/JJzESW51TqeY9uat/arcgis/rest/services/CRoW_Act_2000_Access_Layer/FeatureServer/0/query",
             "Open access land © Natural England (Open Government Licence). Contains Ordnance Survey data © Crown copyright and database right", 11);
-        return new MapTiles(layers) { Overlays = [signedTrails], Areas = [openAccess] };
+        // OS's paths (T173, #177), to see those OpenStreetMap lacks: OS NGD's vector tiles carry them
+        // only from their zoom 16, which is premium, so on the Premium plan alone; at 512 pixels a
+        // tile fills the map at a zoom one deeper than its own, so they show from the map's zoom 17.
+        var vectors = new List<VectorOverlay>();
+        if (!string.IsNullOrEmpty(os) && premium)
+        {
+            vectors.Add(new VectorOverlay("OS paths",
+                $"https://api.os.uk/maps/vector/ngd/ota/v1/collections/ngd-base/tiles/3857/{{z}}/{{y}}/{{x}}?key={Uri.EscapeDataString(os)}",
+                "trn_ntwk_pathlink", $"Paths: contains OS data © Crown copyright and database rights {DateTime.UtcNow.Year}", 17, 19));
+        }
+        return new MapTiles(layers) { Overlays = [signedTrails], Areas = [openAccess], Vectors = vectors };
     }
 }

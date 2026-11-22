@@ -113,6 +113,29 @@ public class ShowingTheMap
         Assert.That(TilesFor(null).Areas.Single().Attribution,
             Does.Contain("© Natural England").And.Contain("Open Government Licence").And.Contain("Crown copyright"));
 
+    //  OS's paths drawn bold over any map (T173, #177), to see the paths OS has and OpenStreetMap
+    //  lacks (about 27% of OS's path length in the T172 trial). OS's vector tiles carry them only from
+    //  their zoom 16, which is premium (offered on the Premium plan), and, at 512 pixels, fill the map from its zoom 17.
+    [Test]
+    public void On_OS_s_Premium_plan_OS_paths_can_be_drawn_from_zoom_17()
+    {
+        var paths = TilesFor(null, "os-key", "true").Vectors.Single();
+        Assert.That((paths.Name, paths.Tiles, paths.SourceLayer, paths.FromZoom, paths.MaxNativeZoom), Is.EqualTo(("OS paths",
+            "https://api.os.uk/maps/vector/ngd/ota/v1/collections/ngd-base/tiles/3857/{z}/{y}/{x}?key=os-key", "trn_ntwk_pathlink", 17, 19)));
+    }
+
+    [Test]
+    public void On_OS_s_free_plan_OS_paths_are_left_out() =>
+        Assert.That(TilesFor(null, "os-key").Vectors, Is.Empty);
+
+    [Test]
+    public void Without_an_OS_key_OS_paths_are_left_out() =>
+        Assert.That(TilesFor(null, null, "true").Vectors, Is.Empty);
+
+    [Test]
+    public void OS_paths_credit_Ordnance_Survey() =>
+        Assert.That(TilesFor(null, "os-key", "true").Vectors.Single().Attribution, Does.Contain("Crown copyright"));
+
     [Test]
     public void Every_overlay_credits_its_maker_and_OpenStreetMap() =>
         Assert.That(TilesFor(null).Overlays.Select(o => o.Attribution.Contains("OpenStreetMap contributors", StringComparison.Ordinal) && o.Attribution.Contains(Makers[o.Name], StringComparison.Ordinal)),

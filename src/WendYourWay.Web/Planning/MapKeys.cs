@@ -20,8 +20,8 @@ public sealed record KnownKey(string Name, string Label, string Need, string Giv
             "Thunderforest Outdoors and OpenCycleMap, the first maps in the switcher.",
             new Uri("https://www.thunderforest.com/pricing/"), "a free hobby key from Thunderforest"),
         new("OsMaps:ApiKey", "Ordnance Survey", "Optional",
-            "OS Outdoor, Ordnance Survey's own map.",
-            new Uri("https://osdatahub.os.uk/"), "a key from a project with the OS Maps API on the OS Data Hub (its free plan will do)",
+            "OS Outdoor, Ordnance Survey's own map; on its Premium plan, OS paths over any map too.",
+            new Uri("https://osdatahub.os.uk/"), "a key from a project with the OS Maps API on the OS Data Hub (its free plan will do; for OS paths, add the OS NGD API – Tiles to it)",
             Plan: "OsMaps:Premium"),
     ];
 }
