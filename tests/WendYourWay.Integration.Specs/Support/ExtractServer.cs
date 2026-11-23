@@ -74,7 +74,10 @@ internal sealed class ExtractServer : IDisposable
     /// </summary>
     public int? DaysFileAnswers { get; init; }
 
-    private bool DaysFileMissing => DaysFileAnswers is not null;
+    /// <summary>Set, the day's file the extract is sent on to never answers, as Geofabrik's didn't on 23 November 2026 (T184).</summary>
+    public bool DaysFileHangs { get; init; }
+
+    private bool DaysFileMissing => DaysFileAnswers is not null || DaysFileHangs;
 
     // Where the extract is sent on to: the day's file.
     private string Sent => $"/{Name}/{Name}-261118.osm";
@@ -111,6 +114,11 @@ internal sealed class ExtractServer : IDisposable
             while (!string.IsNullOrEmpty(await reader.ReadLineAsync())) { }
             var path = request?.Split(' ')[1] ?? "/";
             lock (Asked) Asked.Add(path);
+            if (DaysFileHangs && path == Sent)
+            {
+                try { await Task.Delay(Timeout.Infinite, _stop.Token); } catch (OperationCanceledException) { }
+                return;
+            }
 
             // MD5 because Geofabrik publishes it: a check the file arrived whole, not of who sent it.
 #pragma warning disable CA5351

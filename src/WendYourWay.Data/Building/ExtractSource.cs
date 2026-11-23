@@ -64,29 +64,58 @@ public sealed class ExtractSource
 
     // The extract, or where it's sent on to a day's file (`…-261122.osm.pbf`) that isn't found or ready, the day
     // before's, or the one before that: Geofabrik's day's file is sometimes listed before it's there.
+    /// <summary>How long the day's file is waited on to start before the day before's is taken (T184).</summary>
+    public TimeSpan DaysFileWait { get; init; } = TimeSpan.FromSeconds(60);
+
     private async Task<HttpResponseMessage> DaysOrEarlierAsync(CancellationToken cancellationToken)
     {
         TookEarlier = null;
-        var response = await _http.GetAsync(_extract, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
-        // Not found, or not ready (503: Geofabrik part-way through making it, 23 November 2026).
-        if (response.StatusCode is not (System.Net.HttpStatusCode.NotFound or System.Net.HttpStatusCode.ServiceUnavailable)
-            || response.RequestMessage?.RequestUri is not { } sent) return response;
-        var dated = System.Text.RegularExpressions.Regex.Match(sent.AbsoluteUri, @"-(\d{6})(\.[^/]+)$", System.Text.RegularExpressions.RegexOptions.None, TimeSpan.FromSeconds(1));
-        if (!dated.Success || !DateOnly.TryParseExact(dated.Groups[1].Value, "yyMMdd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var day)) return response;
+        HttpResponseMessage? response = null;
+        using (var waiting = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken))
+        {
+            waiting.CancelAfter(DaysFileWait);
+            try
+            {
+                response = await _http.GetAsync(_extract, HttpCompletionOption.ResponseHeadersRead, waiting.Token);
+            }
+            catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+            {
+                // No answer at all (23 November 2026): named below from the date its data runs to.
+            }
+        }
+        string before, after;
+        DateOnly day;
+        if (response is null)
+        {
+            // Geofabrik's day's file is in the extract's folder, named for the day its data runs to.
+            day = DateOnly.FromDateTime((await DataAtAsync(cancellationToken)).UtcDateTime);
+            var named = FileName.LastIndexOf("-latest", StringComparison.Ordinal);
+            var name = FileName[..named];
+            var folder = _extract.Segments.Length >= 2 && _extract.Segments[^2].TrimEnd('/') == name ? new Uri(_extract, ".") : new Uri(_extract, name + "/");
+            (before, after) = (new Uri(folder, name).AbsoluteUri, FileName[(named + "-latest".Length)..]);
+        }
+        else
+        {
+            // Not found, or not ready (503: Geofabrik part-way through making it, 23 November 2026).
+            if (response.StatusCode is not (System.Net.HttpStatusCode.NotFound or System.Net.HttpStatusCode.ServiceUnavailable)
+                || response.RequestMessage?.RequestUri is not { } sent) return response;
+            var dated = System.Text.RegularExpressions.Regex.Match(sent.AbsoluteUri, @"-(\d{6})(\.[^/]+)$", System.Text.RegularExpressions.RegexOptions.None, TimeSpan.FromSeconds(1));
+            if (!dated.Success || !DateOnly.TryParseExact(dated.Groups[1].Value, "yyMMdd", CultureInfo.InvariantCulture, DateTimeStyles.None, out day)) return response;
+            (before, after) = (sent.AbsoluteUri[..dated.Index], dated.Groups[2].Value);
+        }
         for (var back = 1; back <= DaysBack; back++)
         {
             var earlier = day.AddDays(-back);
-            var address = new Uri(sent.AbsoluteUri[..dated.Index] + "-" + earlier.ToString("yyMMdd", CultureInfo.InvariantCulture) + dated.Groups[2].Value);
-            var tried = await _http.GetAsync(address, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
+            var tried = await _http.GetAsync(new Uri(before + "-" + earlier.ToString("yyMMdd", CultureInfo.InvariantCulture) + after), HttpCompletionOption.ResponseHeadersRead, cancellationToken);
             if (tried.IsSuccessStatusCode)
             {
-                response.Dispose();
+                response?.Dispose();
                 TookEarlier = earlier;
                 return tried;
             }
             tried.Dispose();
         }
-        return response;
+        return response ?? throw new OperationCanceledException("Neither the day's file nor the days before's answered.");
     }
 
     /// <summary>When the source's data runs to: `state.txt`'s timestamp, its colons escaped (`21\:22\:47`).</summary>

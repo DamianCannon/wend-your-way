@@ -97,6 +97,28 @@ public class DownloadingAnExtract
         }
     }
 
+    //  On the next try that day (T184), the day's file didn't answer at all. After a while the day before's is
+    //  taken, named from the date the folder's updates give.
+    [Test]
+    public async Task Where_the_days_file_never_answers_the_day_befores_is_taken_after_a_while()
+    {
+        var extract = new byte[10_000];
+        Random.Shared.NextBytes(extract);
+        using var server = new ExtractServer("foldered", extract, new DateTimeOffset(2026, 11, 18, 21, 21, 2, TimeSpan.Zero)) { Folders = true, DaysFileHangs = true };
+        var folder = Directory.CreateTempSubdirectory("cutthrough-folders-").FullName;
+        try
+        {
+            using var http = new HttpClient();
+            var source = new ExtractSource(http, server.ExtractUrl) { DaysFileWait = TimeSpan.FromSeconds(1) };
+            var kept = await source.DownloadAsync(folder);
+            Assert.That((await File.ReadAllBytesAsync(kept), source.TookEarlier), Is.EqualTo((extract, (DateOnly?)new DateOnly(2026, 11, 17))));
+        }
+        finally
+        {
+            Directory.Delete(folder, recursive: true);
+        }
+    }
+
     [Test]
     public void An_earlier_days_file_taken_is_said_by_its_day() =>
         Assert.That(ExtractSource.Earlier(new DateOnly(2026, 11, 21)), Is.EqualTo("  Geofabrik's newest file isn't there yet: using 21 Nov's instead"));
