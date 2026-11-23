@@ -34,6 +34,7 @@ const danger = colour("--danger", "#c92a2a");
 // An Outing's covered Segments by ground (STORY-030). Hi-vis orange stays the Loop's own.
 const groundColours = { off_road: colour("--ground-off-road", "#2e7d32"), traffic_free: colour("--ground-traffic-free", "#1f78c8"), connector: colour("--ground-connector", "#8a8f8c") };
 const gapColour = colour("--map-gap", "#d62828");
+const possibleGapColour = colour("--possible-gap", "#5b6760");
 // A route's gaps (T088): a break in the orange, dotted in ink, so they never read as more route.
 const routeGapInk = colour("--ink", "#1f2a24");
 
@@ -670,6 +671,9 @@ export function showLoop(loop, fit = true) {
             return [
                 L.polyline(gapLine, { color: "#ffffff", weight: 10, opacity: 1, interactive: false }),
                 L.polyline(gapLine, { color: gapColour, weight: 6, opacity: 1, dashArray: "6 5", interactive: false }),
+                // A dot at its middle (T183), seen at any length: a 2 m gap is shorter than a dash.
+                L.circleMarker([(gap.from.latitude + gap.to.latitude) / 2, (gap.from.longitude + gap.to.longitude) / 2],
+                    { radius: 6, color: "#ffffff", weight: 2.5, fillColor: gapColour, fillOpacity: 1, interactive: false }),
             ];
         }),
         // Wider than it looks, to grab (T076): dragged, a Via; clicked, Avoid this time. Never the map's
@@ -692,8 +696,9 @@ export function showLoop(loop, fit = true) {
             const gapLine = [point(gap.from), point(gap.to)];
             const middle = [(gap.from.latitude + gap.to.latitude) / 2, (gap.from.longitude + gap.to.longitude) / 2];
             return [
+                // Grey and dashed (T183): an option near the Loop, not part of it, unlike its red.
                 L.polyline(gapLine, { color: "#ffffff", weight: 7, opacity: 0.9, interactive: false }),
-                L.polyline(gapLine, { color: gapColour, weight: 3, opacity: 1, interactive: false }),
+                L.polyline(gapLine, { color: possibleGapColour, weight: 3, opacity: 1, dashArray: "4 4", interactive: false }),
                 removable(L.polyline(gapLine, { color: "#000", weight: 18, opacity: 0, bubblingMouseEvents: false })
                     .bindTooltip(`A possible gap in the map · ${Math.round(gap.lengthM)} m`, { sticky: true }),
                     "Include this time", () => owner.invokeMethodAsync("GapIncluded", middle[0], middle[1])),
