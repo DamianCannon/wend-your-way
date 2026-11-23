@@ -68,8 +68,17 @@ internal sealed class ExtractServer : IDisposable
     /// </summary>
     public bool DaysMd5Missing { get; init; }
 
+    /// <summary>
+    /// Set, the day's file the extract is sent on to isn't found, as Geofabrik's wasn't on 23 November 2026
+    /// (T184), though the day before's, with its MD5, is.
+    /// </summary>
+    public bool DaysFileMissing { get; init; }
+
+    // Where the extract is sent on to: the day's file.
+    private string Sent => $"/{Name}/{Name}-261118.osm";
+
     // Where the extract's bytes are, and its date.
-    private string Served => Folders ? $"/{Name}/{Name}-261118.osm" : $"/{Name}-latest.osm";
+    private string Served => !Folders ? $"/{Name}-latest.osm" : DaysFileMissing ? $"/{Name}/{Name}-261117.osm" : Sent;
 
     private string State => Folders ? $"/{Name}/updates/state.txt" : $"/{Name}-updates/state.txt";
 
@@ -116,7 +125,7 @@ internal sealed class ExtractServer : IDisposable
             };
 #pragma warning restore CA5351
             var head = $"HTTP/1.1 {status} {status switch { 200 => "OK", 307 => "Temporary Redirect", _ => "Not Found" }}\r\n"
-                + (status == 307 ? $"Location: {Served}\r\n" : "")
+                + (status == 307 ? $"Location: {Sent}\r\n" : "")
                 + $"Content-Length: {promised ?? body.Length}\r\nConnection: close\r\n\r\n";
             try
             {

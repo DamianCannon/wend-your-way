@@ -38,8 +38,10 @@ public static class RegionCommand
             return null;
         }
         await output.WriteLineAsync($"Downloading {found.Name}'s map from Geofabrik");
-        var extract = await new ExtractSource(Http, found.Extract).DownloadAsync(dataFolder, cancellationToken: cancellationToken);
+        var source = new ExtractSource(Http, found.Extract);
+        var extract = await source.DownloadAsync(dataFolder, cancellationToken: cancellationToken);
         await output.WriteLineAsync($"  {new FileInfo(extract).Length:N0} bytes, matching its MD5");
+        if (source.TookEarlier is { } day) await output.WriteLineAsync(ExtractSource.Earlier(day));
         return extract;
     }
 }

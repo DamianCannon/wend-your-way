@@ -127,6 +127,7 @@ public static class UpdateCommand
         await steps.AtAsync("downloading", cancellationToken);
         var kept = await extract.DownloadAsync(dataFolder, cancellationToken: cancellationToken);
         await output.WriteLineAsync($"  downloaded {new FileInfo(kept).Length:N0} bytes, matching its MD5");
+        if (extract.TookEarlier is { } day) await output.WriteLineAsync(ExtractSource.Earlier(day));
 
         await updates.StageAsync(id, "building", cancellationToken: cancellationToken);
         await steps.AtAsync("osm2pgsql", cancellationToken);

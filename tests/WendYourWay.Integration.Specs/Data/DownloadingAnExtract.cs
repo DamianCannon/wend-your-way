@@ -74,6 +74,51 @@ public class DownloadingAnExtract
         }
     }
 
+    //  Found on 23 November 2026 (T184, #188): the day's file the extract is sent on to not found, so CI's
+    //  build failed again. The day before's is taken, checked against its own MD5, and said.
+    [Test]
+    public async Task Where_the_days_file_isnt_found_the_day_befores_is_taken_and_said()
+    {
+        var extract = new byte[10_000];
+        Random.Shared.NextBytes(extract);
+        using var server = new ExtractServer("foldered", extract, DateTimeOffset.UnixEpoch) { Folders = true, DaysFileMissing = true };
+        var folder = Directory.CreateTempSubdirectory("cutthrough-folders-").FullName;
+        try
+        {
+            using var http = new HttpClient();
+            var source = new ExtractSource(http, server.ExtractUrl);
+            var kept = await source.DownloadAsync(folder);
+            Assert.That((await File.ReadAllBytesAsync(kept), source.TookEarlier), Is.EqualTo((extract, (DateOnly?)new DateOnly(2026, 11, 17))));
+        }
+        finally
+        {
+            Directory.Delete(folder, recursive: true);
+        }
+    }
+
+    [Test]
+    public void An_earlier_days_file_taken_is_said_by_its_day() =>
+        Assert.That(ExtractSource.Earlier(new DateOnly(2026, 11, 21)), Is.EqualTo("  Geofabrik's newest file isn't there yet: using 21 Nov's instead"));
+
+    //  The day's file found: nothing earlier taken.
+    [Test]
+    public async Task Where_the_days_file_is_found_nothing_earlier_is_said()
+    {
+        using var server = new ExtractServer("foldered", new byte[1_000], DateTimeOffset.UnixEpoch) { Folders = true };
+        var folder = Directory.CreateTempSubdirectory("cutthrough-folders-").FullName;
+        try
+        {
+            using var http = new HttpClient();
+            var source = new ExtractSource(http, server.ExtractUrl);
+            await source.DownloadAsync(folder);
+            Assert.That(source.TookEarlier, Is.Null);
+        }
+        finally
+        {
+            Directory.Delete(folder, recursive: true);
+        }
+    }
+
     [Test]
     public async Task From_Geofabriks_folders_the_date_is_read_from_the_folders_updates()
     {

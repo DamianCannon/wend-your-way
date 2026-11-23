@@ -49,6 +49,44 @@ public sealed class ExtractSource
     /// <summary>The name the one before is kept by, to build from again if a new map turns out bad.</summary>
     public string PreviousFileName { get; }
 
+    /// <summary>How many days back a missing day's file is looked for (T184).</summary>
+    public const int DaysBack = 2;
+
+    /// <summary>
+    /// The day whose file was taken instead, when the one the extract was sent on to wasn't there (T184,
+    /// #188: Geofabrik's wasn't, on 23 November 2026); none when the newest came.
+    /// </summary>
+    public DateOnly? TookEarlier { get; private set; }
+
+    /// <summary>What's said when an earlier day's file was taken (T184).</summary>
+    public static string Earlier(DateOnly day) =>
+        $"  Geofabrik's newest file isn't there yet: using {day.ToString("d MMM", CultureInfo.InvariantCulture)}'s instead";
+
+    // The extract, or where it's sent on to a day's file (`…-261122.osm.pbf`) that isn't found, the day
+    // before's, or the one before that: Geofabrik's day's file is sometimes listed before it's there.
+    private async Task<HttpResponseMessage> DaysOrEarlierAsync(CancellationToken cancellationToken)
+    {
+        TookEarlier = null;
+        var response = await _http.GetAsync(_extract, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
+        if (response.StatusCode != System.Net.HttpStatusCode.NotFound || response.RequestMessage?.RequestUri is not { } sent) return response;
+        var dated = System.Text.RegularExpressions.Regex.Match(sent.AbsoluteUri, @"-(\d{6})(\.[^/]+)$", System.Text.RegularExpressions.RegexOptions.None, TimeSpan.FromSeconds(1));
+        if (!dated.Success || !DateOnly.TryParseExact(dated.Groups[1].Value, "yyMMdd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var day)) return response;
+        for (var back = 1; back <= DaysBack; back++)
+        {
+            var earlier = day.AddDays(-back);
+            var address = new Uri(sent.AbsoluteUri[..dated.Index] + "-" + earlier.ToString("yyMMdd", CultureInfo.InvariantCulture) + dated.Groups[2].Value);
+            var tried = await _http.GetAsync(address, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
+            if (tried.IsSuccessStatusCode)
+            {
+                response.Dispose();
+                TookEarlier = earlier;
+                return tried;
+            }
+            tried.Dispose();
+        }
+        return response;
+    }
+
     /// <summary>When the source's data runs to: `state.txt`'s timestamp, its colons escaped (`21\:22\:47`).</summary>
     public async Task<DateTimeOffset> DataAtAsync(CancellationToken cancellationToken = default)
     {
@@ -77,7 +115,7 @@ public sealed class ExtractSource
         var part = kept + ".part";
         try
         {
-            using var response = await _http.GetAsync(_extract, HttpCompletionOption.ResponseHeadersRead, stalled.Token);
+            using var response = await DaysOrEarlierAsync(stalled.Token);
             response.EnsureSuccessStatusCode();
             stalled.CancelAfter(quiet);
             // The MD5 beside the file that came: the day's, where it was sent on to one (T151). Where
