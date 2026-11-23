@@ -112,45 +112,73 @@ function cafesAndToilets() {
     return layer;
 }
 
-// Areas read for the view (T170: Open access land): off until turned on, and remembered; from their
-// zoom in, read as the map stops moving, simplified to about a pixel. A wash under the Loop, never in
-// the way of a click.
+// Areas read for the view (T170: Open access land): off until turned on, and remembered; read as the map
+// stops moving from each of its sources whose bounds the view is over, from that source's zoom in. A wash
+// under the Loop, never in the way of a click.
 const accessFill = colour("--access-land", "#e3b505");
 const accessEdge = colour("--access-land-edge", "#b08900");
+
+// Whether a source covers any of the view (none of its own bounds: anywhere).
+const covers = (source, b) => !source.within
+    || (b.getWest() < source.within[2] && b.getEast() > source.within[0] && b.getSouth() < source.within[3] && b.getNorth() > source.within[1]);
+
+// An ArcGIS feature layer's areas for the view, simplified to about a pixel, a page at a time: a busy view
+// (London's commons, zoomed out) holds more than one answer's 2,000.
+async function arcgisAreas(source, b, zoom, stale) {
+    const query = new URLSearchParams({
+        where: "1=1", geometry: `${b.getWest()},${b.getSouth()},${b.getEast()},${b.getNorth()}`,
+        geometryType: "esriGeometryEnvelope", inSR: "4326", spatialRel: "esriSpatialRelIntersects",
+        outFields: "OBJECTID", outSR: "4326", maxAllowableOffset: String(360 / (256 * 2 ** zoom)),
+        geometryPrecision: "6", orderByFields: "OBJECTID", f: "geojson"
+    });
+    const features = [];
+    for (let pages = 0, offset = 0; pages < 5; pages++) {
+        query.set("resultOffset", String(offset));
+        const found = await fetch(`${source.query}?${query}`).then(response => response.ok ? response.json() : null);
+        if (stale() || !found?.features) break;
+        features.push(...found.features);
+        if (!found.properties?.exceededTransferLimit) break;
+        offset += found.features.length;
+    }
+    return features;
+}
+
+// A WFS layer's areas for the view, as GeoJSON in latitude and longitude: one answer, as a view from the
+// source's zoom holds a few hundred at most (Wales's busiest, 451 at zoom 12).
+async function wfsAreas(source, b) {
+    const query = new URLSearchParams({
+        service: "WFS", version: "2.0.0", request: "GetFeature", typeNames: source.layer,
+        outputFormat: "application/json", srsName: "urn:ogc:def:crs:EPSG::4326", count: "2000",
+        bbox: `${b.getSouth()},${b.getWest()},${b.getNorth()},${b.getEast()},urn:ogc:def:crs:EPSG::4326`
+    });
+    const found = await fetch(`${source.query}?${query}`).then(response => response.ok ? response.json() : null);
+    return found?.features ?? [];
+}
 
 function areaOverlay(overlay) {
     const layer = L.geoJSON(null, {
         pane: "areas", interactive: false,
         style: { color: accessEdge, weight: 1, opacity: 0.8, fillColor: accessFill, fillOpacity: 0.22 }
     });
+    // The zoom it's drawn from in this view: the deepest of the sources the view is over (T170: Wales's from
+    // 12, England's from 11), so the key says to zoom in while any of them is waiting.
+    layer.fromZoomHere = () => {
+        const here = overlay.sources.filter(source => covers(source, map.getBounds())).map(source => source.fromZoom);
+        return here.length ? Math.max(...here) : overlay.fromZoom;
+    };
     let reading = 0;
     layer.refresh = () => {
         const run = ++reading;
-        if (!map.hasLayer(layer) || map.getZoom() < overlay.fromZoom) { layer.clearLayers(); return; }
-        const b = map.getBounds();
-        const query = new URLSearchParams({
-            where: "1=1", geometry: `${b.getWest()},${b.getSouth()},${b.getEast()},${b.getNorth()}`,
-            geometryType: "esriGeometryEnvelope", inSR: "4326", spatialRel: "esriSpatialRelIntersects",
-            outFields: "OBJECTID", outSR: "4326", maxAllowableOffset: String(360 / (256 * 2 ** map.getZoom())),
-            geometryPrecision: "6", orderByFields: "OBJECTID", f: "geojson"
-        });
-        // A page at a time: a busy view (London's commons, zoomed out) holds more than one answer's 2,000.
-        const page = offset => {
-            query.set("resultOffset", String(offset));
-            return fetch(`${overlay.query}?${query}`).then(response => response.ok ? response.json() : null);
-        };
-        (async () => {
-            const features = [];
-            for (let pages = 0, offset = 0; pages < 5; pages++) {
-                const found = await page(offset);
-                if (run !== reading || !found?.features) return;
-                features.push(...found.features);
-                if (!found.properties?.exceededTransferLimit) break;
-                offset += found.features.length;
-            }
-            layer.clearLayers();
-            layer.addData({ type: "FeatureCollection", features });
-        })().catch(() => { /* none shown */ });
+        const stale = () => run !== reading;
+        const zoom = map.getZoom(), b = map.getBounds();
+        const sources = map.hasLayer(layer) ? overlay.sources.filter(source => zoom >= source.fromZoom && covers(source, b)) : [];
+        if (!sources.length) { layer.clearLayers(); return; }
+        Promise.all(sources.map(source => (source.layer ? wfsAreas(source, b) : arcgisAreas(source, b, zoom, stale)).catch(() => [])))
+            .then(found => {
+                if (stale()) return;
+                layer.clearLayers();
+                layer.addData({ type: "FeatureCollection", features: found.flat() });
+            });
     };
     return layer;
 }
@@ -407,7 +435,8 @@ function reportKey() {
         if (marksLayer?.getLayers().length) shown.push("blocked");
         if (outingLayer) shown.push("outing");
         for (const [name, layer] of Object.entries(keyedOverlays)) if (map.hasLayer(layer)) shown.push(name);
-        const waiting = shown.filter(name => map.getZoom() < (keyedFrom[name] ?? 0));
+        const from = name => typeof keyedFrom[name] === "function" ? keyedFrom[name]() : keyedFrom[name] ?? 0;
+        const waiting = shown.filter(name => map.getZoom() < from(name));
         let collapsed = false;
         try { collapsed = localStorage.getItem(keyCollapsedKey) === "true"; } catch { /* open */ }
         owner.invokeMethodAsync("KeyShown", shown, waiting, collapsed);
@@ -554,8 +583,10 @@ export function create(element, tiles, centre, dotNet) {
     owner = dotNet;
     keyedOverlays = overlays;
     keyedFrom = { [amenitiesName]: amenitiesFromZoom, [carParksName]: 11 };
-    for (const overlay of [...(tiles.areas ?? []), ...(tiles.vectors ?? [])]) keyedFrom[overlay.name] = overlay.fromZoom;
-    map.on("overlayadd overlayremove zoomend", reportKey);
+    for (const overlay of tiles.vectors ?? []) keyedFrom[overlay.name] = overlay.fromZoom;
+    // An area overlay's zoom depends on where the view is (T170: Wales's from 12): asked each time.
+    for (const [name, layer] of Object.entries(areaOverlays)) keyedFrom[name] = layer.fromZoomHere;
+    map.on("overlayadd overlayremove moveend", reportKey);
     reportKey();
     // A click that closes a popup only closes it: the popups have no close button, so clicking
     // away is how they go, and that mustn't move the start (user, 2026-11-07).

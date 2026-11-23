@@ -149,17 +149,43 @@ public class ShowingTheMap
     //  Open access land (T170, #174; user: "bring in open access land as a view"): where you may go off
     //  the paths in England, Natural England's CRoW access layer, read for the view as GeoJSON.
     [Test]
-    public void Open_access_land_is_Natural_Englands_read_for_the_view_from_zoom_11()
+    public void Open_access_land_in_England_is_Natural_Englands_read_for_the_view_from_zoom_11()
     {
-        var area = TilesFor(null).Areas.Single();
-        Assert.That((area.Name, area.Query, area.FromZoom), Is.EqualTo(("Open access land",
-            "https://services.arcgis.com/JJzESW51TqeY9uat/arcgis/rest/services/CRoW_Act_2000_Access_Layer/FeatureServer/0/query", 11)));
+        var england = TilesFor(null).Areas.Single().Sources[0];
+        Assert.That((england.Query, england.Layer, england.FromZoom), Is.EqualTo((
+            "https://services.arcgis.com/JJzESW51TqeY9uat/arcgis/rest/services/CRoW_Act_2000_Access_Layer/FeatureServer/0/query", (string?)null, 11)));
+    }
+
+    //  And in Wales (T170 reopened; user: "yes you can add it to the open access task"): Natural Resources
+    //  Wales's open country, common land and other dedicated land, from DataMapWales's WFS. Unsimplified, a
+    //  view over the Beacons is about 8 MB at zoom 11 and 2.4 MB at 12, so from 12, and only read where the
+    //  view is over Wales. One switch for both.
+    [Test]
+    public void Open_access_land_in_Wales_is_Natural_Resources_Waless_three_layers_from_zoom_12()
+    {
+        var wales = TilesFor(null).Areas.Single().Sources.Skip(1).ToList();
+        Assert.That(wales.Select(s => (s.Query, s.Layer, s.FromZoom)), Is.EqualTo(new[]
+        {
+            ("https://datamap.gov.wales/geoserver/ows", "inspire-nrw:NRW_OPEN_COUNTRY_2014", 12),
+            ("https://datamap.gov.wales/geoserver/ows", "inspire-nrw:NRW_COMMON_LAND_2014", 12),
+            ("https://datamap.gov.wales/geoserver/ows", "inspire-nrw:NRW_OTHER_DEDICATED_LAND", 12)
+        }));
     }
 
     [Test]
-    public void Open_access_land_credits_Natural_England_and_its_licence() =>
+    public void Open_access_land_in_Wales_is_read_only_where_the_view_is_over_Wales() =>
+        Assert.That(TilesFor(null).Areas.Single().Sources.Skip(1).Select(s => s.Within), Is.All.EqualTo(new[] { -5.35, 51.35, -2.65, 53.45 }));
+
+    [Test]
+    public void Open_access_land_is_offered_from_the_shallowest_of_its_zooms() =>
+        Assert.That(TilesFor(null).Areas.Single().FromZoom, Is.EqualTo(11));
+
+    [Test]
+    public void Open_access_land_credits_Natural_England_Natural_Resources_Wales_and_their_licences() =>
         Assert.That(TilesFor(null).Areas.Single().Attribution,
-            Does.Contain("© Natural England").And.Contain("Open Government Licence").And.Contain("Crown copyright"));
+            Does.Contain("© Natural England").And.Contain("Open Government Licence").And.Contain("Crown copyright")
+                .And.Contain("Contains Natural Resources Wales information © Natural Resources Wales and Database Right")
+                .And.Contain("Ordnance Survey Licence number AC0000849444"));
 
     //  OS's paths drawn bold over any map (T173, #177), to see the paths OS has and OpenStreetMap
     //  lacks (about 27% of OS's path length in the T172 trial). OS's vector tiles carry them only from

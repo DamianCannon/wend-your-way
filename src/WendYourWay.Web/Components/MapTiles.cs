@@ -33,12 +33,27 @@ public sealed record TileOverlay(string Name, IReadOnlyList<string> Urls, string
     public bool NamesRoutes { get; init; }
 }
 
-/// <summary>Areas drawn over whichever map is chosen, read for the view as GeoJSON from an ArcGIS feature service (T170).</summary>
+/// <summary>Areas drawn over whichever map is chosen, read for the view as GeoJSON (T170): one switch, from one or more sources.</summary>
 /// <param name="Name">What the map switcher calls it.</param>
-/// <param name="Query">The feature layer's query address.</param>
+/// <param name="Sources">Where they're read from.</param>
 /// <param name="Attribution">The credit shown while it's on.</param>
-/// <param name="FromZoom">The zoom they're drawn from: further out, a view holds too many.</param>
-public sealed record AreaOverlay(string Name, string Query, string Attribution, int FromZoom);
+public sealed record AreaOverlay(string Name, IReadOnlyList<AreaSource> Sources, string Attribution)
+{
+    /// <summary>The zoom it's offered from: the shallowest of its sources'.</summary>
+    public int FromZoom => Sources.Min(s => s.FromZoom);
+}
+
+/// <summary>One place areas are read from (T170): an ArcGIS feature layer's query, or a WFS's <see cref="Layer"/>.</summary>
+/// <param name="Query">The address asked.</param>
+/// <param name="FromZoom">The zoom they're read from: further out, a view holds too much.</param>
+public sealed record AreaSource(string Query, int FromZoom)
+{
+    /// <summary>The WFS feature type read, as GeoJSON in latitude and longitude; none for an ArcGIS feature layer.</summary>
+    public string? Layer { get; init; }
+
+    /// <summary>The bounds it covers (west, south, east, north): not read for a view outside them. None: anywhere.</summary>
+    public double[]? Within { get; init; }
+}
 
 /// <summary>Lines drawn bold over whichever map is chosen, from one layer of vector tiles (T173).</summary>
 /// <param name="Name">What the map switcher calls it.</param>
@@ -65,6 +80,9 @@ public sealed record MapTiles(IReadOnlyList<TileLayer> Layers)
 
     /// <summary>The overlays offered from vector tiles, off until turned on (T173).</summary>
     public IReadOnlyList<VectorOverlay> Vectors { get; init; } = [];
+
+    // Natural Resources Wales's access land (T170): open country, common land, other dedicated land.
+    private static readonly string[] WalesAccessLayers = ["NRW_OPEN_COUNTRY_2014", "NRW_COMMON_LAND_2014", "NRW_OTHER_DEDICATED_LAND"];
 
     // Waymarked Trails' maps: signed walking, cycling and mountain-bike routes.
     private static readonly string[] TrailKinds = ["hiking", "cycling", "mtb"];
@@ -129,10 +147,22 @@ public sealed record MapTiles(IReadOnlyList<TileLayer> Layers)
         var signedTrails = new TileOverlay("Signed trails",
             TrailKinds.Select(kind => $"https://tile.waymarkedtrails.org/{kind}/{{z}}/{{x}}/{{y}}.png").ToList(),
             $"Trails © <a href=\"https://waymarkedtrails.org\">Waymarked Trails</a> (CC BY-SA), {OpenStreetMapCredit}", 18) { NamesRoutes = true };
-        // Open access land in England (T170, #174): Natural England's CRoW access layer, under the OGL.
+        // Open access land (T170, #174), under the OGL: in England, Natural England's CRoW access layer; in
+        // Wales, Natural Resources Wales's open country, common land and other dedicated land, from DataMapWales's
+        // WFS. Its shapes aren't simplified (a view over the Beacons is about 8 MB at zoom 11, 2.4 MB at 12), so
+        // from 12, and only for a view over Wales. Dedicated woodlands left out: a 1947 forestry scheme, not
+        // access land, naming landowners.
+        const string dataMapWales = "https://datamap.gov.wales/geoserver/ows";
+        double[] wales = [-5.35, 51.35, -2.65, 53.45];
         var openAccess = new AreaOverlay("Open access land",
-            "https://services.arcgis.com/JJzESW51TqeY9uat/arcgis/rest/services/CRoW_Act_2000_Access_Layer/FeatureServer/0/query",
-            "Open access land © Natural England (Open Government Licence). Contains Ordnance Survey data © Crown copyright and database right", 11);
+            [
+                new AreaSource("https://services.arcgis.com/JJzESW51TqeY9uat/arcgis/rest/services/CRoW_Act_2000_Access_Layer/FeatureServer/0/query", 11),
+                .. WalesAccessLayers
+                    .Select(layer => new AreaSource(dataMapWales, 12) { Layer = "inspire-nrw:" + layer, Within = wales })
+            ],
+            "Open access land © Natural England (Open Government Licence). Contains Natural Resources Wales information © Natural Resources Wales " +
+            "and Database Right. All rights Reserved. Contains Ordnance Survey Data. Ordnance Survey Licence number AC0000849444. " +
+            "Contains Ordnance Survey data © Crown copyright and database right");
         // OS's paths (T173, #177), to see those OpenStreetMap lacks: OS NGD's vector tiles carry them
         // only from their zoom 16, which is premium, so on the Premium plan alone; at 512 pixels a
         // tile fills the map at a zoom one deeper than its own, so they show from the map's zoom 17.
