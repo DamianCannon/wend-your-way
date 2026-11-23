@@ -81,7 +81,7 @@ public class ReadingTheMapKey
     public void A_Loop_s_stops_avoids_and_gaps_are_keyed() =>
         Assert.That(new[] { "stops", "avoids", "map-gaps", "possible-gaps", "not-on-map" }.SelectMany(KeyFor), Is.EqualTo(new[]
         {
-            "A stop on the way", "Avoided", "A gap in the loop", "Possible link nearby: click to include it",
+            "A stop on the way", "Avoided", "A gap in the loop", "Possible link to use",
             "Not on the map",
         }));
 
