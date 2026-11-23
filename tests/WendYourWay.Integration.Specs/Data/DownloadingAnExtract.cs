@@ -76,12 +76,13 @@ public class DownloadingAnExtract
 
     //  Found on 23 November 2026 (T184, #188): the day's file the extract is sent on to not found, so CI's
     //  build failed again. The day before's is taken, checked against its own MD5, and said.
-    [Test]
-    public async Task Where_the_days_file_isnt_found_the_day_befores_is_taken_and_said()
+    [TestCase(404, Description = "not found")]
+    [TestCase(503, Description = "not ready: Geofabrik part-way through making it")]
+    public async Task Where_the_days_file_isnt_there_the_day_befores_is_taken_and_said(int answer)
     {
         var extract = new byte[10_000];
         Random.Shared.NextBytes(extract);
-        using var server = new ExtractServer("foldered", extract, DateTimeOffset.UnixEpoch) { Folders = true, DaysFileMissing = true };
+        using var server = new ExtractServer("foldered", extract, DateTimeOffset.UnixEpoch) { Folders = true, DaysFileAnswers = answer };
         var folder = Directory.CreateTempSubdirectory("cutthrough-folders-").FullName;
         try
         {

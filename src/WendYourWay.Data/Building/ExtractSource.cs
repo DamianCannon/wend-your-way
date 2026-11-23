@@ -62,13 +62,15 @@ public sealed class ExtractSource
     public static string Earlier(DateOnly day) =>
         $"  Geofabrik's newest file isn't there yet: using {day.ToString("d MMM", CultureInfo.InvariantCulture)}'s instead";
 
-    // The extract, or where it's sent on to a day's file (`…-261122.osm.pbf`) that isn't found, the day
+    // The extract, or where it's sent on to a day's file (`…-261122.osm.pbf`) that isn't found or ready, the day
     // before's, or the one before that: Geofabrik's day's file is sometimes listed before it's there.
     private async Task<HttpResponseMessage> DaysOrEarlierAsync(CancellationToken cancellationToken)
     {
         TookEarlier = null;
         var response = await _http.GetAsync(_extract, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
-        if (response.StatusCode != System.Net.HttpStatusCode.NotFound || response.RequestMessage?.RequestUri is not { } sent) return response;
+        // Not found, or not ready (503: Geofabrik part-way through making it, 23 November 2026).
+        if (response.StatusCode is not (System.Net.HttpStatusCode.NotFound or System.Net.HttpStatusCode.ServiceUnavailable)
+            || response.RequestMessage?.RequestUri is not { } sent) return response;
         var dated = System.Text.RegularExpressions.Regex.Match(sent.AbsoluteUri, @"-(\d{6})(\.[^/]+)$", System.Text.RegularExpressions.RegexOptions.None, TimeSpan.FromSeconds(1));
         if (!dated.Success || !DateOnly.TryParseExact(dated.Groups[1].Value, "yyMMdd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var day)) return response;
         for (var back = 1; back <= DaysBack; back++)

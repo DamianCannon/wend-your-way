@@ -69,10 +69,12 @@ internal sealed class ExtractServer : IDisposable
     public bool DaysMd5Missing { get; init; }
 
     /// <summary>
-    /// Set, the day's file the extract is sent on to isn't found, as Geofabrik's wasn't on 23 November 2026
-    /// (T184), though the day before's, with its MD5, is.
+    /// Set, the day's file the extract is sent on to answers this instead (404, then 503, from Geofabrik on
+    /// 23 November 2026, T184), though the day before's, with its MD5, is there.
     /// </summary>
-    public bool DaysFileMissing { get; init; }
+    public int? DaysFileAnswers { get; init; }
+
+    private bool DaysFileMissing => DaysFileAnswers is not null;
 
     // Where the extract is sent on to: the day's file.
     private string Sent => $"/{Name}/{Name}-261118.osm";
@@ -121,10 +123,11 @@ internal sealed class ExtractServer : IDisposable
                 _ when (path == Served + ".md5" || (Folders && path == $"/{Name}/{Name}-latest.osm.md5")) => (200, Encoding.ASCII.GetBytes($"{WrongMd5 ?? Convert.ToHexStringLower(MD5.HashData(Extract))}  {Name}-latest.osm\n"), null),
                 _ when path == "/index-v1-nogeom.json" && Index is not null => (200, Encoding.UTF8.GetBytes(Index), null),
                 _ when path == Served => (200, CutOffAfter is { } cut ? Extract[..cut] : Extract, Extract.Length),
+                _ when DaysFileMissing && path == Sent => (DaysFileAnswers!.Value, Encoding.ASCII.GetBytes("Not here yet"), (int?)null),
                 _ => (404, Encoding.ASCII.GetBytes("Not found"), null),
             };
 #pragma warning restore CA5351
-            var head = $"HTTP/1.1 {status} {status switch { 200 => "OK", 307 => "Temporary Redirect", _ => "Not Found" }}\r\n"
+            var head = $"HTTP/1.1 {status} {status switch { 200 => "OK", 307 => "Temporary Redirect", 503 => "Service Unavailable", _ => "Not Found" }}\r\n"
                 + (status == 307 ? $"Location: {Sent}\r\n" : "")
                 + $"Content-Length: {promised ?? body.Length}\r\nConnection: close\r\n\r\n";
             try
