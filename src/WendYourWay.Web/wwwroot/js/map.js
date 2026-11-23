@@ -35,6 +35,8 @@ const danger = colour("--danger", "#c92a2a");
 const groundColours = { off_road: colour("--ground-off-road", "#2e7d32"), traffic_free: colour("--ground-traffic-free", "#1f78c8"), connector: colour("--ground-connector", "#8a8f8c") };
 const gapColour = colour("--map-gap", "#d62828");
 const possibleGapColour = colour("--possible-gap", "#5b6760");
+const gapDot = colour("--gap-dot", "#ffd400");
+const gapDotRing = colour("--gap-dot-ring", "#1f2a24");
 // A route's gaps (T088): a break in the orange, dotted in ink, so they never read as more route.
 const routeGapInk = colour("--ink", "#1f2a24");
 
@@ -672,8 +674,9 @@ export function showLoop(loop, fit = true) {
                 L.polyline(gapLine, { color: "#ffffff", weight: 10, opacity: 1, interactive: false }),
                 L.polyline(gapLine, { color: gapColour, weight: 6, opacity: 1, dashArray: "6 5", interactive: false }),
                 // A dot at its middle (T183), seen at any length: a 2 m gap is shorter than a dash.
+                // Caution yellow ringed dark (user, 2026-11-23: "a different colour to stand out more"), not red beside the orange.
                 L.circleMarker([(gap.from.latitude + gap.to.latitude) / 2, (gap.from.longitude + gap.to.longitude) / 2],
-                    { radius: 6, color: "#ffffff", weight: 2.5, fillColor: gapColour, fillOpacity: 1, interactive: false }),
+                    { radius: 6, color: gapDotRing, weight: 2.5, fillColor: gapDot, fillOpacity: 1, interactive: false }),
             ];
         }),
         // Wider than it looks, to grab (T076): dragged, a Via; clicked, Avoid this time. Never the map's
@@ -980,9 +983,17 @@ function decorate() {
     const metresPerPixel = map.distance(map.containerPointToLatLng(middle), map.containerPointToLatLng(middle.add([100, 0]))) / 100;
 
     const layers = [];
+    // No chevron under a mark on the line (user, 2026-11-23: one showing through a stop "looks odd"):
+    // its stops, Avoids, start, finish and the dots on its gaps.
+    const marks = [shownLoop?.start, ...(shownLoop?.anchors ?? []), ...(shownLoop?.avoids ?? []),
+        ...(shownLoop?.mapGaps ?? []).map(g => ({ latitude: (g.from.latitude + g.to.latitude) / 2, longitude: (g.from.longitude + g.to.longitude) / 2 }))]
+        .filter(Boolean).map(m => map.latLngToLayerPoint(point(m)));
+    if (finishMarker) marks.push(map.latLngToLayerPoint(finishMarker.getLatLng()));
+    const clearOfMarks = at => { const p = map.latLngToLayerPoint(at); return marks.every(m => m.distanceTo(p) > 16); };
     const arrowEvery = arrowEveryPixels * metresPerPixel;
     for (let d = arrowEvery / 2; d < measured.length; d += arrowEvery) {
         const { at, heading } = pointAt(d);
+        if (!clearOfMarks(at)) continue;
         layers.push(L.marker(at, {
             icon: L.divIcon({
                 className: "direction-arrow",

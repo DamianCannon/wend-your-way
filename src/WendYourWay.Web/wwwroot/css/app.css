@@ -20,6 +20,9 @@
     --ground-traffic-free: #1f78c8;
     --ground-connector: #8a8f8c;
     --map-gap: #d62828;
+    /* The dot on a gap in the loop (T183): caution yellow ringed dark, standing out from the Loop's orange. */
+    --gap-dot: #ffd400;
+    --gap-dot-ring: var(--ink);
     /* A possible gap near a Loop (T146c, T183): an option, grey, never the route's red. */
     --possible-gap: var(--ink-soft);
     --cafe: #8d5b3a;
@@ -300,7 +303,7 @@ button:disabled, button[aria-disabled="true"]:not(.preparing) { opacity: 0.5; cu
 /* A Map gap (#150, T146b): red and dashed, as the map draws it. */
 .pager .map-gap-note { margin: 4px 0 0; text-align: center; font-size: 0.85rem; color: var(--danger); }
 /* The dot that marks each gap on the map (T183). */
-.pager .map-gap-note::before { content: ""; display: inline-block; width: 10px; height: 10px; margin-right: 6px; vertical-align: -1px; border-radius: 50%; background: var(--map-gap); box-shadow: 0 0 0 2px var(--white), var(--shadow-pin); }
+.pager .map-gap-note::before { content: ""; display: inline-block; width: 10px; height: 10px; margin-right: 6px; vertical-align: -1px; border-radius: 50%; background: var(--gap-dot); box-shadow: 0 0 0 2px var(--gap-dot-ring); }
 .saved-routes { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
 /* The name across the top, cut short; km and date a line each beneath it, the buttons beside them */
 .saved-routes li {
@@ -713,7 +716,7 @@ button:disabled, button[aria-disabled="true"]:not(.preparing) { opacity: 0.5; cu
 .swatch.note::after { content: "Aa"; }
 .swatch.outing-track { height: 2px; background: var(--ink); }
 /* A gap the Loop crosses: the dot at its middle (T183). */
-.swatch.map-gap { width: 12px; height: 12px; border-radius: 50%; background: var(--map-gap); border: 2px solid var(--white); box-sizing: border-box; box-shadow: var(--shadow-pin); }
+.swatch.map-gap { width: 12px; height: 12px; border-radius: 50%; background: var(--gap-dot); border: 2px solid var(--gap-dot-ring); box-sizing: border-box; }
 .swatch.possible-gap { height: 3px; background: repeating-linear-gradient(90deg, var(--possible-gap) 0 4px, transparent 4px 8px); }
 .swatch.not-on-map { background: repeating-linear-gradient(90deg, var(--ink) 0 2px, var(--white) 2px 7px); }
 /* Blocked: dotted, so it isn't taken for a gap in the map's dashes (T180). */
