@@ -389,8 +389,8 @@
     {
         var lengths = string.Join(", ", gaps.Select(g => string.Create(System.Globalization.CultureInfo.InvariantCulture, $"{Math.Max(1, Math.Round(g.LengthM)):0} m")));
         return gaps.Count == 1
-            ? $"A gap in the map ({lengths}): check it's passable"
-            : $"{gaps.Count} gaps in the map ({lengths}): check they're passable";
+            ? $"A gap in the loop ({lengths}): check it's passable"
+            : $"{gaps.Count} gaps in the loop ({lengths}): check they're passable";
     }
 
     private bool _open;

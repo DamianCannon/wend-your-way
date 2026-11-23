@@ -17,7 +17,7 @@ public class ShowingMapGaps : PlannerPageSpecs
         _planner.Imported = Second with { MapGaps = [new MapGapCrossed(KenwoodHouse, ParliamentHill, 3.4)] };
         var screen = OfferThree();
         Import(screen, HeathGpx);
-        screen.WaitForAssertion(() => Assert.That(screen.Find(".pager .map-gap-note").TextContent.Trim(), Is.EqualTo("A gap in the map (3 m): check it's passable")));
+        screen.WaitForAssertion(() => Assert.That(screen.Find(".pager .map-gap-note").TextContent.Trim(), Is.EqualTo("A gap in the loop (3 m): check it's passable")));
     }
 
     [Test]
@@ -26,7 +26,7 @@ public class ShowingMapGaps : PlannerPageSpecs
         _planner.Imported = Second with { MapGaps = [new MapGapCrossed(KenwoodHouse, ParliamentHill, 3.4), new MapGapCrossed(ParliamentHill, KenwoodHouse, 0.6)] };
         var screen = OfferThree();
         Import(screen, HeathGpx);
-        screen.WaitForAssertion(() => Assert.That(screen.Find(".pager .map-gap-note").TextContent.Trim(), Is.EqualTo("2 gaps in the map (3 m, 1 m): check they're passable")));
+        screen.WaitForAssertion(() => Assert.That(screen.Find(".pager .map-gap-note").TextContent.Trim(), Is.EqualTo("2 gaps in the loop (3 m, 1 m): check they're passable")));
     }
 
     [Test]
