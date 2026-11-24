@@ -157,15 +157,21 @@ public class ReadingTheMapKey
     [Test]
     public void Single_entries_come_before_the_groups()
     {
-        OnScreen(false, "Cafés and toilets", "Signed trails", "Off-road networks", "Car parks", "Gravel hotspots", "OS paths", "Open access land");
+        OnScreen(false, "Gaps in OSM", "Cafés and toilets", "Signed trails", "Off-road networks", "Car parks", "Gravel hotspots", "OS paths", "Open access land");
         Assert.That(_view.FindAll(".map-key h3, .map-key li").Select(e => e.TextContent.Trim()), Is.EqualTo(new[]
         {
             "Open access land", "OS paths", "Gravel hotspots", "Car parks",
             "Off-road networks", "Under 10 km", "10–30 km", "30–100 km", "100–300 km", "Over 300 km",
             "Signed trails", "International", "National", "Regional", "Local",
             "Cafés and toilets", "Café", "Toilets",
+            "Gaps in OSM", "Under 5 m: Loops cross it", "5 m to 15 m: check before using",
         }));
     }
+
+    //  T185, #189: gaps in OSM to look at, told apart as the Loop's own gap marks are.
+    [Test]
+    public void Gaps_in_OSM_are_keyed_by_whether_Loops_cross_them() =>
+        Assert.That(KeyFor("Gaps in OSM"), Is.EqualTo(new[] { "Under 5 m: Loops cross it", "5 m to 15 m: check before using" }));
 
     //  Overlays with more than one entry are headed by their name.
     [Test]

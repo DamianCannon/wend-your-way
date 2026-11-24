@@ -265,6 +265,10 @@ button:disabled, button[aria-disabled="true"]:not(.preparing) { opacity: 0.5; cu
 .route-popup .fix-hint { margin: 0; max-width: 220px; font-size: 0.85em; color: var(--ink-soft); text-align: center; }
 .leaflet-interactive.blocked { cursor: pointer; }
 .route-popup .osm-link { font-size: 0.85rem; color: var(--forest); text-align: center; }
+/* A gap in OSM (T185): what it is, then a link a line to the ways either side and the editor there. */
+.gap-in-osm { display: flex; flex-direction: column; gap: 4px; max-width: 240px; }
+.gap-in-osm .what { margin: 0 0 2px; font-size: 0.9rem; }
+.gap-in-osm .osm-link { font-size: 0.85rem; color: var(--forest); }
 /* An Avoid (T079): a round hi-vis marker with "!", where the route was told to go round */
 .avoid-marker {
     display: flex; align-items: center; justify-content: center; border-radius: 50%;
@@ -718,6 +722,9 @@ button:disabled, button[aria-disabled="true"]:not(.preparing) { opacity: 0.5; cu
 /* A gap the Loop crosses: the dot at its middle (T183). */
 .swatch.map-gap { width: 12px; height: 12px; border-radius: 50%; background: var(--gap-dot); border: 2px solid var(--gap-dot-ring); box-sizing: border-box; }
 .swatch.possible-gap { height: 3px; background: repeating-linear-gradient(90deg, var(--possible-gap) 0 4px, transparent 4px 8px); }
+.swatch.osm-gap-joined, .swatch.osm-gap-possible { width: 12px; height: 12px; border-radius: 50%; border: 2px solid var(--gap-dot-ring); box-sizing: border-box; }
+.swatch.osm-gap-joined { background: var(--gap-dot); }
+.swatch.osm-gap-possible { background: var(--possible-gap); }
 .swatch.not-on-map { background: repeating-linear-gradient(90deg, var(--ink) 0 2px, var(--white) 2px 7px); }
 /* Blocked: dotted, so it isn't taken for a gap in the map's dashes (T180). */
 .swatch.blocked { height: 6px; background: radial-gradient(circle, var(--danger) 0 2.5px, transparent 3px) 0 0 / 8px 6px; }

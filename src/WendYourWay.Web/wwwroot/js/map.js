@@ -112,6 +112,57 @@ function cafesAndToilets() {
     return layer;
 }
 
+// Gaps in OSM (T185, #189): an overlay, off at first and remembered, of the short gaps the build found in
+// view from zoom 14 (a path's dead end stopping short of another way, nothing mapped across), read as the
+// map stops moving. Under 5 m, the yellow dot of a gap a Loop crosses; 5 m to 15 m, grey; each with a dashed
+// line across it. Clicked, it says how long it is and links to the ways either side and OSM's editor there,
+// to see what the problem is. Wend Your Way sends OSM nothing.
+const gapsName = "Gaps in OSM";
+const gapsFromZoom = 14;
+
+function gapsInOsm() {
+    const layer = L.layerGroup();
+    let reading = 0;
+    const said = gap => {
+        const content = L.DomUtil.create("div", "gap-in-osm");
+        L.DomUtil.create("p", "what", content).textContent = gap.kind === "joined"
+            ? `A gap of ${gap.lengthM.toFixed(0)} m in OSM: Loops cross it as if joined.`
+            : `A gap of ${gap.lengthM.toFixed(0)} m in OSM: Loops don't use it unless you include it.`;
+        const link = (text, href) => {
+            const a = L.DomUtil.create("a", "osm-link", content);
+            a.textContent = text;
+            a.href = href;
+            a.target = "_blank";
+            a.rel = "noopener noreferrer";
+        };
+        const place = `20/${gap.from[0].toFixed(6)}/${gap.from[1].toFixed(6)}`;
+        link("The path", `https://www.openstreetmap.org/way/${gap.pathWay}`);
+        if (gap.ontoWay) link("The way it stops short of", `https://www.openstreetmap.org/way/${gap.ontoWay}`);
+        link("Edit the map here", `https://www.openstreetmap.org/edit?editor=id&way=${gap.pathWay}#map=${place}`);
+        return content;
+    };
+    layer.refresh = () => {
+        const run = ++reading;
+        if (!map.hasLayer(layer) || map.getZoom() < gapsFromZoom) { layer.clearLayers(); return; }
+        const b = map.getBounds();
+        fetch(`gaps-in-osm?south=${b.getSouth()}&west=${b.getWest()}&north=${b.getNorth()}&east=${b.getEast()}`)
+            .then(response => response.ok ? response.json() : [])
+            .then(found => {
+                if (run !== reading) return;
+                layer.clearLayers();
+                for (const gap of found) {
+                    const joined = gap.kind === "joined";
+                    L.polyline([gap.from, gap.to], { color: joined ? gapDotRing : possibleGapColour, weight: 3, dashArray: "4 4", interactive: false }).addTo(layer);
+                    L.circleMarker(gap.from, {
+                        radius: 7, color: gapDotRing, weight: 2.5, fillColor: joined ? gapDot : possibleGapColour, fillOpacity: 1, bubblingMouseEvents: false
+                    }).bindPopup(() => said(gap), { className: "nudge-popup", closeButton: false, offset: [0, -4] }).addTo(layer);
+                }
+            })
+            .catch(() => { /* none shown */ });
+    };
+    return layer;
+}
+
 // Areas read for the view (T170: Open access land): off until turned on, and remembered; read as the map
 // stops moving from each of its sources whose bounds the view is over, from that source's zoom in. A wash
 // under the Loop, never in the way of a click.
@@ -512,6 +563,8 @@ export function create(element, tiles, centre, dotNet) {
     if (rememberedOverlay(offRoadName)) turnOn(offRoad);
     const amenities = cafesAndToilets();
     if (rememberedOverlay(amenitiesName)) amenities.addTo(map);
+    const gaps = gapsInOsm();
+    if (rememberedOverlay(gapsName)) gaps.addTo(map);
     // The Gravel hotspots (T072): on until turned off, all of them at every zoom.
     const hotspots = gravelHotspots();
     if (rememberedOverlay(hotspotsName, true)) hotspots.addTo(map);
@@ -551,8 +604,8 @@ export function create(element, tiles, centre, dotNet) {
         if (rememberedOverlay(overlay.name)) turnOn(layer);
         vectorOverlays[overlay.name] = layer;
     }
-    const readForTheView = [amenities, ...Object.values(areaOverlays)];
-    const overlays = { [offRoadName]: offRoad, ...tiledOverlays, ...areaOverlays, ...vectorOverlays, [amenitiesName]: amenities, [hotspotsName]: hotspots, [carParksName]: carParks };
+    const readForTheView = [amenities, gaps, ...Object.values(areaOverlays)];
+    const overlays = { [offRoadName]: offRoad, ...tiledOverlays, ...areaOverlays, ...vectorOverlays, [amenitiesName]: amenities, [gapsName]: gaps, [hotspotsName]: hotspots, [carParksName]: carParks };
     let offered = [];
     const switcher = L.control.layers(names.length > 1 ? layers : {}, {}, { position: "topright" }).addTo(map);
     // The overlays offered for the grid the map is on (T168): on Britain's, none cut on the web grid,
@@ -582,7 +635,7 @@ export function create(element, tiles, centre, dotNet) {
     map.attributionControl.setPrefix('<a href="https://leafletjs.com">Leaflet</a>');
     owner = dotNet;
     keyedOverlays = overlays;
-    keyedFrom = { [amenitiesName]: amenitiesFromZoom, [carParksName]: 11 };
+    keyedFrom = { [amenitiesName]: amenitiesFromZoom, [gapsName]: gapsFromZoom, [carParksName]: 11 };
     for (const overlay of tiles.vectors ?? []) keyedFrom[overlay.name] = overlay.fromZoom;
     // An area overlay's zoom depends on where the view is (T170: Wales's from 12): asked each time.
     for (const [name, layer] of Object.entries(areaOverlays)) keyedFrom[name] = layer.fromZoomHere;

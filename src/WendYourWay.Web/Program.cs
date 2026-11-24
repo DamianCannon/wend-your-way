@@ -54,6 +54,7 @@ builder.Services.AddSingleton<ILastRequest, PostgisLastRequest>();
 builder.Services.AddSingleton<OffRoadTiles>();
 builder.Services.AddSingleton<ICarParks, PostgisCarParks>();
 builder.Services.AddSingleton<IAmenities, PostgisAmenities>();
+builder.Services.AddSingleton<IGapsInOsm, PostgisGapsInOsm>();
 builder.Services.AddSingleton<ISignedRoutes, PostgisSignedRoutes>();
 builder.Services.AddSingleton<IGravelHotspots, PostgisGravelHotspots>();
 builder.Services.AddSingleton<ISavedRoutes, PostgisSavedRoutes>();
@@ -137,6 +138,19 @@ app.MapGet("/amenities", async (double south, double west, double north, double 
         ? Results.BadRequest()
         : Results.Json((await amenities.InViewAsync(new MapBounds(south, west, north, east), cancellationToken))
             .Select(a => new { kind = a.Kind == AmenityKind.Cafe ? "cafe" : "toilets", a.Name, lat = a.At.Latitude, lon = a.At.Longitude })));
+
+// The short gaps in OSM in view (T185, #189), for the overlay that shows them from zoom 14: a view no wider
+// than zoom 12's, so a crafted request can't read a county. Joined or possible, its length, its ends, and the
+// OSM ways either side, to look at in OpenStreetMap.
+app.MapGet("/gaps-in-osm", async (double south, double west, double north, double east, IGapsInOsm gaps, CancellationToken cancellationToken) =>
+    south >= north || west >= east || north - south > 0.25 || east - west > 0.5
+        ? Results.BadRequest()
+        : Results.Json((await gaps.InViewAsync(new MapBounds(south, west, north, east), cancellationToken))
+            .Select(g => new
+            {
+                kind = g.Kind == WendYourWay.Core.Network.MapGapKind.Joined ? "joined" : "possible", lengthM = Math.Round(g.LengthM, 1),
+                from = new[] { g.From.Latitude, g.From.Longitude }, to = new[] { g.To.Latitude, g.To.Longitude }, pathWay = g.PathWay, ontoWay = g.OntoWay
+            })));
 
 // The signed routes under the pointer (T176), for the card shown while Signed trails is on: no
 // further than 200 m (PostgisSignedRoutes clamps it), so a crafted request can't read a county.

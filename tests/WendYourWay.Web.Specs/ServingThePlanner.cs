@@ -75,6 +75,25 @@ public class ServingThePlanner
         Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
     }
 
+    //  T185: the gaps in OSM in view, for the overlay that shows them from zoom 14.
+    [Test]
+    public async Task Then_it_serves_the_gaps_in_OSM_in_view()
+    {
+        using var client = _app.CreateClient();
+        using var response = await client.GetAsync(new Uri("/gaps-in-osm?south=51.49&west=-0.17&north=51.52&east=-0.10", UriKind.Relative));
+        Assert.That((response.StatusCode, response.Content.Headers.ContentType?.MediaType, (await response.Content.ReadAsStringAsync())[0]),
+            Is.EqualTo((HttpStatusCode.OK, "application/json", (char)91)));
+    }
+
+    [TestCase("south=51.52&west=-0.17&north=51.49&east=-0.10", Description = "south of north")]
+    [TestCase("south=51.3&west=-0.5&north=51.7&east=0.2", Description = "wider than zoom 12")]
+    public async Task Then_a_view_of_gaps_that_s_wrong_or_too_large_is_refused(string query)
+    {
+        using var client = _app.CreateClient();
+        using var response = await client.GetAsync(new Uri("/gaps-in-osm?" + query, UriKind.Relative));
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
+    }
+
     [Test]
     public async Task Then_a_tile_that_doesn_t_exist_is_not_found()
     {
