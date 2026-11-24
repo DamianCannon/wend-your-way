@@ -62,19 +62,52 @@ const rememberedOverlay = (name, byDefault = false) => {
 };
 const rememberOverlay = (name, on) => { try { localStorage.setItem(overlayKey(name), on ? "on" : "off"); } catch { /* not kept */ } };
 
+// The overlays that couldn't be loaded (T186, #190: its service down, slow or refusing), said in the key so
+// an empty overlay isn't taken for there being nothing there; loaded again, it's said no more.
+let failedOverlays = new Set();
+const loaded = (layer, ok) => {
+    if (ok !== failedOverlays.has(layer)) return;
+    if (ok) failedOverlays.delete(layer); else failedOverlays.add(layer);
+    reportKey();
+};
+// How long a source has to answer before it counts as not loaded, rather than leaving the overlay empty for good.
+const inTime = () => AbortSignal.timeout(30000);
+// An answer's JSON, or why there's none.
+const answered = response => {
+    if (!response.ok) throw new Error(`${response.status} ${response.statusText}`);
+    return response.json();
+};
+
+// Whether a layer of tiles loaded (T186): not, if it was asked for tiles and none came, only errors. A group
+// of them (Signed trails' several), not if any of its own didn't.
+function watchTiles(layer, tileLayers = [layer]) {
+    const failing = new Map();
+    for (const tiles of tileLayers) {
+        let came = 0, errors = 0;
+        tiles.on("loading", () => { came = errors = 0; });
+        tiles.on("tileload", () => came++);
+        tiles.on("tileerror", () => errors++);
+        tiles.on("load", () => {
+            failing.set(tiles, errors > 0 && came === 0);
+            loaded(layer, ![...failing.values()].some(Boolean));
+        });
+    }
+    return layer;
+}
+
 function offRoadNetworks() {
     const Layer = L.GridLayer.extend({
         createTile(coords, done) {
             const tile = document.createElement("canvas");
             tile.width = tile.height = 256;
-            fetch(`tiles/offroad/${coords.z}/${coords.x}/${coords.y}`)
-                .then(response => response.json())
+            fetch(`tiles/offroad/${coords.z}/${coords.x}/${coords.y}`, { signal: inTime() })
+                .then(answered)
                 .then(data => { drawOffRoad(tile.getContext("2d"), data, coords.z); done(null, tile); })
                 .catch(error => done(error, tile));
             return tile;
         }
     });
-    return new Layer({ opacity: 0.85, zIndex: 3, maxZoom: 20 });
+    return watchTiles(new Layer({ opacity: 0.85, zIndex: 3, maxZoom: 20 }));
 }
 
 // Cafés and toilets (T067): an overlay, off at first and remembered, of those in view from zoom
@@ -92,10 +125,11 @@ function cafesAndToilets() {
         const run = ++reading;
         if (!map.hasLayer(layer) || map.getZoom() < amenitiesFromZoom) { layer.clearLayers(); return; }
         const b = map.getBounds();
-        fetch(`amenities?south=${b.getSouth()}&west=${b.getWest()}&north=${b.getNorth()}&east=${b.getEast()}`)
-            .then(response => response.ok ? response.json() : [])
+        fetch(`amenities?south=${b.getSouth()}&west=${b.getWest()}&north=${b.getNorth()}&east=${b.getEast()}`, { signal: inTime() })
+            .then(answered)
             .then(found => {
                 if (run !== reading) return;
+                loaded(layer, true);
                 layer.clearLayers();
                 for (const a of found) {
                     const icon = L.divIcon({
@@ -107,7 +141,7 @@ function cafesAndToilets() {
                         .addTo(layer);
                 }
             })
-            .catch(() => { /* none shown */ });
+            .catch(() => { if (run === reading) loaded(layer, false); });
     };
     return layer;
 }
@@ -145,10 +179,11 @@ function gapsInOsm() {
         const run = ++reading;
         if (!map.hasLayer(layer) || map.getZoom() < gapsFromZoom) { layer.clearLayers(); return; }
         const b = map.getBounds();
-        fetch(`gaps-in-osm?south=${b.getSouth()}&west=${b.getWest()}&north=${b.getNorth()}&east=${b.getEast()}`)
-            .then(response => response.ok ? response.json() : [])
+        fetch(`gaps-in-osm?south=${b.getSouth()}&west=${b.getWest()}&north=${b.getNorth()}&east=${b.getEast()}`, { signal: inTime() })
+            .then(answered)
             .then(found => {
                 if (run !== reading) return;
+                loaded(layer, true);
                 layer.clearLayers();
                 for (const gap of found) {
                     const joined = gap.kind === "joined";
@@ -158,7 +193,7 @@ function gapsInOsm() {
                     }).bindPopup(() => said(gap), { className: "nudge-popup", closeButton: false, offset: [0, -4] }).addTo(layer);
                 }
             })
-            .catch(() => { /* none shown */ });
+            .catch(() => { if (run === reading) loaded(layer, false); });
     };
     return layer;
 }
@@ -185,8 +220,10 @@ async function arcgisAreas(source, b, zoom, stale) {
     const features = [];
     for (let pages = 0, offset = 0; pages < 5; pages++) {
         query.set("resultOffset", String(offset));
-        const found = await fetch(`${source.query}?${query}`).then(response => response.ok ? response.json() : null);
-        if (stale() || !found?.features) break;
+        const found = await fetch(`${source.query}?${query}`, { signal: inTime() }).then(answered);
+        if (stale()) break;
+        // ArcGIS says what went wrong in an answer of its own, not by its status (T186).
+        if (!found?.features) throw new Error(found?.error?.message ?? "no areas in its answer");
         features.push(...found.features);
         if (!found.properties?.exceededTransferLimit) break;
         offset += found.features.length;
@@ -202,8 +239,10 @@ async function wfsAreas(source, b) {
         outputFormat: "application/json", srsName: "urn:ogc:def:crs:EPSG::4326", count: "2000",
         bbox: `${b.getSouth()},${b.getWest()},${b.getNorth()},${b.getEast()},urn:ogc:def:crs:EPSG::4326`
     });
-    const found = await fetch(`${source.query}?${query}`).then(response => response.ok ? response.json() : null);
-    return found?.features ?? [];
+    // GeoServer's refusals are XML, which isn't JSON (T186).
+    const found = await fetch(`${source.query}?${query}`, { signal: inTime() }).then(answered);
+    if (!found?.features) throw new Error("no areas in its answer");
+    return found.features;
 }
 
 function areaOverlay(overlay) {
@@ -223,12 +262,15 @@ function areaOverlay(overlay) {
         const stale = () => run !== reading;
         const zoom = map.getZoom(), b = map.getBounds();
         const sources = map.hasLayer(layer) ? overlay.sources.filter(source => zoom >= source.fromZoom && covers(source, b)) : [];
-        if (!sources.length) { layer.clearLayers(); return; }
-        Promise.all(sources.map(source => (source.layer ? wfsAreas(source, b) : arcgisAreas(source, b, zoom, stale)).catch(() => [])))
+        // Nothing to ask for here (zoomed out, or over none of its sources): nothing that failed to say.
+        if (!sources.length) { layer.clearLayers(); loaded(layer, true); return; }
+        // What came is drawn, and any source that didn't answer said in the key (T186): Wales's, say, while England's loaded.
+        Promise.allSettled(sources.map(source => source.layer ? wfsAreas(source, b) : arcgisAreas(source, b, zoom, stale)))
             .then(found => {
                 if (stale()) return;
                 layer.clearLayers();
-                layer.addData({ type: "FeatureCollection", features: found.flat() });
+                layer.addData({ type: "FeatureCollection", features: found.flatMap(f => f.status === "fulfilled" ? f.value : []) });
+                loaded(layer, found.every(f => f.status === "fulfilled"));
             });
     };
     return layer;
@@ -278,7 +320,16 @@ const VectorOverlayLayer = L.Layer.extend({
                     ]
                 }
             }).addTo(on);
-        }).catch(() => { /* not drawn: tried again when next turned on */ });
+            // Whether its tiles came (T186): each time MapLibre settles, not if it was sent errors and no tiles.
+            let came = 0, errors = 0;
+            const drawing = this._drawn.getMaplibreMap();
+            drawing.on("data", e => { if (e.dataType === "source" && e.tile) came++; });
+            drawing.on("error", () => errors++);
+            drawing.on("idle", () => {
+                if (errors || came) loaded(this, !(errors > 0 && came === 0));
+                came = errors = 0;
+            });
+        }).catch(() => { loaded(this, false); /* tried again when next turned on */ });
     },
     onRemove(on) {
         if (this._drawn) on.removeLayer(this._drawn);
@@ -357,9 +408,13 @@ function nameRoutesOnPointing(isOn) {
 function gravelHotspots() {
     const layer = L.layerGroup();
     const escape = text => text.replace(/[&<>"']/g, c => `&#${c.charCodeAt(0)};`);
-    fetch("gravel-hotspots")
-        .then(response => response.ok ? response.json() : [])
+    // Read once; if that failed (T186), read again when next turned on.
+    let got = false, asking = false;
+    const read = () => !got && !asking && (asking = true) && fetch("gravel-hotspots", { signal: inTime() })
+        .then(answered)
         .then(found => {
+            got = true;
+            loaded(layer, true);
             for (const h of found) {
                 const icon = L.divIcon({ className: "hotspot-marker", html: `<span>${h.km}</span>`, iconSize: null });
                 L.marker([h.lat, h.lon], { icon, keyboard: false, zIndexOffset: -200 })
@@ -368,7 +423,10 @@ function gravelHotspots() {
                     .addTo(layer);
             }
         })
-        .catch(() => { /* none shown */ });
+        .catch(() => loaded(layer, false))
+        .finally(() => { asking = false; });
+    read();
+    layer.on("add", read);
     return layer;
 }
 
@@ -488,9 +546,10 @@ function reportKey() {
         for (const [name, layer] of Object.entries(keyedOverlays)) if (map.hasLayer(layer)) shown.push(name);
         const from = name => typeof keyedFrom[name] === "function" ? keyedFrom[name]() : keyedFrom[name] ?? 0;
         const waiting = shown.filter(name => map.getZoom() < from(name));
+        const failed = shown.filter(name => failedOverlays.has(keyedOverlays[name]));
         let collapsed = false;
         try { collapsed = localStorage.getItem(keyCollapsedKey) === "true"; } catch { /* open */ }
-        owner.invokeMethodAsync("KeyShown", shown, waiting, collapsed);
+        owner.invokeMethodAsync("KeyShown", shown, waiting, failed, collapsed);
     });
 }
 
@@ -524,6 +583,7 @@ export function dispose() {
     overlaysOffered = () => { };
     keyedOverlays = {};
     keyedFrom = {};
+    failedOverlays = new Set();
     fittingUntil = 0;
 }
 const fitting = () => { fittingUntil = Date.now() + 1000; };
@@ -577,6 +637,7 @@ export function create(element, tiles, centre, dotNet) {
         const group = L.layerGroup(overlay.urls.map(url => L.tileLayer(url, {
             attribution: overlay.attribution, maxZoom: 20, maxNativeZoom: overlay.maxNativeZoom, zIndex: 2
         })));
+        watchTiles(group, group.getLayers());
         webOnly.push(group);
         if (rememberedOverlay(overlay.name)) turnOn(group);
         tiledOverlays[overlay.name] = group;
@@ -632,6 +693,8 @@ export function create(element, tiles, centre, dotNet) {
     map.on("baselayerchange", e => rememberMap(e.name));
     map.on("overlayadd", e => { if (!switching) rememberOverlay(e.name, true); });
     map.on("overlayremove", e => { if (!switching) rememberOverlay(e.name, false); });
+    // Turned off, an overlay that couldn't load is asked again when next turned on (T186): not said till then.
+    map.on("overlayremove", e => failedOverlays.delete(e.layer));
     map.attributionControl.setPrefix('<a href="https://leafletjs.com">Leaflet</a>');
     owner = dotNet;
     keyedOverlays = overlays;

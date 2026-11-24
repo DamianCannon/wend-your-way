@@ -5,7 +5,7 @@
 @inject MapTiles Tiles
 
 <div class="map" @ref="_element"></div>
-<MapKey Shown="_keyShown" Waiting="_keyWaiting" Collapsed="_keyCollapsed" OnCollapsedChanged="CollapseKeyAsync" />
+<MapKey Shown="_keyShown" Waiting="_keyWaiting" Failed="_keyFailed"Collapsed="_keyCollapsed" OnCollapsedChanged="CollapseKeyAsync" />
 
 @code {
     /// <summary>Where the map opens; central London when not given.</summary>
@@ -186,16 +186,17 @@
 
     private IReadOnlyCollection<string> _keyShown = [];
     private IReadOnlyCollection<string> _keyWaiting = [];
+    private IReadOnlyCollection<string> _keyFailed = [];
     private bool _keyCollapsed;
 
     /// <summary>
     /// What's on screen, for the key (T177): the overlays on, by name, and the route's parts; those of them on
-    /// but not drawn at this zoom (T180); and whether the key was left collapsed.
+    /// but not drawn at this zoom (T180); those that couldn't be loaded (T186); and whether the key was left collapsed.
     /// </summary>
     [JSInvokable]
-    public void KeyShown(string[] shown, string[] waiting, bool collapsed)
+    public void KeyShown(string[] shown, string[] waiting, string[] failed, bool collapsed)
     {
-        (_keyShown, _keyWaiting, _keyCollapsed) = (shown, waiting, collapsed);
+        (_keyShown, _keyWaiting, _keyFailed, _keyCollapsed) = (shown, waiting, failed, collapsed);
         StateHasChanged();
     }
 

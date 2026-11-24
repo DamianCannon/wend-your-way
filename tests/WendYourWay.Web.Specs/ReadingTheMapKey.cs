@@ -36,11 +36,15 @@ public class ReadingTheMapKey
 
     // The map says what's on screen, and whether the key was last left collapsed.
     private void OnScreen(bool collapsed, params string[] shown) =>
-        _view.InvokeAsync(() => _view.Instance.KeyShown(shown, [], collapsed));
+        _view.InvokeAsync(() => _view.Instance.KeyShown(shown, [], [], collapsed));
 
     // On, but not drawn at this zoom (T180): cafés from 13, say.
     private void OnButNotDrawn(string[] shown, string[] waiting) =>
-        _view.InvokeAsync(() => _view.Instance.KeyShown(shown, waiting, false));
+        _view.InvokeAsync(() => _view.Instance.KeyShown(shown, waiting, [], false));
+
+    // On, but not loaded (T186): its service down, slow or refusing.
+    private void OnButNotLoaded(string[] shown, string[] failed) =>
+        _view.InvokeAsync(() => _view.Instance.KeyShown(shown, [], failed, false));
 
     private string[] Entries() => _view.FindAll(".map-key li").Select(li => li.TextContent.Trim()).ToArray();
 
@@ -113,6 +117,35 @@ public class ReadingTheMapKey
     {
         OnButNotDrawn(["OS paths", "Car parks"], ["Car parks"]);
         Assert.That(Entries(), Is.EqualTo(new[] { "OS paths", "Car parks · zoom in to see" }));
+    }
+
+    //  An overlay that couldn't be loaded says so (T186, #190), rather than looking like there's nothing there.
+    [Test]
+    public void An_overlay_that_couldn_t_be_loaded_says_so()
+    {
+        OnButNotLoaded(["Open access land"], ["Open access land"]);
+        Assert.That(Entries(), Is.EqualTo(new[] { "Open access land · couldn't load just now" }));
+    }
+
+    [Test]
+    public void A_group_that_couldn_t_be_loaded_says_it_in_its_heading()
+    {
+        OnButNotLoaded(["Gaps in OSM"], ["Gaps in OSM"]);
+        Assert.That(_view.Find(".map-key h3").TextContent, Is.EqualTo("Gaps in OSM · couldn't load just now"));
+    }
+
+    [Test]
+    public void An_overlay_that_loaded_says_nothing_more()
+    {
+        OnButNotLoaded(["OS paths", "Open access land"], ["Open access land"]);
+        Assert.That(Entries(), Is.EqualTo(new[] { "Open access land · couldn't load just now", "OS paths" }));
+    }
+
+    [Test]
+    public void Zoomed_out_it_says_zoom_in_as_nothing_was_asked_for()
+    {
+        _view.InvokeAsync(() => _view.Instance.KeyShown(["Open access land"], ["Open access land"], ["Open access land"], false));
+        Assert.That(Entries(), Is.EqualTo(new[] { "Open access land · zoom in to see" }));
     }
 
     //  T182 (#186): where the Loop runs on ways for customers only, striped.

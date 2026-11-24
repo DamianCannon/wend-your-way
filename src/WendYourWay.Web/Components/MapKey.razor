@@ -8,15 +8,16 @@
         {
             @foreach (var section in _sections)
             {
-                var waiting = Waiting.Contains(section.Shows);
+                // Zoomed out, nothing was asked for: so "zoom in" before "couldn't load" (T186).
+                var note = Waiting.Contains(section.Shows) ? ZoomIn : Failed.Contains(section.Shows) ? NotLoaded : null;
                 @if (section.Entries.Count > 1)
                 {
-                    <h3>@section.Title@if (waiting) {<span class="waiting"> · zoom in to see</span>}</h3>
+                    <h3>@section.Title@if (note is not null) {<span class="waiting"> · @note</span>}</h3>
                 }
-                <ul class="@(waiting ? "waiting" : null)">
+                <ul class="@(note is not null ? "waiting" : null)">
                     @foreach (var entry in section.Entries)
                     {
-                        <li><span class="swatch @entry.Swatch" aria-hidden="true"></span>@entry.Label@if (waiting && section.Entries.Count == 1) {<span class="waiting"> · zoom in to see</span>}</li>
+                        <li><span class="swatch @entry.Swatch" aria-hidden="true"></span>@entry.Label@if (note is not null && section.Entries.Count == 1) {<span class="waiting"> · @note</span>}</li>
                     }
                 </ul>
             }
@@ -72,6 +73,16 @@
 
     /// <summary>What's switched on but not drawn at this zoom (T180): said, so it isn't looked for.</summary>
     [Parameter] public IReadOnlyCollection<string> Waiting { get; set; } = [];
+
+    /// <summary>
+    /// What's switched on but couldn't be loaded (T186, #190): its service down, slow or refusing. Said, so an
+    /// empty overlay isn't taken for there being nothing there.
+    /// </summary>
+    [Parameter] public IReadOnlyCollection<string> Failed { get; set; } = [];
+
+    private const string ZoomIn = "zoom in to see";
+
+    private const string NotLoaded = "couldn't load just now";
 
     /// <summary>Whether only its heading shows.</summary>
     [Parameter] public bool Collapsed { get; set; }
