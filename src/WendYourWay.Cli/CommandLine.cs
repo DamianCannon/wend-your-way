@@ -27,9 +27,11 @@ public static class CommandLine
               --terrain: OS Terrain 50's ASCII grid tiles, for climbing (default data/terrain50/asc).
               --rights-of-way: the Definitive Map byways, for Trail Rides, one folder per authority
                 (default data/rights-of-way).
-          wend update [--source <extract url>] [--data <folder>] [--database <connection string>] [--log <file>]
+          wend update [--source <extract url>] [--data <folder>] [--database <connection string>] [--terrain <folder>] [--os <url>] [--log <file>]
               Bring the map up to date: if Geofabrik's Great Britain extract is newer than the map, download it
               (checked against its MD5, the one before kept), build the Network from it, and calibrate the stars.
+              OS's heights (Terrain 50) and place names (Open Names) come with it when OS has newer ones, from its
+              Downloads API (--os: another like it); if they can't, those in use are kept.
               Whatever fails part-way, the map in use stays as it was; a run stopped after its map was built is
               finished by the next. One at a time; --log writes what it says to a file too.
           wend network back [--database <connection string>] [--terrain <folder>] [--log <file>]
@@ -119,7 +121,7 @@ public static class CommandLine
                 updateOptions.GetValueOrDefault("--osm2pgsql") ?? Osm2pgsqlLocator.Find(), Terrain(updateOptions),
                 updateOptions.GetValueOrDefault("--rights-of-way", DefaultRightsOfWay), to,
                 updateOptions.TryGetValue("--room", out var room) ? double.Parse(room, System.Globalization.CultureInfo.InvariantCulture) : UpdateCommand.LeastRoomGb,
-                cancellationToken);
+                updateOptions.GetValueOrDefault("--os", Data.Building.OsDownloads.Api), cancellationToken);
         }
 
         if (args is ["network", "rebuild", .. var again] && Options.TryParse(again, out var rebuildOptions))
@@ -219,7 +221,7 @@ public static class CommandLine
 
     private static class Options
     {
-        private static readonly HashSet<string> Known = ["--database", "--osm2pgsql", "--terrain", "--rights-of-way", "--source", "--data", "--log", "--room", "--folder", "--index", "--pause"];
+        private static readonly HashSet<string> Known = ["--database", "--osm2pgsql", "--terrain", "--rights-of-way", "--source", "--data", "--log", "--room", "--os", "--folder", "--index", "--pause"];
 
         public static bool TryParse(string[] args, out Dictionary<string, string> options)
         {

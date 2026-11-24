@@ -397,4 +397,27 @@ public class LookingAfterWendYourWay
     [Test]
     public void The_maps_update_is_here_too() =>
         Assert.That(OpenAdmin(Status()).FindAll(".admin .map-update"), Has.Count.EqualTo(1));
+
+    //  T171, #175: OS's place names and heights, brought up to date with the map, said by the release in use.
+    private string OsData(OsDataInUse? data) => Said(OpenAdmin(Status() with { OsData = data }), "the-map .os-data");
+
+    [Test]
+    public void The_map_says_which_release_of_OSs_place_names_and_heights_is_in_use() =>
+        Assert.That(OsData(new OsDataInUse("2026-10", "2026-07", HasHeights: true)),
+            Is.EqualTo("Place names from OS Open Names 2026-10. Heights from OS Terrain 50 2026-07."));
+
+    //  Loaded by hand before T171: the next map update fetches OS's newest.
+    [Test]
+    public void A_release_not_known_is_said_so() =>
+        Assert.That(OsData(new OsDataInUse(null, null, HasHeights: true)),
+            Is.EqualTo("Place names from OS Open Names, release not known. Heights from OS Terrain 50, release not known."));
+
+    [Test]
+    public void Without_heights_it_says_there_are_none() =>
+        Assert.That(OsData(new OsDataInUse("2026-10", null, HasHeights: false)),
+            Is.EqualTo("Place names from OS Open Names 2026-10. No heights: OS Terrain 50 isn't there, so nothing climbs."));
+
+    [Test]
+    public void Before_its_known_nothing_is_said() =>
+        Assert.That(OpenAdmin(Status()).FindAll(".admin .os-data"), Is.Empty);
 }

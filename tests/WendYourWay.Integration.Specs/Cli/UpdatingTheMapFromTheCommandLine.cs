@@ -44,7 +44,7 @@ public class UpdatingTheMapFromTheCommandLine
         return (exitCode, output.ToString());
     }
 
-    private Task<(int ExitCode, string Output)> Update() => Ct("update", "--source", _server.ExtractUrl, "--data", _data,
+    private Task<(int ExitCode, string Output)> Update() => Ct("update", "--source", _server.ExtractUrl, "--os", _server.OsApi, "--data", _data,
         "--database", TestDatabase.ConnectionString, "--osm2pgsql", Tools.Osm2pgsql, "--rights-of-way", Fixtures.Path("rights-of-way"));
 
     private string Extract => Path.Combine(_data, "same-ground-latest.osm");
@@ -81,7 +81,7 @@ public class UpdatingTheMapFromTheCommandLine
     public async Task Finished_it_was_on_the_last_of_its_steps()
     {
         await Updated();
-        Assert.That(await Scalar<string>("select coalesce(step, '') from app.map_updates order by id desc limit 1"), Is.EqualTo("step 16 of 16, backing up"));
+        Assert.That(await Scalar<string>("select coalesce(step, '') from app.map_updates order by id desc limit 1"), Is.EqualTo("step 17 of 17, backing up"));
     }
 
     //  T136: after it builds, Saved Routes the map changed under are moved onto it (none here).
@@ -142,7 +142,7 @@ public class UpdatingTheMapFromTheCommandLine
     [Test]
     public async Task Without_room_for_it_nothing_is_done_and_it_says_so()
     {
-        var (exitCode, output) = await Ct("update", "--source", _server.ExtractUrl, "--data", _data, "--database", TestDatabase.ConnectionString,
+        var (exitCode, output) = await Ct("update", "--source", _server.ExtractUrl, "--os", _server.OsApi, "--data", _data, "--database", TestDatabase.ConnectionString,
             "--osm2pgsql", Tools.Osm2pgsql, "--rights-of-way", Fixtures.Path("rights-of-way"), "--room", "1000000");
         Assert.That((exitCode, _server.Asked.Contains("/same-ground-latest.osm"), await LastOutcome(), await LastMessage()),
             Is.EqualTo((1, false, "failed", (await LastMessage()))), output);

@@ -238,7 +238,9 @@ Geofabrik great-britain-latest.osm.pbf
     reattach_user_data()    re-link Marks, Saved Loops and coverage by OSM identity or closeness
 
   other inputs:
-    OS Terrain 50 (ASCII grid tiles) ─► read in place from data/terrain50/asc (input to climbing)
+    OS Terrain 50 (ASCII grid tiles) ─► read in place from data/terrain50/asc (input to climbing);
+                                         wend update fetches OS's newer release first (T171)
+    OS Open Names (CSV, zipped)      ─► places.names, by wend update after it builds, when OS's is newer (T171)
     DfT AADF traffic counts (CSV)    ─► network.traffic_counts (input to derive_hazard)
     rowmaps GeoJSON per authority    ─► network.definitive_ways (input to derive_access;
                                          fetched the first time a Request or Outing touches it)

@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.IO.Compression;
 using System.Text;
 using WendYourWay.Core.Network;
 using WendYourWay.Core.Places;
@@ -31,9 +32,27 @@ public static class OpenNames
     }
 
     /// <summary>The entries of one file kept for search.</summary>
-    public static IEnumerable<OpenNamesEntry> Read(string file)
+    public static IEnumerable<OpenNamesEntry> Read(string file) => Read(() => File.OpenRead(file));
+
+    /// <summary>The CSV files in OS's zip of OS Open Names (T171): its Data folder's, in order.</summary>
+    public static IReadOnlyList<ZipArchiveEntry> Files(ZipArchive zip)
     {
-        using var reader = new StreamReader(file, Encoding.UTF8, detectEncodingFromByteOrderMarks: true);
+        ArgumentNullException.ThrowIfNull(zip);
+        return [.. zip.Entries.Where(e => e.FullName.Replace('\\', '/').Contains("Data/", StringComparison.OrdinalIgnoreCase)
+                && e.Name.EndsWith(".csv", StringComparison.OrdinalIgnoreCase))
+            .OrderBy(e => e.Name, StringComparer.OrdinalIgnoreCase)];
+    }
+
+    /// <summary>The entries of one file in OS's zip kept for search (T171).</summary>
+    public static IEnumerable<OpenNamesEntry> Read(ZipArchiveEntry file)
+    {
+        ArgumentNullException.ThrowIfNull(file);
+        return Read(file.Open);
+    }
+
+    private static IEnumerable<OpenNamesEntry> Read(Func<Stream> open)
+    {
+        using var reader = new StreamReader(open(), Encoding.UTF8, detectEncodingFromByteOrderMarks: true);
         foreach (var row in Csv.Rows(reader))
         {
             if (row.Count <= Country || row[Country] is not ("England" or "Wales")) continue;

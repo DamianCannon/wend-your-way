@@ -77,6 +77,31 @@ internal sealed class ExtractServer : IDisposable
     /// <summary>Set, the day's file the extract is sent on to never answers, as Geofabrik's didn't on 23 November 2026 (T184).</summary>
     public bool DaysFileHangs { get; init; }
 
+
+    /// <summary>OS's Downloads API (T171), at `/os/`: what `wend update --os` takes.</summary>
+    public string OsApi => $"http://127.0.0.1:{((IPEndPoint)_listener.LocalEndpoint).Port}/os/";
+
+    /// <summary>OS's products offered there (T171), by id: none, and OS answers nothing found.</summary>
+    public Dictionary<string, (string Version, string Format, string FileName, byte[] Bytes)> OsProducts { get; } = [];
+
+    // MD5 because OS publishes it: a check the file arrived whole, not of who sent it.
+#pragma warning disable CA5351
+    // OS's answer to a path under /os/ (T171): a product's release, its files, or a file; null if not OS's.
+    private (int, byte[], int?)? OsAnswer(string path)
+    {
+        if (!path.StartsWith("/os/", StringComparison.Ordinal)) return null;
+        foreach (var (id, p) in OsProducts)
+        {
+            if (path == $"/os/products/{id}")
+                return (200, Encoding.UTF8.GetBytes($$"""{"id":"{{id}}","version":"{{p.Version}}","areas":["GB"]}"""), null);
+            if (path == $"/os/products/{id}/downloads")
+                return (200, Encoding.UTF8.GetBytes($$"""[{"md5":"{{Convert.ToHexStringLower(MD5.HashData(p.Bytes))}}","size":{{p.Bytes.Length}},"url":"{{OsApi}}files/{{id}}","format":"{{p.Format}}","area":"GB","fileName":"{{p.FileName}}"}]"""), null);
+            if (path == $"/os/files/{id}") return (200, p.Bytes, null);
+        }
+        return (404, Encoding.ASCII.GetBytes("Not found"), null);
+    }
+#pragma warning restore CA5351
+
     private bool DaysFileMissing => DaysFileAnswers is not null || DaysFileHangs;
 
     // Where the extract is sent on to: the day's file.
@@ -122,7 +147,7 @@ internal sealed class ExtractServer : IDisposable
 
             // MD5 because Geofabrik publishes it: a check the file arrived whole, not of who sent it.
 #pragma warning disable CA5351
-            var (status, body, promised) = path switch
+            var (status, body, promised) = OsAnswer(path) ?? path switch
             {
                 _ when Folders && path == $"/{Name}/{Name}-latest.osm" => (307, Array.Empty<byte>(), (int?)null),
                 _ when path == State => (200, Encoding.ASCII.GetBytes(
@@ -135,6 +160,7 @@ internal sealed class ExtractServer : IDisposable
                 _ => (404, Encoding.ASCII.GetBytes("Not found"), null),
             };
 #pragma warning restore CA5351
+
             var head = $"HTTP/1.1 {status} {status switch { 200 => "OK", 307 => "Temporary Redirect", 503 => "Service Unavailable", _ => "Not Found" }}\r\n"
                 + (status == 307 ? $"Location: {Sent}\r\n" : "")
                 + $"Content-Length: {promised ?? body.Length}\r\nConnection: close\r\n\r\n";

@@ -24,12 +24,16 @@ public sealed class TerrainGrid
     public TerrainGrid(string folder)
     {
         if (!Directory.Exists(folder)) throw new DirectoryNotFoundException($"No OS Terrain 50 tiles at {Path.GetFullPath(folder)}.");
+        Folder = folder;
         foreach (var file in Directory.EnumerateFiles(folder, "*.asc"))
         {
             var header = Header(File.ReadLines(file).Take(5));
             _files[((int)(header["xllcorner"] / SquareM), (int)(header["yllcorner"] / SquareM))] = file;
         }
     }
+
+    /// <summary>The folder of tiles read (T171: which release they are is said there).</summary>
+    public string Folder { get; }
 
     /// <summary>How many tiles the folder holds.</summary>
     public int Tiles => _files.Count;

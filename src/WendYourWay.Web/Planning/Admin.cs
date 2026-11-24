@@ -4,6 +4,7 @@ using WendYourWay.Data.Building;
 using WendYourWay.Data.Outings;
 using WendYourWay.Data.UserData;
 using Npgsql;
+using WendYourWay.Data.Places;
 
 namespace WendYourWay.Web.Planning;
 
@@ -16,7 +17,7 @@ namespace WendYourWay.Web.Planning;
 public sealed record AdminStatus(
     int Outings, int Unrated, DateTimeOffset? LastImported, DateTimeOffset? LastBackup, string? BackupFolder,
     double? FreeGb, string? Drive, Job? Running, Job? LastImport = null, IReadOnlyList<BackupListed>? Backups = null, Job? LastRestore = null,
-    MapBefore? MapBefore = null, Job? LastBack = null)
+    MapBefore? MapBefore = null, Job? LastBack = null, OsDataInUse? OsData = null)
 {
     /// <summary>Before anything's known.</summary>
     public static AdminStatus Unknown { get; } = new(0, 0, null, null, null, null, null, null);
@@ -24,6 +25,12 @@ public sealed record AdminStatus(
     /// <summary>Whether there's room for a map update (`wend update` refuses under this).</summary>
     public bool RoomForAnUpdate => FreeGb is not { } free || free >= UpdateRoom.LeastGb;
 }
+
+/// <summary>
+/// OS's open data in use (T171, #175): the release of OS Open Names loaded, and of OS Terrain 50 unpacked, each
+/// null when it isn't known (loaded by hand, before T171); and whether there are heights at all.
+/// </summary>
+public sealed record OsDataInUse(string? NamesVersion, string? HeightsVersion, bool HasHeights);
 
 /// <summary>A job under way (T138): it, and how long the last of its kind that ended well took, if one has.</summary>
 public sealed record UnderWay(Job Job, TimeSpan? TookLast);
@@ -72,7 +79,7 @@ public interface IAdmin
 /// <param name="backupFolder">This database's own backup folder; none for a test database.</param>
 /// <param name="importFolder">Where runs are imported from (`Import:Folder`); the user's Downloads, as wend finds it, by default.</param>
 public sealed class AdminView(
-    NpgsqlDataSource dataSource, string connectionString, string? backupFolder, string dataFolder, TimeProvider time, WendLauncher launcher, string? importFolder = null, WorkUnderWay? underWay = null, HeldBackAtStart? heldBack = null) : IAdmin
+    NpgsqlDataSource dataSource, string connectionString, string? backupFolder, string dataFolder, TimeProvider time, WendLauncher launcher, string? importFolder = null, WorkUnderWay? underWay = null, HeldBackAtStart? heldBack = null, string? terrainFolder = null) : IAdmin
 {
     private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
 
@@ -87,7 +94,25 @@ public sealed class AdminView(
             .Select(b => new BackupListed(Path.GetFileName(b.DumpPath), b.Manifest.TakenAt, b.Manifest.Rows.GetValueOrDefault("outings"))).ToList();
         return new AdminStatus(counts.Outings, counts.Unrated, counts.LastImported, LastBackup(), backupFolder, freeGb, drive, running,
             await jobs.LastAsync(JobKind.Import, cancellationToken), backups, await jobs.LastAsync(JobKind.Restore, cancellationToken),
-            await NetworkBefore.FindAsync(dataSource, cancellationToken), await jobs.LastAsync(JobKind.Back, cancellationToken));
+            await NetworkBefore.FindAsync(dataSource, cancellationToken), await jobs.LastAsync(JobKind.Back, cancellationToken),
+            await OsDataAsync(cancellationToken));
+    }
+
+    // Which release of OS's place names and heights is in use (T171): the places' own record, and the terrain folder's.
+    private async Task<OsDataInUse> OsDataAsync(CancellationToken cancellationToken)
+    {
+        string? names;
+        try
+        {
+            names = (await PlacesImport.ReleaseAsync(dataSource, cancellationToken))?.Release.Version;
+        }
+        catch (PostgresException e) when (e.SqlState == PostgresErrorCodes.UndefinedTable)
+        {
+            // Its migration held back while a job runs (T149): not known yet.
+            names = null;
+        }
+        var hasHeights = terrainFolder is not null && Directory.Exists(terrainFolder);
+        return new OsDataInUse(names, hasHeights ? TerrainRelease.In(terrainFolder!)?.Version : null, hasHeights);
     }
 
     public async Task<UnderWay?> UnderWayAsync(CancellationToken cancellationToken = default)

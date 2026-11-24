@@ -73,7 +73,8 @@ builder.Services.AddSingleton<WendYourWay.Web.Planning.IAdmin>(services => new W
     new WendYourWay.Web.Planning.WendLauncher(builder.Environment.ContentRootPath, ConnectionString(services.GetRequiredService<IConfiguration>()), services.GetRequiredService<TimeProvider>()),
     services.GetRequiredService<IConfiguration>()["Import:Folder"],
     services.GetRequiredService<WendYourWay.Web.Planning.WorkUnderWay>(),
-    services.GetRequiredService<WendYourWay.Web.Planning.HeldBackAtStart>()));
+    services.GetRequiredService<WendYourWay.Web.Planning.HeldBackAtStart>(),
+    services.GetRequiredService<TerrainFolder>().Grid?.Folder));
 builder.Services.AddSingleton<WendYourWay.Web.Planning.HeldBackAtStart>();
 // The map brought up to date from the app (T128): `wend update` started in a process of its own.
 builder.Services.AddSingleton(TimeProvider.System);

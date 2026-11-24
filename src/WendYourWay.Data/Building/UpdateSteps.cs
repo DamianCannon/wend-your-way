@@ -11,6 +11,7 @@ public sealed class UpdateSteps
     [
         ("checking", "checking for a newer map"),
         ("downloading", "downloading the map"),
+        ("heights", "checking OS's heights"),
         ("osm2pgsql", "loading the map"),
         ("rights of way", "loading the rights of way"),
         ("segments", "building the paths"),
@@ -23,6 +24,7 @@ public sealed class UpdateSteps
         ("climbing", "working out the climbing"),
         ("in order of place", "putting the paths in order"),
         ("outings", "finding what your Outings covered"),
+        ("place names", "loading OS's place names"),
         ("moving Saved Routes", "moving Saved Routes onto the new map"),
         ("calibrating", "calibrating the stars"),
         ("backing up", "backing up"),
@@ -32,8 +34,8 @@ public sealed class UpdateSteps
 
     private UpdateSteps((string Key, string Words)[] steps) => _steps = steps;
 
-    /// <summary>An update's steps: the climbing among them only if there's terrain to climb on.</summary>
-    public static UpdateSteps For(bool climbing) => new([.. All.Where(s => climbing || s.Key != "climbing")]);
+    /// <summary>An update's steps: OS's heights and the climbing among them only if there's terrain to climb on (T171).</summary>
+    public static UpdateSteps For(bool climbing) => new([.. All.Where(s => climbing || s.Key is not ("climbing" or "heights"))]);
 
     /// <summary>The step, as the job line says it; null if it isn't one of this update's.</summary>
     public string? Said(string step)

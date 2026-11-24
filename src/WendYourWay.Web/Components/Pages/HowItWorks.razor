@@ -115,8 +115,8 @@
                 <tbody>
                     <tr><td>OpenStreetMap</td><td>Download <code>great-britain-latest.osm.pbf</code> from Geofabrik, then <code>wend network build</code> it: about 4&frac12; hours, best overnight.</td></tr>
                     <tr><td>Byways (Trail Rides)</td><td><code>scripts/get-rights-of-way.ps1</code>, then <code>wend network rebuild</code>.</td></tr>
-                    <tr><td>Place names</td><td>OS Open Names' CSV, quarterly: <code>wend places import</code>, under a minute.</td></tr>
-                    <tr><td>Heights</td><td>OS Terrain 50, yearly: new tiles in <code>data/terrain50/asc</code>, then <code>wend network rebuild</code>.</td></tr>
+                    <tr><td>Place names</td><td>OS Open Names, quarterly: fetched and loaded by <strong>Update the map</strong> when OS has a newer release (the Admin panel says which is in use), or <code>wend places import</code> by hand.</td></tr>
+                    <tr><td>Heights</td><td>OS Terrain 50, yearly: fetched by <strong>Update the map</strong> when OS has a newer release, before it builds, or new tiles in <code>data/terrain50/asc</code> and <code>wend network rebuild</code> by hand.</td></tr>
                     <tr><td>Your runs</td><td>A new Strava export: <code>wend outings import-strava</code> adds only what's new.</td></tr>
                     <tr><td>Your own data</td><td>Backed up by itself to "Wend Your Way Backups" in OneDrive, after every import and build and each day the app starts; 10 kept, spread over a month. The Admin panel backs up at a click, lists the last ten with their Outings, and puts one back, asking first.</td></tr>
                 </tbody>

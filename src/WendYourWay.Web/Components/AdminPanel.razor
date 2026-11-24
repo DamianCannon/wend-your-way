@@ -15,6 +15,11 @@
     <section class="the-map">
         <h3>The map</h3>
         <MapUpdateLine />
+        @* OS's place names and heights (T171, #175), brought up to date with the map: which release is in use. *@
+        @if (_status.OsData is { } os)
+        {
+            <p class="os-data">@OsDataSaid(os)</p>
+        }
         @* Back to the map before (#135, T131), if a new one turns out bad; done again, forward. *@
         @if (_status.LastBack is { } back && back.Id != _status.Running?.Id)
         {
@@ -283,6 +288,13 @@
     public void Dispose() => _looking?.Dispose();
 
     private static string Day(DateTimeOffset at) => at.ToLocalTime().ToString("d MMM yyyy", Culture);
+
+    // Which release of OS's place names and heights is in use (T171).
+    private static string OsDataSaid(OsDataInUse os) =>
+        $"Place names from OS Open Names{Release(os.NamesVersion)}. "
+        + (os.HasHeights ? $"Heights from OS Terrain 50{Release(os.HeightsVersion)}." : "No heights: OS Terrain 50 isn't there, so nothing climbs.");
+
+    private static string Release(string? version) => version is null ? ", release not known" : " " + version;
 
     private static string What(string kind) => JobWords.What(kind);
 }

@@ -30,7 +30,7 @@ public static class UpdateCommand
 
     public static async Task<int> Run(
         string source, string dataFolder, string connectionString, string? osm2pgsqlExe, string? terrain, string rightsOfWay,
-        TextWriter output, double leastRoomGb = LeastRoomGb, CancellationToken cancellationToken = default)
+        TextWriter output, double leastRoomGb = LeastRoomGb, string osApi = OsDownloads.Api, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(output);
         await output.WriteLineAsync($"Updating the map from {source} → {new NpgsqlConnectionStringBuilder(connectionString).Database} ({DateTimeOffset.Now.ToString("d MMM yyyy HH:mm", Culture)})");
@@ -61,7 +61,8 @@ public static class UpdateCommand
         var heartbeat = BeatAsync(updates, id, steps, beating.Token);
         try
         {
-            return await UpdateAsync(id, updates, steps, dataSource, source, dataFolder, connectionString, osm2pgsqlExe, terrain, rightsOfWay, leastRoomGb, output, cancellationToken);
+            return await UpdateAsync(id, updates, steps, dataSource, source, dataFolder, connectionString, osm2pgsqlExe, terrain, rightsOfWay, leastRoomGb,
+                new OsDownloads(Http, osApi), output, cancellationToken);
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
@@ -87,7 +88,7 @@ public static class UpdateCommand
 
     private static async Task<int> UpdateAsync(
         int id, Jobs updates, Stepping steps, NpgsqlDataSource dataSource, string source, string dataFolder, string connectionString,
-        string? osm2pgsqlExe, string? terrain, string rightsOfWay, double leastRoomGb, TextWriter output, CancellationToken cancellationToken)
+        string? osm2pgsqlExe, string? terrain, string rightsOfWay, double leastRoomGb, OsDownloads os, TextWriter output, CancellationToken cancellationToken)
     {
         // A run that died after its swap: what follows the build finished, and nothing downloaded.
         if (await updates.LastUpdateBeforeAsync(id, cancellationToken) is { BuiltButNotFinished: true } stopped)
@@ -129,15 +130,24 @@ public static class UpdateCommand
         await output.WriteLineAsync($"  downloaded {new FileInfo(kept).Length:N0} bytes, matching its MD5");
         if (extract.TookEarlier is { } day) await output.WriteLineAsync(ExtractSource.Earlier(day));
 
+        // OS's heights brought up to date before the build climbs on them (T171).
+        var heights = terrain;
+        if (terrain is not null)
+        {
+            await steps.AtAsync("heights", cancellationToken);
+            heights = await OsDataUpdate.HeightsAsync(os, terrain, output, cancellationToken);
+        }
+
         await updates.StageAsync(id, "building", cancellationToken: cancellationToken);
         await steps.AtAsync("osm2pgsql", cancellationToken);
         var built = false;
-        var code = await NetworkBuildCommand.Run(kept, connectionString, osm2pgsqlExe, terrain, rightsOfWay, output, locked: true,
+        var code = await NetworkBuildCommand.Run(kept, connectionString, osm2pgsqlExe, heights, rightsOfWay, output, locked: true,
             built: async () =>
             {
                 built = true;
                 await updates.StageAsync(id, "built", cancellationToken: cancellationToken);
             }, cancellationToken: cancellationToken, phaseDone: steps.Done);
+        if (terrain is not null) await OsDataUpdate.UseHeights(terrain, heights!, built, output);
         if (code != 0)
         {
             await End(updates, id, "failed", built
@@ -145,6 +155,11 @@ public static class UpdateCommand
                 : "The map couldn't be built from the new extract, so the map in use is as it was. The log says why.", output);
             return 1;
         }
+
+        // OS's place names after the build: they take the new map's green areas (T171).
+        await updates.StageAsync(id, "place names", cancellationToken: cancellationToken);
+        await steps.AtAsync("place names", cancellationToken);
+        await OsDataUpdate.PlaceNamesAsync(os, dataSource, dataFolder, output, cancellationToken);
 
         await FinishAsync(id, updates, steps, dataSource, connectionString, terrain, output, cancellationToken);
         await End(updates, id, "finished", $"Updated: the map's paths are as of {Day(sourceAt)}.", output);

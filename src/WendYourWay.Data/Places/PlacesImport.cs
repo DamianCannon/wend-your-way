@@ -1,3 +1,4 @@
+using System.IO.Compression;
 using WendYourWay.Core.Network;
 using WendYourWay.Core.Places;
 using Npgsql;
@@ -11,6 +12,12 @@ namespace WendYourWay.Data.Places;
 /// <param name="Districts">The postcode districts made from them.</param>
 /// <param name="GreenAreas">The map's own named green areas OS Open Names hasn't.</param>
 public sealed record PlacesLoaded(long Places, long Postcodes, long Districts, long GreenAreas);
+
+/// <summary>A release of OS Open Names (T171): OS's version, "2026-10", and the MD5 of the zip it came in.</summary>
+public sealed record PlacesRelease(string Version, string Md5);
+
+/// <summary>The release of OS Open Names loaded (T171), and when.</summary>
+public sealed record PlacesLoadedRelease(PlacesRelease Release, DateTimeOffset LoadedAt);
 
 /// <summary>
 /// Loads the places to search for (PLAN T064), in place of any loaded before, in one transaction:
@@ -26,10 +33,36 @@ public static class PlacesImport
     /// <summary>How near another of the same name a green area is the same place.</summary>
     public const double SameNameM = 1000;
 
-    public static async Task<PlacesLoaded> LoadAsync(NpgsqlDataSource dataSource, IReadOnlyList<string> files, Action<string>? reading = null, CancellationToken cancellationToken = default)
+    /// <summary>Loads OS Open Names' CSV files, unpacked by hand: which release they are isn't known.</summary>
+    public static Task<PlacesLoaded> LoadAsync(NpgsqlDataSource dataSource, IReadOnlyList<string> files, Action<string>? reading = null, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(files);
+        return LoadAsync(dataSource, files.Select(file => (file, OpenNames.Read(file))), null, reading, cancellationToken);
+    }
+
+    /// <summary>Loads OS Open Names straight from OS's zip (T171), kept as <paramref name="release"/>.</summary>
+    public static async Task<PlacesLoaded> LoadZipAsync(NpgsqlDataSource dataSource, string zip, PlacesRelease release, Action<string>? reading = null, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(release);
+        using var archive = ZipFile.OpenRead(zip);
+        return await LoadAsync(dataSource, OpenNames.Files(archive).Select(file => (file.FullName, OpenNames.Read(file))), release, reading, cancellationToken);
+    }
+
+    /// <summary>The release of OS Open Names loaded, and when; null if they were loaded by hand, or never.</summary>
+    public static async Task<PlacesLoadedRelease?> ReleaseAsync(NpgsqlDataSource dataSource, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(dataSource);
-        ArgumentNullException.ThrowIfNull(files);
+        await using var command = dataSource.CreateCommand("select version, md5, loaded_at from places.release limit 1");
+        await using var reader = await command.ExecuteReaderAsync(cancellationToken);
+        return await reader.ReadAsync(cancellationToken)
+            ? new PlacesLoadedRelease(new PlacesRelease(reader.GetString(0), reader.GetString(1)), reader.GetFieldValue<DateTimeOffset>(2))
+            : null;
+    }
+
+    private static async Task<PlacesLoaded> LoadAsync(NpgsqlDataSource dataSource, IEnumerable<(string Name, IEnumerable<OpenNamesEntry> Entries)> files,
+        PlacesRelease? release, Action<string>? reading, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(dataSource);
         await using var connection = await dataSource.OpenConnectionAsync(cancellationToken);
         await using var transaction = await connection.BeginTransactionAsync(cancellationToken);
         await ExecuteAsync(connection, transaction, "truncate places.names restart identity", cancellationToken);
@@ -38,10 +71,10 @@ public static class PlacesImport
         await using (var names = await connection.BeginBinaryImportAsync(
             "copy places.names (name, kind, context, key, geom) from stdin (format binary)", cancellationToken))
         {
-            foreach (var file in files)
+            foreach (var (file, entries) in files)
             {
                 reading?.Invoke(file);
-                foreach (var entry in OpenNames.Read(file))
+                foreach (var entry in entries)
                 {
                     if (entry.Kind == PlaceKind.Postcode)
                     {
@@ -70,6 +103,15 @@ public static class PlacesImport
 
         var green = await GreenAreasAsync(connection, transaction, cancellationToken);
         await ExecuteAsync(connection, transaction, "analyze places.names", cancellationToken);
+        // Which release they are (T171): none, loaded by hand.
+        await ExecuteAsync(connection, transaction, "delete from places.release", cancellationToken);
+        if (release is not null)
+        {
+            await using var said = new NpgsqlCommand("insert into places.release (version, md5) values (@version, @md5)", connection, transaction);
+            said.Parameters.AddWithValue("version", release.Version);
+            said.Parameters.AddWithValue("md5", release.Md5);
+            await said.ExecuteNonQueryAsync(cancellationToken);
+        }
         await transaction.CommitAsync(cancellationToken);
         return new PlacesLoaded(places, postcodes, districts, green);
     }
