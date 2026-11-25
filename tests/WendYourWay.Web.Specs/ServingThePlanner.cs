@@ -94,6 +94,27 @@ public class ServingThePlanner
         Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
     }
 
+    //  T188 (#192): the Hotspots of the Activity chosen, all of them, for the overlay.
+    [TestCase("run")]
+    [TestCase("gravel-ride")]
+    [TestCase("trail-ride")]
+    public async Task Then_it_serves_the_hotspots_of_each_Activity(string activity)
+    {
+        using var client = _app.CreateClient();
+        using var response = await client.GetAsync(new Uri("/hotspots?activity=" + activity, UriKind.Relative));
+        Assert.That((response.StatusCode, response.Content.Headers.ContentType?.MediaType, (await response.Content.ReadAsStringAsync())[0]),
+            Is.EqualTo((HttpStatusCode.OK, "application/json", (char)91)));
+    }
+
+    [TestCase("activity=swim")]
+    [TestCase("")]
+    public async Task Then_hotspots_of_an_Activity_it_doesn_t_know_are_refused(string query)
+    {
+        using var client = _app.CreateClient();
+        using var response = await client.GetAsync(new Uri("/hotspots?" + query, UriKind.Relative));
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
+    }
+
     [Test]
     public async Task Then_a_tile_that_doesn_t_exist_is_not_found()
     {

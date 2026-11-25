@@ -175,6 +175,7 @@ internal sealed class PlannerSession(
         if (_start is { } start) await _map.ShowStartAsync(start);
         if (_endElsewhere && _finish is { } finish) await _map.ShowFinishAsync(finish);
         await ShowMarksAsync();
+        await _map.ShowActivityAsync(_activity);
     }
 
     internal async Task GoAsync()
@@ -715,6 +716,7 @@ internal sealed class PlannerSession(
         Restart();
         _offered = loops;
         (_importedName, _activity) = (name, activity);
+        await _map.ShowActivityAsync(activity);
         (_start, _chosen) = (loops[0].Start, null);
         if (_outingShown) await _map.ClearOutingAsync();
         _outingShown = false;
@@ -809,6 +811,7 @@ internal sealed class PlannerSession(
         Restart();
         (_offered, _loops, _current) = (step.Offered, step.Loops, step.Current);
         (_start, _chosen, _distanceKm, _activity, _importedName) = (step.Start, step.Chosen, step.DistanceKm, step.Activity, step.Imported);
+        await _map.ShowActivityAsync(_activity);
         (_endElsewhere, _finish, _finishName, _finishDistanceKm, _startName) = (step.EndElsewhere, step.Finish, step.FinishName, step.FinishDistanceKm, step.StartName);
         _nudgeNote = null;
         Changed?.Invoke();
@@ -975,6 +978,7 @@ internal sealed class PlannerSession(
     {
         if (activity == _activity) return;
         _activity = activity;
+        await _map.ShowActivityAsync(activity);
         // Its own car parks (T073), compared for it; with no view yet, nothing to look at.
         if (_starts.View is null) Compare();
         else await LookAroundAsync();

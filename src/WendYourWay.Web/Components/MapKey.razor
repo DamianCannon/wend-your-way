@@ -58,7 +58,8 @@
         One("blocked", "Never used (blocked)", "blocked"),
         One("Open access land", "Open access land", "access-land"),
         One("OS paths", "OS paths", "os-paths"),
-        One("Gravel hotspots", "Gravel hotspots", "hotspot"),
+        // T188: the Activity chosen's Hotspots, named for it as they're shown.
+        One(HotspotsShows, "Hotspots", "hotspot"),
         One("Car parks", "Car parks", "car-park"),
         new("outing", "The Outing", [new("Off-road", "ground-off-road"), new("Traffic-free", "ground-traffic-free"), new("Connector", "ground-connector"), new("Your track", "outing-track"), new("Gap", "outing-gap")]),
         new("Off-road networks", "Off-road networks", [new("Under 10 km", "off-road-1"), new("10–30 km", "off-road-2"), new("30–100 km", "off-road-3"), new("100–300 km", "off-road-4"), new("Over 300 km", "off-road-5")]),
@@ -90,7 +91,21 @@
     /// <summary>Collapsed or opened by the user.</summary>
     [Parameter] public EventCallback<bool> OnCollapsedChanged { get; set; }
 
+    /// <summary>The Activity chosen (T188): the Hotspots shown are its, and named for it.</summary>
+    [Parameter] public WendYourWay.Core.Loops.Activity Activity { get; set; }
+
+    /// <summary>The Hotspots overlay, in the map's words: one for every Activity, showing the chosen one's.</summary>
+    public const string HotspotsShows = "Hotspots";
+
     private IReadOnlyList<KeySection> _sections = [];
 
-    protected override void OnParametersSet() => _sections = [.. Sections.Where(s => Shown.Contains(s.Shows))];
+    protected override void OnParametersSet() =>
+        _sections = [.. Sections.Where(s => Shown.Contains(s.Shows)).Select(s => s.Shows == HotspotsShows ? One(HotspotsShows, HotspotsCalled(Activity), "hotspot") : s)];
+
+    private static string HotspotsCalled(WendYourWay.Core.Loops.Activity activity) => activity switch
+    {
+        WendYourWay.Core.Loops.Activity.GravelRide => "Gravel hotspots",
+        WendYourWay.Core.Loops.Activity.TrailRide => "Trail Ride hotspots",
+        _ => "Run hotspots",
+    };
 }

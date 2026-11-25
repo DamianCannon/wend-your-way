@@ -1,5 +1,6 @@
 using System.Text.RegularExpressions;
 using Bunit;
+using WendYourWay.Core.Loops;
 using WendYourWay.Web.Components;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -23,6 +24,7 @@ public class ReadingTheMapKey
         _map = _context.JSInterop.SetupModule("./js/map.js");
         _map.SetupVoid("create", _ => true).SetVoidResult();
         _map.SetupVoid("rememberKeyCollapsed", _ => true).SetVoidResult();
+        _map.SetupVoid("showActivity", _ => true).SetVoidResult();
         _context.Services.AddSingleton(MapTiles.Of("https://tiles/{z}/{x}/{y}.png", "Map"));
         _view = _context.Render<MapView>();
     }
@@ -174,8 +176,18 @@ public class ReadingTheMapKey
 
     [Test]
     public void The_other_overlays_are_keyed_by_name() =>
-        Assert.That(new[] { "Open access land", "OS paths", "Gravel hotspots", "Cafés and toilets" }.SelectMany(KeyFor),
-            Is.EqualTo(new[] { "Open access land", "OS paths", "Gravel hotspots", "Café", "Toilets" }));
+        Assert.That(new[] { "Open access land", "OS paths", "Hotspots", "Cafés and toilets" }.SelectMany(KeyFor),
+            Is.EqualTo(new[] { "Open access land", "OS paths", "Run hotspots", "Café", "Toilets" }));
+
+    //  T188 (#192): one Hotspots overlay, whose marks are the Activity chosen's, keyed by its name.
+    [TestCase(Activity.Run, "Run hotspots")]
+    [TestCase(Activity.GravelRide, "Gravel hotspots")]
+    [TestCase(Activity.TrailRide, "Trail Ride hotspots")]
+    public void Hotspots_are_keyed_as_the_Activity_chosen_s(Activity activity, string keyed)
+    {
+        _view.InvokeAsync(() => _view.Instance.ShowActivityAsync(activity));
+        Assert.That(KeyFor("Hotspots"), Is.EqualTo(new[] { keyed }));
+    }
 
     //  Sections keep the key's own order (the Loop first), whatever order the map gives them in.
     [Test]
@@ -190,10 +202,10 @@ public class ReadingTheMapKey
     [Test]
     public void Single_entries_come_before_the_groups()
     {
-        OnScreen(false, "Gaps in OSM", "Cafés and toilets", "Signed trails", "Off-road networks", "Car parks", "Gravel hotspots", "OS paths", "Open access land");
+        OnScreen(false, "Gaps in OSM", "Cafés and toilets", "Signed trails", "Off-road networks", "Car parks", "Hotspots", "OS paths", "Open access land");
         Assert.That(_view.FindAll(".map-key h3, .map-key li").Select(e => e.TextContent.Trim()), Is.EqualTo(new[]
         {
-            "Open access land", "OS paths", "Gravel hotspots", "Car parks",
+            "Open access land", "OS paths", "Run hotspots", "Car parks",
             "Off-road networks", "Under 10 km", "10–30 km", "30–100 km", "100–300 km", "Over 300 km",
             "Signed trails", "International", "National", "Regional", "Local",
             "Cafés and toilets", "Café", "Toilets",

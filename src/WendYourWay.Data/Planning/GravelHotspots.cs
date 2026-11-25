@@ -2,18 +2,11 @@ using Npgsql;
 
 namespace WendYourWay.Data.Planning;
 
-/// <summary>
-/// A Gravel hotspot (PLAN T072; STORY-039): a Gravel Off-road network large enough to drive to for
-/// a Gravel Ride, marked at a junction on it, with the box round it and the nearest town or village,
-/// if known.
-/// </summary>
-public sealed record GravelHotspot(string? Near, LatLon At, double Km, MapBounds Box);
-
 /// <summary>The Gravel hotspots of the whole Network (T072).</summary>
 public interface IGravelHotspots
 {
     /// <summary>Every Gravel Off-road network of <paramref name="fromKm"/> or more, largest first.</summary>
-    Task<IReadOnlyList<GravelHotspot>> AllAsync(double fromKm = PostgisGravelHotspots.FromKm, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<Hotspot>> AllAsync(double fromKm = PostgisGravelHotspots.FromKm, CancellationToken cancellationToken = default);
 }
 
 /// <summary>Reads the Gravel hotspots from network.gravel_networks.</summary>
@@ -25,7 +18,7 @@ public sealed class PostgisGravelHotspots(NpgsqlDataSource dataSource) : IGravel
     /// </summary>
     public const double FromKm = 25;
 
-    public async Task<IReadOnlyList<GravelHotspot>> AllAsync(double fromKm = FromKm, CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<Hotspot>> AllAsync(double fromKm = FromKm, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(dataSource);
         // A Network built before Gravel hotspots has none to show.
@@ -40,11 +33,11 @@ public sealed class PostgisGravelHotspots(NpgsqlDataSource dataSource) : IGravel
              order by metres desc
             """);
         query.Parameters.Add(new NpgsqlParameter("from", fromKm * 1000));
-        var hotspots = new List<GravelHotspot>();
+        var hotspots = new List<Hotspot>();
         await using var reader = await query.ExecuteReaderAsync(cancellationToken);
         while (await reader.ReadAsync(cancellationToken))
         {
-            hotspots.Add(new GravelHotspot(
+            hotspots.Add(new Hotspot(
                 reader.IsDBNull(0) ? null : reader.GetString(0),
                 new LatLon(reader.GetDouble(1), reader.GetDouble(2)),
                 reader.GetDouble(3),

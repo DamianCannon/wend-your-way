@@ -5,7 +5,7 @@
 @inject MapTiles Tiles
 
 <div class="map" @ref="_element"></div>
-<MapKey Shown="_keyShown" Waiting="_keyWaiting" Failed="_keyFailed"Collapsed="_keyCollapsed" OnCollapsedChanged="CollapseKeyAsync" />
+<MapKey Shown="_keyShown" Waiting="_keyWaiting" Failed="_keyFailed" Activity="_activity" Collapsed="_keyCollapsed" OnCollapsedChanged="CollapseKeyAsync" />
 
 @code {
     /// <summary>Where the map opens; central London when not given.</summary>
@@ -100,6 +100,16 @@
 
     /// <summary>Takes the map to a place searched for (T064), reported as the user's own move, so the car parks follow.</summary>
     public Task GoToAsync(LatLon place, int zoom) => Call("goTo", place, zoom);
+
+    private WendYourWay.Core.Loops.Activity _activity;
+
+    /// <summary>The Activity chosen (T188, #192): its Hotspots shown, and keyed by its name.</summary>
+    public async Task ShowActivityAsync(WendYourWay.Core.Loops.Activity activity)
+    {
+        _activity = activity;
+        StateHasChanged();
+        await Call("showActivity", WendYourWay.Data.Planning.NetworkHotspots.Named(activity));
+    }
 
     /// <summary>
     /// The user moved or zoomed the map (T060): the part in view and the zoom. Not when the map

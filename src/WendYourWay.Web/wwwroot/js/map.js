@@ -115,7 +115,7 @@ function offRoadNetworks() {
 const amenitiesName = "Cafés and toilets";
 const carParksName = "Car parks";
 const amenitiesFromZoom = 13;
-const hotspotsName = "Gravel hotspots";
+const hotspotsName = "Hotspots";
 const cup = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 9h11v5a5 5 0 0 1-5 5h-1a5 5 0 0 1-5-5zM16 10h1.5a2.5 2.5 0 0 1 0 5H16M8 3v3M11 3v3"/></svg>';
 
 function cafesAndToilets() {
@@ -402,32 +402,52 @@ function nameRoutesOnPointing(isOn) {
     map.on("movestart zoomstart", () => { clearTimeout(resting); asking++; overCard = false; hide(); });
 }
 
-// Gravel hotspots (T072): large Off-road networks a bike may use, each marked with its km and
-// named on pointing; clicking one starts there, as a click on the map does, and finds its Loops
-// (user, 2026-11-06: showing it alone looked like nothing happened).
-function gravelHotspots() {
+// Hotspots (T188, #192; Gravel hotspots, T072): somewhere across the country worth going to for the Activity
+// chosen, each marked with its km and named on pointing; only the chosen Activity's. Clicking one starts there, as
+// a click on the map does, and finds its Loops (user, 2026-11-06: showing it alone looked like nothing happened).
+// Each Activity's read once, when first shown; if that failed (T186), read again when next shown or turned on.
+const hotspotsOf = { run: "off-road running", "gravel-ride": "off-road riding", "trail-ride": "byways" };
+let hotspotsLayer;
+
+function hotspots() {
     const layer = L.layerGroup();
     const escape = text => text.replace(/[&<>"']/g, c => `&#${c.charCodeAt(0)};`);
-    // Read once; if that failed (T186), read again when next turned on.
-    let got = false, asking = false;
-    const read = () => !got && !asking && (asking = true) && fetch("gravel-hotspots", { signal: inTime() })
-        .then(answered)
-        .then(found => {
-            got = true;
-            loaded(layer, true);
-            for (const h of found) {
-                const icon = L.divIcon({ className: "hotspot-marker", html: `<span>${h.km}</span>`, iconSize: null });
-                L.marker([h.lat, h.lon], { icon, keyboard: false, zIndexOffset: -200 })
-                    .bindTooltip(`${h.near ? `Near ${escape(h.near)} · ` : ""}${h.km} km of off-road riding`, { direction: "top", offset: [0, -12] })
-                    .on("click", () => owner.invokeMethodAsync("MapClicked", h.lat, h.lon))
-                    .addTo(layer);
-            }
-        })
-        .catch(() => loaded(layer, false))
-        .finally(() => { asking = false; });
-    read();
-    layer.on("add", read);
+    const got = {};
+    let activity, reading = 0;
+    const draw = found => {
+        layer.clearLayers();
+        for (const h of found) {
+            const icon = L.divIcon({ className: "hotspot-marker", html: `<span>${h.km}</span>`, iconSize: null });
+            L.marker([h.lat, h.lon], { icon, keyboard: false, zIndexOffset: -200 })
+                .bindTooltip(`${h.near ? `Near ${escape(h.near)} · ` : ""}${h.km} km of ${hotspotsOf[activity] ?? "off-road ground"}`, { direction: "top", offset: [0, -12] })
+                .on("click", () => owner.invokeMethodAsync("MapClicked", h.lat, h.lon))
+                .addTo(layer);
+        }
+    };
+    layer.refresh = () => {
+        const run = ++reading, which = activity;
+        if (!which) return;
+        if (got[which]) { draw(got[which]); loaded(layer, true); return; }
+        layer.clearLayers();
+        if (!map.hasLayer(layer)) return;
+        fetch(`hotspots?activity=${which}`, { signal: inTime() })
+            .then(answered)
+            .then(found => {
+                got[which] = found;
+                if (run !== reading) return;
+                loaded(layer, true);
+                draw(found);
+            })
+            .catch(() => { if (run === reading) loaded(layer, false); });
+    };
+    layer.show = chosen => { activity = chosen; layer.refresh(); };
+    layer.on("add", layer.refresh);
     return layer;
+}
+
+/** The Activity chosen (T188): its Hotspots shown in place of another's. */
+export function showActivity(activity) {
+    hotspotsLayer?.show(activity);
 }
 
 function drawOffRoad(context, data, zoom) {
@@ -574,7 +594,7 @@ export function dispose() {
     clearTimeout(keyReport);
     try { map?.remove(); } catch { /* its page has gone already */ }
     map = startMarker = finishMarker = loopLayer = shownLoop = decorations = measured = outingLayer = undefined;
-    placeMarker = startsLayer = marksLayer = carParks = owner = notesLayer = routeCardPopup = keyListener = keyReport = undefined;
+    placeMarker = startsLayer = marksLayer = carParks = owner = notesLayer = routeCardPopup = keyListener = keyReport = hotspotsLayer = undefined;
     routeShown = true;
     notes = [];
     webOnly = [];
@@ -625,9 +645,10 @@ export function create(element, tiles, centre, dotNet) {
     if (rememberedOverlay(amenitiesName)) amenities.addTo(map);
     const gaps = gapsInOsm();
     if (rememberedOverlay(gapsName)) gaps.addTo(map);
-    // The Gravel hotspots (T072): on until turned off, all of them at every zoom.
-    const hotspots = gravelHotspots();
-    if (rememberedOverlay(hotspotsName, true)) hotspots.addTo(map);
+    // The Hotspots (T188; Gravel hotspots, T072): on until turned off, the chosen Activity's, all of them at every
+    // zoom. Its on or off kept as the Gravel hotspots' was, if it hasn't been kept since.
+    const hotspotMarks = hotspotsLayer = hotspots();
+    if (rememberedOverlay(hotspotsName, rememberedOverlay("Gravel hotspots", true))) hotspotMarks.addTo(map);
     // The car parks around here (T070): on, as they always were, until turned off.
     carParks = L.layerGroup();
     if (rememberedOverlay(carParksName, true)) carParks.addTo(map);
@@ -666,7 +687,7 @@ export function create(element, tiles, centre, dotNet) {
         vectorOverlays[overlay.name] = layer;
     }
     const readForTheView = [amenities, gaps, ...Object.values(areaOverlays)];
-    const overlays = { [offRoadName]: offRoad, ...tiledOverlays, ...areaOverlays, ...vectorOverlays, [amenitiesName]: amenities, [gapsName]: gaps, [hotspotsName]: hotspots, [carParksName]: carParks };
+    const overlays = { [offRoadName]: offRoad, ...tiledOverlays, ...areaOverlays, ...vectorOverlays, [amenitiesName]: amenities, [gapsName]: gaps, [hotspotsName]: hotspotMarks, [carParksName]: carParks };
     let offered = [];
     const switcher = L.control.layers(names.length > 1 ? layers : {}, {}, { position: "topright" }).addTo(map);
     // The overlays offered for the grid the map is on (T168): on Britain's, none cut on the web grid,

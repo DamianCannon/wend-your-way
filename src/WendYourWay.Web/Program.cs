@@ -57,6 +57,7 @@ builder.Services.AddSingleton<IAmenities, PostgisAmenities>();
 builder.Services.AddSingleton<IGapsInOsm, PostgisGapsInOsm>();
 builder.Services.AddSingleton<ISignedRoutes, PostgisSignedRoutes>();
 builder.Services.AddSingleton<IGravelHotspots, PostgisGravelHotspots>();
+builder.Services.AddSingleton<IHotspots, NetworkHotspots>();
 builder.Services.AddSingleton<ISavedRoutes, PostgisSavedRoutes>();
 builder.Services.AddSingleton<IMarks, PostgisMarks>();
 // Backups under way finished before the app stops (T138): closing its window stops it. The host
@@ -163,13 +164,16 @@ app.MapGet("/signed-routes", async (double lat, double lon, double metres, ISign
             waymarkedTrails = r.WaymarkedTrails, openStreetMap = r.OpenStreetMap,
         })));
 
-// The Gravel hotspots (T072), for their overlay: all of them, a couple of hundred, read once.
-app.MapGet("/gravel-hotspots", async (IGravelHotspots hotspots, CancellationToken cancellationToken) =>
-    Results.Json((await hotspots.AllAsync(cancellationToken: cancellationToken)).Select(h => new
-    {
-        near = h.Near, lat = h.At.Latitude, lon = h.At.Longitude, km = Math.Round(h.Km),
-        south = h.Box.South, west = h.Box.West, north = h.Box.North, east = h.Box.East,
-    })));
+// The Hotspots of the Activity chosen (T188, #192; Gravel hotspots, T072), for their overlay: all of them, a few
+// hundred at most, read once for each Activity.
+app.MapGet("/hotspots", async (string? activity, IHotspots hotspots, CancellationToken cancellationToken) =>
+    NetworkHotspots.Called(activity) is not { } chosen
+        ? Results.BadRequest()
+        : Results.Json((await hotspots.OfAsync(chosen, cancellationToken)).Select(h => new
+        {
+            near = h.Near, lat = h.At.Latitude, lon = h.At.Longitude, km = Math.Round(h.Km),
+            south = h.Box.South, west = h.Box.West, north = h.Box.North, east = h.Box.East,
+        })));
 
 app.Run();
 

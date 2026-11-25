@@ -51,7 +51,7 @@ public class FindingGravelHotspots
         return (double)(await query.ExecuteScalarAsync())!;
     }
 
-    private async Task<IReadOnlyList<GravelHotspot>> Kept() => await new PostgisGravelHotspots(_dataSource).AllAsync(fromKm: 0.5);
+    private async Task<IReadOnlyList<Hotspot>> Kept() => await new PostgisGravelHotspots(_dataSource).AllAsync(fromKm: 0.5);
 
     //  Tracks joined by a 70 m road, and by a 140 m one, a road link (T074), are one network; a
     //  track 1.1 km of road away, and one reached only by a Main Road, are each their own; the

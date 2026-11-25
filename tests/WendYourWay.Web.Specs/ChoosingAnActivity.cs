@@ -63,6 +63,33 @@ public class ChoosingAnActivity : PlannerPageSpecs
         Assert.That(_last.Saved?.Activity, Is.EqualTo(Activity.GravelRide));
     }
 
+    //  T188 (#192): the map shows the Hotspots of the Activity chosen, so it's told which that is.
+    private string? MapToldLast() =>
+        _map.Invocations["showActivity"] is { Count: > 0 } told ? told[^1].Arguments[0] as string : null;
+
+    [Test]
+    public void The_map_is_told_the_Activity_it_opens_on()
+    {
+        var screen = OpenAfter(new RequestSettings(null, 40, 0, Activity: Activity.GravelRide));
+        screen.WaitForState(() => MapToldLast() == "gravel-ride", Settling);
+    }
+
+    [Test]
+    public void The_map_is_told_the_Activity_chosen()
+    {
+        var screen = Open(KenwoodHouse);
+        Choose(screen, "Trail Ride");
+        screen.WaitForState(() => MapToldLast() == "trail-ride", Settling);
+    }
+
+    [Test]
+    public void A_Run_is_told_as_a_run()
+    {
+        var screen = OpenAfter(new RequestSettings(null, 40, 0, Activity: Activity.GravelRide));
+        Choose(screen, "Run");
+        screen.WaitForState(() => MapToldLast() == "run", Settling);
+    }
+
     [Test]
     public void The_planner_opens_on_the_last_Activity()
     {

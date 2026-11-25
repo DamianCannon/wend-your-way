@@ -404,6 +404,17 @@ of at least 5 ha, none within 250 m of another on its network. Offered as the
 away they are.
 _Avoid_: car park (in code), start point, access point.
 
+**Hotspot**:
+Somewhere across the country worth going to for the chosen Activity, marked on the
+map with its km; choosing one starts there. Only the chosen Activity's are shown.
+A **Gravel hotspot** is a Gravel Off-road network of at least 25 km. A **Trail Ride
+hotspot** is the off-road ways a Trail Ride may use that lie within 2 km of one
+another (a motorbike may use every road, so joining through roads would join them
+all). A **Run hotspot** is where off-road ground a Run may use is densest: 5 km
+squares holding the most, joined where they touch (on foot, Off-road networks join
+up across whole counties, so their size says little).
+_Avoid_: cluster, destination (that's a Loop's).
+
 **Place** (search):
 A name or postcode the map can be taken to (OS Open Names: towns, villages,
 woods, hills, water, stations, postcodes and postcode districts; and the map's

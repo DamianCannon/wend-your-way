@@ -26,6 +26,9 @@ public interface IPlannerMap
     Task ShowStartsAsync(IReadOnlyList<StartOnMap> starts, int chosen);
     Task ClearStartsAsync();
     Task GoToAsync(LatLon place, int zoom);
+
+    /// <summary>The Activity chosen (T188): the map shows its Hotspots.</summary>
+    Task ShowActivityAsync(WendYourWay.Core.Loops.Activity activity);
     Task ShowMarksAsync(IReadOnlyList<MarkOnMap> marks);
 
     /// <summary>The route's notes, for Explain? (T157): none to take them off.</summary>
