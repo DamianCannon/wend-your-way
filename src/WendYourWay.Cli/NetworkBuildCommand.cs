@@ -94,6 +94,7 @@ public static class NetworkBuildCommand
                 "trailheads" => "found",
                 "obstacles" => "found",
                 "gravel networks" => "joined",
+                "trail ride hotspots" => "found",
                 "in order of place" => "sorted",
                 "climbing" => $"sampled ({grid!.Tiles:N0} tiles)",
                 _ => "covered again",
@@ -127,7 +128,7 @@ public static class NetworkBuildCommand
                 "Open ground crossings", report.OpenGround.Crossings, report.OpenGround.LengthM / 1000));
             await Row(output, "gaps in the map joined (under 5 m)", build.GapsJoined);
             await Row(output, "gaps in the map possible (5 m to 15 m)", build.GapsPossible);
-            await OffRoad(output, report.OffRoad, report.Trailheads, report.Obstacles, report.GravelNetworks);
+            await OffRoad(output, report.OffRoad, report.Trailheads, report.Obstacles, report.GravelNetworks, report.TrailRideHotspots);
             if (report.Climbing is { } climbing)
             {
                 await output.WriteLineAsync(string.Format(Culture, "  {0,-44}{1,12:N0}  ({2:N0} km of ascent)",
@@ -182,9 +183,9 @@ public static class NetworkBuildCommand
         {
             await Timed(output, "migrations", () => Task.FromResult(Migrations.Apply(connectionString)), result => $"{result.Count} applied");
             await using var dataSource = Database.CreateDataSource(connectionString);
-            var (built, trailheads, obstacles, gravel) = await Timed(output, "off-road networks", () => OffRoadNetworksPhase.Rebuild(dataSource, cancellationToken), _ => "joined, Trailheads, Obstacles and Gravel hotspots found");
+            var (built, trailheads, obstacles, gravel, trailRide) = await Timed(output, "off-road networks", () => OffRoadNetworksPhase.Rebuild(dataSource, cancellationToken), _ => "joined, Trailheads, Obstacles, Gravel and Trail Ride hotspots found");
             await output.WriteLineAsync();
-            await OffRoad(output, built, trailheads, obstacles, gravel);
+            await OffRoad(output, built, trailheads, obstacles, gravel, trailRide);
             return 0;
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
@@ -201,7 +202,7 @@ public static class NetworkBuildCommand
         }
     }
 
-    private static async Task OffRoad(TextWriter output, OffRoadBuild built, TrailheadBuild trailheads, ObstacleBuild? obstacles, GravelNetworkBuild? gravel)
+    private static async Task OffRoad(TextWriter output, OffRoadBuild built, TrailheadBuild trailheads, ObstacleBuild? obstacles, GravelNetworkBuild? gravel, TrailRideHotspotBuild? trailRide)
     {
         await output.WriteLineAsync(string.Format(Culture, "  {0,-44}{1,12:N0}  (largest {2:0.0} km)", "Off-road networks", built.Networks, built.LargestM / 1000));
         await output.WriteLineAsync(string.Format(Culture, "  {0,-44}{1,12:N0}  (of {2:N0} car parks beside them)", "Trailheads", trailheads.Trailheads, trailheads.CarParks));
@@ -213,6 +214,10 @@ public static class NetworkBuildCommand
         if (gravel is not null)
         {
             await output.WriteLineAsync(string.Format(Culture, "  {0,-44}{1,12:N0}  (of 25 km or more; largest {2:0.0} km)", "Gravel Off-road networks", gravel.Kept, gravel.LargestM / 1000));
+        }
+        if (trailRide is not null)
+        {
+            await output.WriteLineAsync(string.Format(Culture, "  {0,-44}{1,12:N0}  (of 5 km or more; largest {2:0.0} km)", "Trail Ride hotspots", trailRide.Kept, trailRide.LargestM / 1000));
         }
     }
 

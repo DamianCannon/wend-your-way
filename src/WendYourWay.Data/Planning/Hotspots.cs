@@ -16,15 +16,29 @@ public interface IHotspots
     Task<IReadOnlyList<Hotspot>> OfAsync(Activity activity, CancellationToken cancellationToken = default);
 }
 
-/// <summary>Each Activity's Hotspots, read from the Network: a Gravel Ride's its Gravel hotspots.</summary>
-public sealed class NetworkHotspots(IGravelHotspots gravel) : IHotspots
+/// <summary>
+/// Each Activity's Hotspots, read from the Network: a Gravel Ride's its Gravel hotspots (T072); a Trail Ride's its
+/// byways near one another (T189).
+/// </summary>
+public sealed class NetworkHotspots(IGravelHotspots gravel, Npgsql.NpgsqlDataSource dataSource) : IHotspots
 {
-    public async Task<IReadOnlyList<Hotspot>> OfAsync(Activity activity, CancellationToken cancellationToken = default)
+    /// <summary>
+    /// A Trail Ride hotspot's least size (T189): the spike (T187) found 53 of 10 km or more across England and Wales,
+    /// 25 of 20 km. Kept from 5 km, so this can move without a build.
+    /// </summary>
+    public const double TrailRideFromKm = 10;
+
+    public Task<IReadOnlyList<Hotspot>> OfAsync(Activity activity, CancellationToken cancellationToken = default) =>
+        OfAsync(activity, null, cancellationToken);
+
+    /// <summary>Those of <paramref name="fromKm"/> or more, else of the Activity's own least size.</summary>
+    public async Task<IReadOnlyList<Hotspot>> OfAsync(Activity activity, double? fromKm, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(gravel);
         return activity switch
         {
-            Activity.GravelRide => await gravel.AllAsync(cancellationToken: cancellationToken),
+            Activity.GravelRide => await gravel.AllAsync(fromKm ?? PostgisGravelHotspots.FromKm, cancellationToken),
+            Activity.TrailRide => await HotspotTable.ReadAsync(dataSource, "trail_networks", fromKm ?? TrailRideFromKm, cancellationToken),
             _ => [],
         };
     }

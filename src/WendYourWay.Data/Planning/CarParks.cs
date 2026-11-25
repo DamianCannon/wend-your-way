@@ -43,11 +43,15 @@ public sealed class PostgisCarParks(NpgsqlDataSource dataSource) : ICarParks
     {
         ArgumentNullException.ThrowIfNull(view);
         var middle = view.Middle;
-        // A Gravel Ride's car parks are those beside a Gravel Off-road network, and its km their green;
-        // a Trail Ride's too, for now: the tracks a bike may ride (T021).
-        var (network, metres, only) = activity is WendYourWay.Core.Loops.Activity.GravelRide or WendYourWay.Core.Loops.Activity.TrailRide
-            ? ("t.gravel_network_id", "t.gravel_network_m", "and t.gravel_network_id is not null")
-            : ("t.network_id", "t.network_m", "");
+        // A Gravel Ride's car parks are those beside a Gravel Off-road network, and its km their green; a Trail
+        // Ride's, those beside its hotspots (T189), or the Gravel networks' on a map built before them, so they
+        // don't vanish until the next map update.
+        var trail = activity is WendYourWay.Core.Loops.Activity.TrailRide && await HotspotTable.HasRowsAsync(dataSource, "trail_networks", cancellationToken);
+        var (network, metres, only) =
+            trail ? ("t.trail_network_id", "t.trail_network_m", "and t.trail_network_id is not null")
+            : activity is WendYourWay.Core.Loops.Activity.GravelRide or WendYourWay.Core.Loops.Activity.TrailRide
+                ? ("t.gravel_network_id", "t.gravel_network_m", "and t.gravel_network_id is not null")
+                : ("t.network_id", "t.network_m", "");
         await using var query = dataSource.CreateCommand($"""
             with seen as (
                 select ST_Transform(ST_MakeEnvelope(@west, @south, @east, @north, 4326), 27700) as box,

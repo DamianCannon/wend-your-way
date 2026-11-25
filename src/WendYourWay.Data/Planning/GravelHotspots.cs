@@ -18,18 +18,25 @@ public sealed class PostgisGravelHotspots(NpgsqlDataSource dataSource) : IGravel
     /// </summary>
     public const double FromKm = 25;
 
-    public async Task<IReadOnlyList<Hotspot>> AllAsync(double fromKm = FromKm, CancellationToken cancellationToken = default)
+    public Task<IReadOnlyList<Hotspot>> AllAsync(double fromKm = FromKm, CancellationToken cancellationToken = default) =>
+        HotspotTable.ReadAsync(dataSource, "gravel_networks", fromKm, cancellationToken);
+}
+
+/// <summary>
+/// A table of Hotspots the build keeps (T188): gravel_networks (T072), trail_networks (T189); each its metres, a
+/// junction to mark it at, its box and the nearest town or village.
+/// </summary>
+internal static class HotspotTable
+{
+    /// <summary>Those of <paramref name="fromKm"/> or more, largest first; none on a Network built before the table was.</summary>
+    public static async Task<IReadOnlyList<Hotspot>> ReadAsync(NpgsqlDataSource dataSource, string table, double fromKm, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(dataSource);
-        // A Network built before Gravel hotspots has none to show.
-        await using (var exists = dataSource.CreateCommand("select to_regclass('network.gravel_networks') is not null"))
-        {
-            if (!(bool)(await exists.ExecuteScalarAsync(cancellationToken))!) return [];
-        }
-        await using var query = dataSource.CreateCommand("""
+        if (!await ExistsAsync(dataSource, table, cancellationToken)) return [];
+        await using var query = dataSource.CreateCommand($"""
             select near, ST_Y(p), ST_X(p), metres / 1000, ST_YMin(b), ST_XMin(b), ST_YMax(b), ST_XMax(b)
               from (select near, metres, ST_Transform(at, 4326) p, ST_Transform(box, 4326) b
-                      from network.gravel_networks where metres >= @from) g
+                      from network.{table} where metres >= @from) g
              order by metres desc
             """);
         query.Parameters.Add(new NpgsqlParameter("from", fromKm * 1000));
@@ -44,5 +51,21 @@ public sealed class PostgisGravelHotspots(NpgsqlDataSource dataSource) : IGravel
                 new MapBounds(reader.GetDouble(4), reader.GetDouble(5), reader.GetDouble(6), reader.GetDouble(7))));
         }
         return hotspots;
+    }
+
+    /// <summary>Whether the Network has this table, and any rows in it (T189: one built before it has neither).</summary>
+    public static async Task<bool> HasRowsAsync(NpgsqlDataSource dataSource, string table, CancellationToken cancellationToken) =>
+        await ExistsAsync(dataSource, table, cancellationToken) && await AnyAsync(dataSource, table, cancellationToken);
+
+    private static async Task<bool> ExistsAsync(NpgsqlDataSource dataSource, string table, CancellationToken cancellationToken)
+    {
+        await using var exists = dataSource.CreateCommand($"select to_regclass('network.{table}') is not null");
+        return (bool)(await exists.ExecuteScalarAsync(cancellationToken))!;
+    }
+
+    private static async Task<bool> AnyAsync(NpgsqlDataSource dataSource, string table, CancellationToken cancellationToken)
+    {
+        await using var any = dataSource.CreateCommand($"select exists (select 1 from network.{table})");
+        return (bool)(await any.ExecuteScalarAsync(cancellationToken))!;
     }
 }

@@ -57,7 +57,7 @@ builder.Services.AddSingleton<IAmenities, PostgisAmenities>();
 builder.Services.AddSingleton<IGapsInOsm, PostgisGapsInOsm>();
 builder.Services.AddSingleton<ISignedRoutes, PostgisSignedRoutes>();
 builder.Services.AddSingleton<IGravelHotspots, PostgisGravelHotspots>();
-builder.Services.AddSingleton<IHotspots, NetworkHotspots>();
+builder.Services.AddSingleton<IHotspots>(services => new NetworkHotspots(services.GetRequiredService<IGravelHotspots>(), services.GetRequiredService<Npgsql.NpgsqlDataSource>()));
 builder.Services.AddSingleton<ISavedRoutes, PostgisSavedRoutes>();
 builder.Services.AddSingleton<IMarks, PostgisMarks>();
 // Backups under way finished before the app stops (T138): closing its window stops it. The host
