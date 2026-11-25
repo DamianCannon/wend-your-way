@@ -81,7 +81,7 @@ public class UpdatingTheMapFromTheCommandLine
     public async Task Finished_it_was_on_the_last_of_its_steps()
     {
         await Updated();
-        Assert.That(await Scalar<string>("select coalesce(step, '') from app.map_updates order by id desc limit 1"), Is.EqualTo("step 18 of 18, backing up"));
+        Assert.That(await Scalar<string>("select coalesce(step, '') from app.map_updates order by id desc limit 1"), Is.EqualTo("step 19 of 19, backing up"));
     }
 
     //  T136: after it builds, Saved Routes the map changed under are moved onto it (none here).

@@ -411,7 +411,7 @@ A **Gravel hotspot** is a Gravel Off-road network of at least 25 km. A **Trail R
 hotspot** is the off-road ways a Trail Ride may use that lie within 2 km of one
 another (a motorbike may use every road, so joining through roads would join them
 all). A **Run hotspot** is where off-road ground a Run may use is densest: 5 km
-squares holding the most, joined where they touch (on foot, Off-road networks join
+squares holding the most, joined where they lie side by side (on foot, Off-road networks join
 up across whole counties, so their size says little).
 _Avoid_: cluster, destination (that's a Loop's).
 

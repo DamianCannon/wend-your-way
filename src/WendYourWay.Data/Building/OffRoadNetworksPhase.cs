@@ -122,7 +122,7 @@ public static class OffRoadNetworksPhase
     /// Finds the Off-road networks of the Network the app reads and their Trailheads (T023), on
     /// their own, in one transaction.
     /// </summary>
-    public static async Task<(OffRoadBuild OffRoad, TrailheadBuild Trailheads, ObstacleBuild Obstacles, GravelNetworkBuild Gravel, TrailRideHotspotBuild TrailRide)> Rebuild(NpgsqlDataSource dataSource, CancellationToken cancellationToken = default)
+    public static async Task<(OffRoadBuild OffRoad, TrailheadBuild Trailheads, ObstacleBuild Obstacles, GravelNetworkBuild Gravel, TrailRideHotspotBuild TrailRide, RunHotspotBuild Run)> Rebuild(NpgsqlDataSource dataSource, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(dataSource);
         await using var connection = await dataSource.OpenConnectionAsync(cancellationToken);
@@ -139,7 +139,9 @@ public static class OffRoadNetworksPhase
         var gravel = await GravelNetworksPhase.Build(connection, transaction, "network", cancellationToken);
         // And the Trail Ride hotspots (T189).
         var trailRide = await TrailRideHotspotsPhase.Build(connection, transaction, "network", cancellationToken);
+        // And the squares Run hotspots are found in (T190).
+        var run = await RunHotspotsPhase.Build(connection, transaction, "network", cancellationToken);
         await transaction.CommitAsync(cancellationToken);
-        return (built, trailheads, obstacles, gravel, trailRide);
+        return (built, trailheads, obstacles, gravel, trailRide, run);
     }
 }

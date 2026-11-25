@@ -28,6 +28,13 @@ public sealed class NetworkHotspots(IGravelHotspots gravel, Npgsql.NpgsqlDataSou
     /// </summary>
     public const double TrailRideFromKm = 10;
 
+    /// <summary>
+    /// A Run hotspot's least density (T190): the km of off-road ground a Run may use in one of the build's 5 km squares
+    /// for it to count. The spike (T187) found 163 squares of 100 km or more in England and Wales (the top 2.5%; the
+    /// median, 36 km). Read as they're shown, so this can move without a build.
+    /// </summary>
+    public const double RunFromKm = 100;
+
     public Task<IReadOnlyList<Hotspot>> OfAsync(Activity activity, CancellationToken cancellationToken = default) =>
         OfAsync(activity, null, cancellationToken);
 
@@ -39,7 +46,8 @@ public sealed class NetworkHotspots(IGravelHotspots gravel, Npgsql.NpgsqlDataSou
         {
             Activity.GravelRide => await gravel.AllAsync(fromKm ?? PostgisGravelHotspots.FromKm, cancellationToken),
             Activity.TrailRide => await HotspotTable.ReadAsync(dataSource, "trail_networks", fromKm ?? TrailRideFromKm, cancellationToken),
-            _ => [],
+            // A Run's least size is a square's density, not an area's km (T190).
+            _ => await RunSquares.ReadAsync(dataSource, fromKm ?? RunFromKm, cancellationToken),
         };
     }
 

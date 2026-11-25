@@ -39,7 +39,7 @@ public static class CommandLine
               it's forward again. The Outings are covered and scored again on it, Saved Routes moved onto it,
               the stars calibrated.
           wend network offroad [--database <connection string>]
-              Find the Off-road networks, Trailheads, Obstacles, Gravel and Trail Ride hotspots again on the Network as it is, without a rebuild.
+              Find the Off-road networks, Trailheads, Obstacles and Gravel, Trail Ride and Run hotspots again on the Network as it is, without a rebuild.
           wend outings import-gpx <file-or-folder> [--database <connection string>]
               Import your own runs and rides from GPX, TCX or FIT files, and see what each covered.
           wend outings import-strava <export.zip> [--database <connection string>]

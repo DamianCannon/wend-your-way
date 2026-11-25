@@ -16,19 +16,19 @@ public static class CountingAnUpdatesSteps
 
         [Test]
         public void The_first_step_is_checking_for_a_newer_map() =>
-            Assert.That(Steps.Said("checking"), Is.EqualTo("step 1 of 20, checking for a newer map"));
+            Assert.That(Steps.Said("checking"), Is.EqualTo("step 1 of 21, checking for a newer map"));
 
         [Test]
         public void Each_phase_of_the_build_is_a_step_of_its_own() =>
-            Assert.That(Steps.Said("climbing"), Is.EqualTo("step 14 of 20, working out the climbing"));
+            Assert.That(Steps.Said("climbing"), Is.EqualTo("step 15 of 21, working out the climbing"));
 
         [Test]
         public void The_last_step_is_the_backup() =>
-            Assert.That(Steps.Said("backing up"), Is.EqualTo("step 20 of 20, backing up"));
+            Assert.That(Steps.Said("backing up"), Is.EqualTo("step 21 of 21, backing up"));
 
         [Test]
         public void A_phase_done_is_followed_by_the_next() =>
-            Assert.That(Steps.After("trail ride hotspots"), Is.EqualTo("climbing"));
+            Assert.That(Steps.After("run hotspots"), Is.EqualTo("climbing"));
 
         [Test]
         public void Loading_the_map_is_followed_by_the_rights_of_way() =>
@@ -37,17 +37,22 @@ public static class CountingAnUpdatesSteps
         //  T189, #193: the Trail Ride hotspots found after the Gravel networks.
         [Test]
         public void The_gravel_networks_are_followed_by_the_Trail_Ride_hotspots() =>
-            Assert.That(Steps.Said(Steps.After("gravel networks")!), Is.EqualTo("step 13 of 20, finding Trail Ride hotspots"));
+            Assert.That(Steps.Said(Steps.After("gravel networks")!), Is.EqualTo("step 13 of 21, finding Trail Ride hotspots"));
+
+        //  T190, #194: the Run hotspots counted after the Trail Ride hotspots.
+        [Test]
+        public void The_Trail_Ride_hotspots_are_followed_by_the_Run_hotspots() =>
+            Assert.That(Steps.Said(Steps.After("trail ride hotspots")!), Is.EqualTo("step 14 of 21, finding Run hotspots"));
 
         //  T171, #175: OS's heights brought up to date before the build climbs on them, and its place names
         //  after it, as they take the map's green areas.
         [Test]
         public void Downloading_the_map_is_followed_by_OSs_heights() =>
-            Assert.That(Steps.Said(Steps.After("downloading")!), Is.EqualTo("step 3 of 20, checking OS's heights"));
+            Assert.That(Steps.Said(Steps.After("downloading")!), Is.EqualTo("step 3 of 21, checking OS's heights"));
 
         [Test]
         public void The_builds_last_phase_is_followed_by_OSs_place_names() =>
-            Assert.That(Steps.Said(Steps.After("outings")!), Is.EqualTo("step 17 of 20, loading OS's place names"));
+            Assert.That(Steps.Said(Steps.After("outings")!), Is.EqualTo("step 18 of 21, loading OS's place names"));
 
         [TestCase("migrations")]
         [TestCase("backing up")]
@@ -65,11 +70,11 @@ public static class CountingAnUpdatesSteps
 
         [Test]
         public void So_the_count_still_ends_at_its_last_step() =>
-            Assert.That(Steps.Said("backing up"), Is.EqualTo("step 18 of 18, backing up"));
+            Assert.That(Steps.Said("backing up"), Is.EqualTo("step 19 of 19, backing up"));
 
         [Test]
-        public void The_Trail_Ride_hotspots_are_followed_by_putting_the_paths_in_order() =>
-            Assert.That(Steps.After("trail ride hotspots"), Is.EqualTo("in order of place"));
+        public void The_Run_hotspots_are_followed_by_putting_the_paths_in_order() =>
+            Assert.That(Steps.After("run hotspots"), Is.EqualTo("in order of place"));
 
         [Test]
         public void There_are_no_heights_to_check_so_downloading_the_map_is_followed_by_loading_it() =>

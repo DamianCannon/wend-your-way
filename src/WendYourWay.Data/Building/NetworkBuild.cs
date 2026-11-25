@@ -49,7 +49,7 @@ public sealed record ClimbingBuild(long Segments, double AscentM);
 /// <summary>What one Network build did, phase by phase.</summary>
 /// <param name="Climbing">What the climbing phase did, or null when the build had no terrain.</param>
 /// <param name="OutingsCovered">The user's Outings whose coverage was worked out again on the new Network.</param>
-public sealed record NetworkBuildReport(SegmentBuild Segments, SameGroundBuild SameGround, OpenGroundBuild OpenGround, OffRoadBuild OffRoad, TrailheadBuild Trailheads, ClimbingBuild? Climbing, long OutingsCovered, ObstacleBuild? Obstacles = null, GravelNetworkBuild? GravelNetworks = null, RightsOfWayBuild? RightsOfWay = null, TrailRideHotspotBuild? TrailRideHotspots = null);
+public sealed record NetworkBuildReport(SegmentBuild Segments, SameGroundBuild SameGround, OpenGroundBuild OpenGround, OffRoadBuild OffRoad, TrailheadBuild Trailheads, ClimbingBuild? Climbing, long OutingsCovered, ObstacleBuild? Obstacles = null, GravelNetworkBuild? GravelNetworks = null, RightsOfWayBuild? RightsOfWay = null, TrailRideHotspotBuild? TrailRideHotspots = null, RunHotspotBuild? RunHotspots = null);
 
 /// <summary>Builds the Network from the raw OSM ways that <see cref="OsmImport"/> loaded.</summary>
 public static class NetworkBuild
@@ -155,6 +155,10 @@ public static class NetworkBuild
         var trailRide = await TrailRideHotspotsPhase.Build(connection, transaction, "network_next", cancellationToken);
         phaseDone?.Invoke("trail ride hotspots", clock.Elapsed);
 
+        clock.Restart();
+        var run = await RunHotspotsPhase.Build(connection, transaction, "network_next", cancellationToken);
+        phaseDone?.Invoke("run hotspots", clock.Elapsed);
+
         // After Open ground, so its crossings climb too.
         ClimbingBuild? climbing = null;
         if (terrain is not null)
@@ -216,7 +220,7 @@ public static class NetworkBuild
             await command.ExecuteNonQueryAsync(cancellationToken);
         }
         await transaction.CommitAsync(cancellationToken);
-        return new NetworkBuildReport(segments, sameGround, openGround, offRoad, trailheads, climbing, outings, obstacles, gravel, rights, trailRide);
+        return new NetworkBuildReport(segments, sameGround, openGround, offRoad, trailheads, climbing, outings, obstacles, gravel, rights, trailRide, run);
 
         // A large extract takes minutes.
         NpgsqlCommand Command(string sql) => new(sql, connection, transaction) { CommandTimeout = 0 };

@@ -22,6 +22,7 @@ public sealed class UpdateSteps
         ("obstacles", "finding Obstacles"),
         ("gravel networks", "joining gravel networks"),
         ("trail ride hotspots", "finding Trail Ride hotspots"),
+        ("run hotspots", "finding Run hotspots"),
         ("climbing", "working out the climbing"),
         ("in order of place", "putting the paths in order"),
         ("outings", "finding what your Outings covered"),
