@@ -25,7 +25,14 @@ public class UsingThePlannerScreen
     [TearDown]
     public void Dispose() => _screen.Dispose();
 
-    private IRenderedComponent<Planner> Open() => _context.Render<Planner>();
+    // Opened, and its map told what to show as the page's first render finishes (T188: the Activity, its last call
+    // there), so a click isn't queued behind that and lost; as PlannerPageSpecs waits.
+    private IRenderedComponent<Planner> Open()
+    {
+        var screen = _context.Render<Planner>();
+        screen.WaitForAssertion(() => Assert.That(_screen.Map.Invocations["showActivity"], Is.Not.Empty));
+        return screen;
+    }
 
     //  No Reference Loops (T109): the user's stars took their place. Admin (T129) before Help.
     [Test]

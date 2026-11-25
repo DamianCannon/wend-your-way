@@ -106,8 +106,12 @@
     /// <summary>The Activity chosen (T188, #192): its Hotspots shown, and keyed by its name.</summary>
     public async Task ShowActivityAsync(WendYourWay.Core.Loops.Activity activity)
     {
-        _activity = activity;
-        StateHasChanged();
+        // Drawn again only if it's another (the key's name for its Hotspots): not on every first render.
+        if (activity != _activity)
+        {
+            _activity = activity;
+            StateHasChanged();
+        }
         await Call("showActivity", WendYourWay.Data.Planning.NetworkHotspots.Named(activity));
     }
 
