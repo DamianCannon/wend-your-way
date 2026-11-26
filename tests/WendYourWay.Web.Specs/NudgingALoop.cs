@@ -69,9 +69,10 @@ public class NudgingALoop : PlannerPageSpecs
         Assert.That(Greyed(screen, "undo"), Is.True);
     }
 
+    //  Always there (T196), so nothing appearing below the bar moves it: greyed out with nothing to undo.
     [Test]
-    public void A_Loop_not_nudged_has_no_Undo() =>
-        Assert.That(OfferThree().FindAll(".pager .undo"), Is.Empty);
+    public void A_Loop_not_nudged_has_Undo_greyed_out() =>
+        Assert.That(Greyed(OfferThree(), "undo"), Is.True);
 
     [Test]
     public void A_Loop_nudged_out_of_its_window_says_by_how_much()

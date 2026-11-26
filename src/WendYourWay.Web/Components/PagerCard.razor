@@ -94,6 +94,35 @@
             @* Added because few Loops were good enough, heading where none of them goes (T096, STORY-044). *@
             <p class="other-way" title="Few Loops were good enough, so this one, weaker, was added in a direction none of them goes">In another direction, below the usual bar</p>
         }
+        @* Whatever comes and goes on the card goes above its bar (T196): the card is pinned at the bottom, so a line
+           below the bar moved the bar, and its arrows, from under the pointer. The Map gaps it crosses aren't said here:
+           their yellow dots on the route say them (user: "the icon shows there's a gap"). *@
+        @if ((Finding || Searching) && Progress is { } progress)
+        {
+            @Progressing(progress)
+        }
+        else if (Searching)
+        {
+            <p class="searching">Looking for more Loops…</p>
+        }
+        @* An imported route's gaps (T083), drawn in red: where the GPX left the map. *@
+        @if (loop.Gaps.Count > 0)
+        {
+            <p class="gap-note">@GapNote(loop.Gaps)</p>
+        }
+        @if (NudgeNote is { } note)
+        {
+            <p class="nudge-note">@note</p>
+        }
+        @* Saving (T080): a name asked for, where it starts and its km offered. *@
+        @if (_naming)
+        {
+            <form class="saving" @onsubmit="SaveAsync">
+                <input class="save-name" aria-label="Name for the Saved Route" maxlength="100" @bind="_name" @bind:event="oninput" />
+                <button type="submit" class="avoid-this">Save</button>
+                <button type="button" class="cancel" @onclick="() => _naming = false">Cancel</button>
+            </form>
+        }
         <div class="bar">
             <button type="button" class="page" aria-label="Previous Loop" disabled="@(Loops.Count < 2)" @onclick="() => OnPage.InvokeAsync(-1)">‹</button>
             <span class="summary">@(Current + 1) of @Loops.Count · @Km(loop.Breakdown.LengthM, "0.0")@Longer(loop)</span>
@@ -171,52 +200,19 @@
                 <svg viewBox="0 0 24 24" aria-hidden="true"><path d="@(_open ? "M6.5 9.5L12 15l5.5-5.5" : "M6.5 14.5L12 9l5.5 5.5")" /></svg>
             </button>
         </div>
-        @* Saving (T080): a name asked for, where it starts and its km offered. *@
-        @if (_naming)
-        {
-            <form class="saving" @onsubmit="SaveAsync">
-                <input class="save-name" aria-label="Name for the Saved Route" maxlength="100" @bind="_name" @bind:event="oninput" />
-                <button type="submit" class="avoid-this">Save</button>
-                <button type="button" class="cancel" @onclick="() => _naming = false">Cancel</button>
-            </form>
-        }
-        @* Undo and Redo (T076, T078) on a line of their own, so the bar stays put; centred, both there
-           once there's anything to undo or redo, one greyed out at its end (user, 2026-11-07). *@
-        @if (CanUndo || CanRedo)
-        {
-            <div class="nudged">
-                <button type="button" class="undo" title="Undo (Ctrl+Z): the last change to the route, or the last new start" disabled="@(!CanUndo)" @onclick="OnUndo">
-                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 7L4.5 11.5 9 16M5 11.5h9.5a5 5 0 0 1 0 10H12" /></svg>
-                    <span>Undo</span>
-                </button>
-                <button type="button" class="redo" title="Redo (Ctrl+Y)" disabled="@(!CanRedo)" @onclick="OnRedo">
-                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 7l4.5 4.5L15 16M19 11.5H9.5a5 5 0 0 0 0 10H12" /></svg>
-                    <span>Redo</span>
-                </button>
-            </div>
-        }
-        @if (NudgeNote is { } note)
-        {
-            <p class="nudge-note">@note</p>
-        }
-        @* An imported route's gaps (T083), drawn in red: where the GPX left the map. *@
-        @if (loop.Gaps.Count > 0)
-        {
-            <p class="gap-note">@GapNote(loop.Gaps)</p>
-        }
-        @* The Map gaps it crosses (#150, T146b), drawn red and dashed: the user should check each is passable. *@
-        @if (loop.MapGaps.Count > 0)
-        {
-            <p class="map-gap-note">@MapGapNote(loop.MapGaps)</p>
-        }
-        @if ((Finding || Searching) && Progress is { } progress)
-        {
-            @Progressing(progress)
-        }
-        else if (Searching)
-        {
-            <p class="searching">Looking for more Loops…</p>
-        }
+        @* Undo and Redo (T076, T078) on a line of their own, so the bar stays put; centred, always there once a Loop is,
+           greyed out with nothing to undo or redo (user, 2026-11-07); the only thing below the bar (T196, #200: "that text at
+           the bottom shifts the content so my mouse is no longer over the tab arrows"). *@
+        <div class="nudged">
+            <button type="button" class="undo" title="Undo (Ctrl+Z): the last change to the route, or the last new start" disabled="@(!CanUndo)" @onclick="OnUndo">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 7L4.5 11.5 9 16M5 11.5h9.5a5 5 0 0 1 0 10H12" /></svg>
+                <span>Undo</span>
+            </button>
+            <button type="button" class="redo" title="Redo (Ctrl+Y)" disabled="@(!CanRedo)" @onclick="OnRedo">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 7l4.5 4.5L15 16M19 11.5H9.5a5 5 0 0 0 0 10H12" /></svg>
+                <span>Redo</span>
+            </button>
+        </div>
     }
     else if (Problem is { } problem)
     {
@@ -399,15 +395,6 @@
     private static string GapNote(IReadOnlyList<RouteGap> gaps) =>
         string.Create(System.Globalization.CultureInfo.InvariantCulture,
             $"{gaps.Count} {(gaps.Count == 1 ? "gap" : "gaps")}, {gaps.Sum(g => g.LengthM) / 1000:0.0} km not on the map");
-
-    // Each gap to the metre, none under 1 m.
-    private static string MapGapNote(IReadOnlyList<MapGapCrossed> gaps)
-    {
-        var lengths = string.Join(", ", gaps.Select(g => string.Create(System.Globalization.CultureInfo.InvariantCulture, $"{Math.Max(1, Math.Round(g.LengthM)):0} m")));
-        return gaps.Count == 1
-            ? $"A gap in the loop ({lengths}): check it's passable"
-            : $"{gaps.Count} gaps in the loop ({lengths}): check they're passable";
-    }
 
     private bool _open;
 

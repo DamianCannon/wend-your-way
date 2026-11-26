@@ -344,8 +344,9 @@ A path that dead-ends within 15 m of another way, with nothing mapped across
 (a fence, wall, hedge, waterway or railway), joined to it as a Segment of its
 own: usually two ways that should meet in OSM but don't. **Joined** under
 5 m, used like its path at a little more cost; **possible** from 5 m to 15 m,
-used only when the user includes it. Drawn in red, and noted on the Loop card
-and in the GPX, as the user should check it's passable.
+used only when the user includes it. Drawn in red with a yellow dot on the Loop
+(not said on its card too, T196), and noted in the GPX, as the user should check
+it's passable.
 _Avoid_: gap on its own (that word is an Outing's), link, bridge (a bridge is a way).
 
 **Chosen Outing**:

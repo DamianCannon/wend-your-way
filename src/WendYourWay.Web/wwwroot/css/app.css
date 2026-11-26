@@ -284,7 +284,7 @@ button:disabled, button[aria-disabled="true"]:not(.preparing) { opacity: 0.5; cu
 }
 .pager .undo svg, .pager .redo svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 .pager .undo:hover:not(:disabled), .pager .redo:hover:not(:disabled) { background: var(--paper-edge); }
-.pager .nudge-note { margin: 6px 0 0; font-size: 0.85rem; color: var(--ink-soft); }
+.pager .nudge-note { margin: 0 0 6px; font-size: 0.85rem; color: var(--ink-soft); }
 /* Save the route (T080): a bookmark on the bar; its name asked for under it */
 .pager .save {
     display: flex; align-items: center; justify-content: center; width: 30px; height: 30px; padding: 5px;
@@ -292,7 +292,7 @@ button:disabled, button[aria-disabled="true"]:not(.preparing) { opacity: 0.5; cu
 }
 .pager .save svg { width: 19px; height: 19px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linejoin: round; }
 .pager .save:hover, .pager .save[aria-expanded="true"] { background: var(--paper-edge); }
-.pager form.saving { display: flex; gap: 6px; margin-top: 8px; }
+.pager form.saving { display: flex; gap: 6px; margin-bottom: 8px; }
 .pager .save-name { flex: 1; min-width: 0; padding: 5px 8px; border: 1px solid var(--paper-edge); border-radius: 6px; font: inherit; }
 /* Saved Routes (T080): newest first, each opened, renamed or deleted in place */
 /* Import a GPX (T083): a button-like label over the hidden file input, above the list. */
@@ -301,13 +301,9 @@ button:disabled, button[aria-disabled="true"]:not(.preparing) { opacity: 0.5; cu
 .import-gpx.busy { opacity: 0.5; cursor: progress; }
 .import-gpx input[type=file] { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
 .import-problem, .route-problem { margin: 0; color: var(--danger); line-height: 1.4; }
-.pager .gap-note { margin: 4px 0 0; text-align: center; font-size: 0.85rem; color: var(--ink); }
+.pager .gap-note { margin: 0 0 6px; text-align: center; font-size: 0.85rem; color: var(--ink); }
 /* Drawn as the map draws a route's gaps (T088): ink dots on white. */
 .pager .gap-note::before { content: ""; display: inline-block; width: 22px; height: 0; margin-right: 6px; vertical-align: middle; border-top: 4px dotted var(--ink); }
-/* A Map gap (#150, T146b): red and dashed, as the map draws it. */
-.pager .map-gap-note { margin: 4px 0 0; text-align: center; font-size: 0.85rem; color: var(--danger); }
-/* The dot that marks each gap on the map (T183). */
-.pager .map-gap-note::before { content: ""; display: inline-block; width: 10px; height: 10px; margin-right: 6px; vertical-align: -1px; border-radius: 50%; background: var(--gap-dot); box-shadow: 0 0 0 2px var(--gap-dot-ring); }
 .saved-routes { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
 /* The name across the top, cut short; km and date a line each beneath it, the buttons beside them */
 .saved-routes li {
@@ -383,11 +379,12 @@ button:disabled, button[aria-disabled="true"]:not(.preparing) { opacity: 0.5; cu
 /* The Loop in words (T101): read like a guidebook's line, not a table. */
 .pager .closures { margin: 0 0 10px; font-size: 0.8rem; line-height: 1.4; }
 .pager .empty strong { color: var(--ink); }
-.pager .searching { margin: 6px 0 0; font-size: 0.8rem; color: var(--ink-soft); }
+.pager .searching { margin: 0 0 6px; font-size: 0.8rem; color: var(--ink-soft); }
 
 /* How far a Request has got (T054): its own numbers, and a meter once there's a total */
 .pager .progress { display: grid; gap: 6px; font-size: 0.85rem; color: var(--ink-soft); }
-.pager .bar + .progress { margin-top: 8px; font-size: 0.8rem; }
+/* Above the bar (T196), so it never moves it. */
+.pager .progress:has(~ .bar) { margin-bottom: 8px; font-size: 0.8rem; }
 .pager .progress .meter { height: 4px; border-radius: 2px; background: var(--paper-edge); overflow: hidden; }
 .pager .progress .done { height: 100%; background: var(--forest); transition: width 0.2s linear; }
 

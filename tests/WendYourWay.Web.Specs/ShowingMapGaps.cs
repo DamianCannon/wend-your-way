@@ -6,34 +6,22 @@ using WendYourWay.Web.Components;
 namespace WendYourWay.Web.Specs;
 
 /// <summary>
-/// The planner page (#150, T146b): a Loop over Map gaps says so on its card, with each gap's length,
-/// for the user to check it's passable; and a possible one near it, clicked, includes it this time (T146c).
+/// The planner page (#150, T146b): a Loop over Map gaps has them drawn with it (not told on its card, T196),
+/// for the user to check each is passable; and a possible one near it, clicked, includes it this time (T146c).
 /// </summary>
 public class ShowingMapGaps : PlannerPageSpecs
 {
+    //  T196 (#200; user: "I don't think we need that extra line about 'a gap in the loop' because the icon shows there's a
+    //  gap"): drawn on the route, its yellow dot, whatever the Gaps in OSM overlay is set to; not said on the card too.
     [Test]
-    public void A_Map_gap_is_told_on_the_card()
+    public void A_Map_gap_is_drawn_with_the_route_and_not_told_on_the_card()
     {
-        _planner.Imported = Second with { MapGaps = [new MapGapCrossed(KenwoodHouse, ParliamentHill, 3.4)] };
+        var gapped = Second with { MapGaps = [new MapGapCrossed(KenwoodHouse, ParliamentHill, 3.4)] };
+        _planner.Imported = gapped;
         var screen = OfferThree();
         Import(screen, HeathGpx);
-        screen.WaitForAssertion(() => Assert.That(screen.Find(".pager .map-gap-note").TextContent.Trim(), Is.EqualTo("A gap in the loop (3 m): check it's passable")));
-    }
-
-    [Test]
-    public void Two_are_told_together()
-    {
-        _planner.Imported = Second with { MapGaps = [new MapGapCrossed(KenwoodHouse, ParliamentHill, 3.4), new MapGapCrossed(ParliamentHill, KenwoodHouse, 0.6)] };
-        var screen = OfferThree();
-        Import(screen, HeathGpx);
-        screen.WaitForAssertion(() => Assert.That(screen.Find(".pager .map-gap-note").TextContent.Trim(), Is.EqualTo("2 gaps in the loop (3 m, 1 m): check they're passable")));
-    }
-
-    [Test]
-    public void A_Loop_with_none_tells_none()
-    {
-        var screen = OfferThree();
-        Assert.That(screen.FindAll(".pager .map-gap-note"), Is.Empty);
+        screen.WaitForAssertion(() => Assert.That(_map.Invocations["showLoop"][^1].Arguments[0], Is.EqualTo(gapped)));
+        Assert.That(screen.Find(".pager").TextContent, Does.Not.Contain("gap in the loop"));
     }
 
     //  T146c: "Include this time" on a possible gap is a Nudge, the Loop through it, undone like any other.
