@@ -32,14 +32,15 @@ public class FindingTrailRideHotspots
         _dataSource = Database.CreateDataSource(TestDatabase.ConnectionString);
         _built = await NetworkBuild.Build(_dataSource);
         // Byways a Trail Ride may use, as the Definitive Map would say: 500, 502, 504 and 510; 512 unconfirmed,
-        // and the footway 505 none.
+        // and the footway 505 none. Car parks 44 m from 500, 352 m from 504, and 1.3 km from 502.
         await using (var byways = _dataSource.CreateCommand("""
             update network.segments set access_trail = case when osm_way_id = 512 then 'unconfirmed' else 'allowed' end::access_kind
              where osm_way_id in (500, 502, 504, 510, 512);
             update network.segments set access_trail = 'forbidden' where osm_way_id = 505;
             insert into network.trailheads (osm_kind, osm_id, name, label, geom, network_id, network_m)
             values ('point', 1, 'Track car park', 'Track car park', ST_Transform(ST_SetSRID(ST_MakePoint(-0.3900, 51.2504), 4326), 27700), 1, 10000),
-                   ('point', 2, 'Footway car park', 'Footway car park', ST_Transform(ST_SetSRID(ST_MakePoint(-0.3420, 51.2504), 4326), 27700), 1, 10000)
+                   ('point', 2, 'Footway car park', 'Footway car park', ST_Transform(ST_SetSRID(ST_MakePoint(-0.3420, 51.2504), 4326), 27700), 1, 10000),
+                   ('point', 3, 'Far car park', 'Far car park', ST_Transform(ST_SetSRID(ST_MakePoint(-0.3700, 51.2380), 4326), 27700), 1, 10000)
             """))
         {
             await byways.ExecuteNonQueryAsync();
@@ -90,14 +91,15 @@ public class FindingTrailRideHotspots
     public async Task Then_small_groups_aren_t_hotspots() =>
         Assert.That(await Kept(fromKm: 2), Has.Count.EqualTo(1));
 
-    //  A Trail Ride's car parks are those beside its byways, with their km; no longer the Gravel networks'.
-    private static readonly MapBounds AroundTheTracks = new(51.24, -0.41, 51.27, -0.33);
+    //  A Trail Ride's car parks are those within 1 km of its byways, with their km; no longer the Gravel networks'
+    //  (T191, #195: "on a motorbike you're most likely to be meeting there rather than parking"; at 100 m, 80 in all).
+    private static readonly MapBounds AroundTheTracks = new(51.22, -0.41, 51.27, -0.33);
 
     [Test]
-    public async Task Then_a_Trail_Ride_s_car_parks_are_those_beside_its_hotspots() =>
+    public async Task Then_a_Trail_Ride_s_car_parks_are_those_within_a_km_of_its_hotspots() =>
         Assert.That((await new PostgisCarParks(_dataSource).AroundAsync(AroundTheTracks, 10, Activity.TrailRide)).OnMap
             .Select(p => (p.Name, Math.Round(p.NetworkM / 1000, 3))),
-            Is.EqualTo(new[] { ("Track car park", await KmOf(500, 502, 504)) }));
+            Is.EquivalentTo(new[] { ("Track car park", await KmOf(500, 502, 504)), ("Footway car park", await KmOf(500, 502, 504)) }));
 }
 
 /// <summary>

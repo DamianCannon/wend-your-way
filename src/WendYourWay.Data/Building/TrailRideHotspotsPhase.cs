@@ -1,5 +1,4 @@
 using System.Globalization;
-using WendYourWay.Core.Network;
 using Npgsql;
 
 namespace WendYourWay.Data.Building;
@@ -12,7 +11,7 @@ public sealed record TrailRideHotspotBuild(long Kept, double LargestM);
 /// grouped where they lie within <see cref="WithinM"/> of one another, whatever lies between: a motorbike may use
 /// every road, so joining them through roads, as the Gravel networks are, would join them all. Those of
 /// <see cref="KeepFromM"/> or more kept, each marked at its own junction nearest its middle by length; and a Trail
-/// Ride's car parks found beside them. The spike (T187) found 53 of 10 km or more across England and Wales, the
+/// Ride's car parks found near them. The spike (T187) found 53 of 10 km or more across England and Wales, the
 /// largest Salisbury Plain's, 256 km; at 3 km apart, they began to run together.
 /// </summary>
 public static class TrailRideHotspotsPhase
@@ -22,6 +21,12 @@ public static class TrailRideHotspotsPhase
 
     /// <summary>The least kept: below a hotspot's shown, so that line can move without a build.</summary>
     public const double KeepFromM = 5_000;
+
+    /// <summary>
+    /// How near a byway in a hotspot a Trail Ride's car park lies (T191, #195): a ride along a lane, where riders meet
+    /// more than park (at the 100 m a Gravel Ride's car park lies, 80 across England and Wales; at 1 km, 354).
+    /// </summary>
+    public const double CarParksWithinM = 1_000;
 
     /// <summary>
     /// Finds the Trail Ride hotspots of the Network in <paramref name="schema"/> (network_next in a build, network on
@@ -58,12 +63,12 @@ public static class TrailRideHotspotsPhase
             truncate {schema}.trail_networks;
             insert into {schema}.trail_networks (id, metres, at, box) select id, metres, at, box from trail_kept;
 
-            -- A Trail Ride's car parks: each Trailhead's largest kept group with a way within its reach, or none.
+            -- A Trail Ride's car parks: each Trailhead's largest kept group with a way within 1 km, or none.
             update {schema}.trailheads t
                set (trail_network_id, trail_network_m) = (
                    select k.id, k.metres
                      from trail_ways w join trail_kept k on k.grouped = w.grouped
-                    where ST_DWithin(w.geom, t.geom, {M(Trailheads.BesideM)})
+                    where ST_DWithin(w.geom, t.geom, {M(CarParksWithinM)})
                     order by k.metres desc
                     limit 1);
             """);
