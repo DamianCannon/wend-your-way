@@ -31,9 +31,11 @@ public sealed class NetworkHotspots(IGravelHotspots gravel, Npgsql.NpgsqlDataSou
     /// <summary>
     /// A Run hotspot's least density (T190): the km of off-road ground a Run may use in one of the build's 5 km squares
     /// for it to count. The spike (T187) found 163 squares of 100 km or more in England and Wales (the top 2.5%; the
-    /// median, 36 km). Read as they're shown, so this can move without a build.
+    /// median, 36 km). Lowered to 75 km (T193, #197; user: "a little sparse when cut off at 100km"): on the real map,
+    /// 196 hotspots in place of 90, the largest 46 squares; at 50 km, one ran to 318. Read as they're shown, so this can
+    /// move without a build.
     /// </summary>
-    public const double RunFromKm = 100;
+    public const double RunFromKm = 75;
 
     public Task<IReadOnlyList<Hotspot>> OfAsync(Activity activity, CancellationToken cancellationToken = default) =>
         OfAsync(activity, null, cancellationToken);

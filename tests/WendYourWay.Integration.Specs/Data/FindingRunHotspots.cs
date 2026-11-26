@@ -108,3 +108,46 @@ public class FindingRunHotspots
     public void Then_a_map_build_finds_them_too() =>
         Assert.That(_built.RunHotspots?.Squares, Is.GreaterThan(0));
 }
+
+/// <summary>
+/// The line for a Run hotspot's square, as shown (T193, #197; user: "the hotspots for running are a little sparse when cut
+/// off at 100km"): 75 km in a 5 km square, a build's own. On the real map, 196 hotspots in place of 90; at 50 km, one
+/// ran to 318 squares. Two squares apart, one holding 76.8 km, the other 72 km.
+/// </summary>
+[TestFixture]
+[NonParallelizable]
+public class FindingRunHotspotsAtTheirLine
+{
+    private NpgsqlDataSource _dataSource = null!;
+
+    [OneTimeSetUp]
+    public async Task Arrange()
+    {
+        TestDatabase.Wipe();
+        Migrations.Apply(TestDatabase.ConnectionString);
+        _dataSource = Database.CreateDataSource(TestDatabase.ConnectionString);
+        // Paths 4.8 km long, 300 m apart across a square: 16 in the one at x 500 km, 15 in the one at x 510 km.
+        await using (var laid = _dataSource.CreateCommand("""
+            insert into network.segments (osm_way_id, from_node_id, to_node_id, geom, ground, access_run)
+            select row_number() over (), 1000 + row_number() over (), 2000 + row_number() over (),
+                   ST_MakeLine(ST_MakePoint(x + 100, 150000 + 100 + i * 300), ST_MakePoint(x + 4900, 150000 + 100 + i * 300))::geometry(LineString, 27700),
+                   'off_road', 'allowed'
+              from (select 500000 as x, generate_series(0, 15) as i union all select 510000, generate_series(0, 14)) laid
+            """))
+        {
+            await laid.ExecuteNonQueryAsync();
+        }
+        await using var connection = await _dataSource.OpenConnectionAsync();
+        await using var transaction = await connection.BeginTransactionAsync();
+        await RunHotspotsPhase.Build(connection, transaction, "network", CancellationToken.None);
+        await transaction.CommitAsync();
+    }
+
+    [OneTimeTearDown]
+    public void Dispose() => _dataSource.Dispose();
+
+    [Test]
+    public async Task Then_a_square_holding_75_km_is_one_and_one_holding_less_isn_t() =>
+        Assert.That((await new NetworkHotspots(new PostgisGravelHotspots(_dataSource), _dataSource).OfAsync(Activity.Run)).Select(h => Math.Round(h.Km, 1)),
+            Is.EqualTo(new[] { 76.8 }));
+}
