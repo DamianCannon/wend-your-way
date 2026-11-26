@@ -84,6 +84,11 @@
                 <button type="button" class="close-phone" disabled="@(_preparing == "qr")" @onclick="OnPhoneClosed">Done</button>
             </section>
         }
+        @if (loop.Wended is { } gained)
+        {
+            @* What a variation of the route gains (T194). *@
+            <p class="wended">Wended: @Km(gained.RoadSavedM, "0.0") less road, @Percent(gained.KeptShare * 100) of your route kept</p>
+        }
         @if (loop.InAnotherDirection)
         {
             @* Added because few Loops were good enough, heading where none of them goes (T096, STORY-044). *@
@@ -112,6 +117,14 @@
             <button type="button" class="explain" aria-pressed="@(View.Explaining ? "true" : "false")"
                     title="@(View.Explaining ? "Take the notes off the map" : "Say on the map why the route goes the way it does: its crossings, gates and stiles, roads, and longest green stretch")"
                     @onclick="OnExplain">Explain?</button>
+            @* Variations of a route with fewer roads, its shape kept (T194, #198; user: "a 'Wend It!' button that comes up with
+               variations on the route"): on a route shown alone. *@
+            @if (View.CanWendIt)
+            {
+                <button type="button" class="wend-it" aria-busy="@(View.Wending ? "true" : "false")" disabled="@View.Wending"
+                        title="Variations of this route with fewer roads: its start and turning points kept, about as long"
+                        @onclick="OnWendIt">@(View.Wending ? "Wending…" : "Wend It!")</button>
+            }
             @* Each says so while it's made (T139, user: "there's a short delay with no feedback"), and
                none of the three is pressed again till it's done; a screen reader is told. *@
             <span class="visually-hidden" role="status">@Announced</span>
@@ -349,6 +362,9 @@
     [Parameter] public EventCallback OnToggleRoute { get; set; }
 
     [Parameter] public EventCallback OnExplain { get; set; }
+
+    /// <summary>Wend It! was clicked (T194).</summary>
+    [Parameter] public EventCallback OnWendIt { get; set; }
 
 
     /// <summary>Undo was clicked.</summary>

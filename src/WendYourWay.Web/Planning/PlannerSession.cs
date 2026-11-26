@@ -731,6 +731,55 @@ internal sealed class PlannerSession(
     }
 
     /// <summary>
+    /// Whether the route shown may be wended (T194): one shown alone (imported, made from an Outing, or a Saved Route),
+    /// back where it began, and not a variation already. Loops offered for a Request are the planner's best already.
+    /// </summary>
+    internal bool CanWendIt => !_outingShown && (_importedName is not null || _openedRoute is not null) && Shown is { Wended: null, EndsAtStart: true };
+
+    private bool _wending;
+
+    /// <summary>
+    /// Wend It! (T194, #198): the route shown found again through its turning points, its variations with less road
+    /// offered in its place, a step of the history; with none, said, and the route stays.
+    /// </summary>
+    internal async Task WendItAsync()
+    {
+        if (_wending || !CanWendIt || Shown is not { } shown) return;
+        if (await NudgeableAsync() is not { } offered) return;
+        _wending = true;
+        _nudgeNote = null;
+        Changed?.Invoke();
+        IOfferedLoops? wended;
+        try
+        {
+            wended = await offered.WendItAsync(shown);
+        }
+        catch (Exception e) when (e is not OperationCanceledException)
+        {
+            Log.PlanningFailed(_logger, e);
+            wended = null;
+        }
+        finally
+        {
+            _wending = false;
+        }
+        if (wended is not { Count: > 0 })
+        {
+            _nudgeNote = wended is null ? "Couldn't wend it. The app's log says why." : "Already about as wended as it gets: no way with less road keeps its shape";
+            Changed?.Invoke();
+            return;
+        }
+        // Saved by the route's own name, as it was offered.
+        var name = _importedName;
+        Restart();
+        _importedName = name;
+        _offered = wended;
+        await ShowAsync(wended);
+        Take(_history.NextRequest());
+        Changed?.Invoke();
+    }
+
+    /// <summary>
     /// The Segment of the Loop shown at <paramref name="at"/> Blocked (T082): no Loop uses it from now
     /// on, and the Loop shown goes round it at once, as an Avoid.
     /// </summary>
@@ -1159,7 +1208,7 @@ internal sealed class PlannerSession(
     internal PagerView Pager => new(_loops, _current, _activity, _offered?.ShortestM, _finding, _progress, _searching, _nothingFound, _problem,
         _phoneAsked, _phone, _routeHidden, CanUndo, CanRedo, _nudgeNote, SuggestedName,
         // The car park started from, named on the card opened (T061).
-        _chosen is { } chosen && _start == chosen.At ? chosen.Name : null) { Explaining = _explaining };
+        _chosen is { } chosen && _start == chosen.At ? chosen.Name : null) { Explaining = _explaining, CanWendIt = CanWendIt, Wending = _wending };
 
     /// <summary>The Loop shown as a GPX file, its turns as waypoints, named as it's exported (T100, T112).</summary>
     internal async Task<GpxFile?> GpxAsync() => Shown is { } shown ? Kept(LoopGpx.Of(shown, await TurnsOfAsync(shown), ExportName, _activity)) : null;

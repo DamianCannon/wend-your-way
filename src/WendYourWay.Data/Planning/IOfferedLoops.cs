@@ -53,4 +53,11 @@ public interface IOfferedLoops : IReadOnlyList<PlannedLoop>
     /// labelled against; null for Loops.
     /// </summary>
     double? ShortestM => null;
+
+    /// <summary>
+    /// Wend It! (T194, #198): <paramref name="planned"/>, one of these or a Loop nudged from one, found again through its
+    /// turning points, the variations with less road offered alone, most road saved first, each with what it gains; none
+    /// offered if there's no better way; null if it isn't one of these.
+    /// </summary>
+    Task<IOfferedLoops?> WendItAsync(PlannedLoop planned, CancellationToken cancellationToken = default) => Task.FromResult<IOfferedLoops?>(null);
 }

@@ -148,7 +148,7 @@
     </SidePanel>
     @if (!Session.OutingShown)
     {
-        <PagerCard View="Session.Pager" OnPage="Session.PageAsync" OnExport="ExportAsync" OnExportTcx="ExportTcxAsync" OnPhone="Session.PhoneAsync" OnPhoneClosed="() => Session.PhoneAsked = false" OnPlace="Session.MarkPlaceAsync" OnToggleRoute="Session.ToggleRouteAsync" OnExplain="Session.ToggleExplainAsync" OnBreakdown="Session.BreakdownOpenedAsync" OnUndo="Session.UndoAsync" OnRedo="Session.RedoAsync" OnSave="Session.SaveAsync" />
+        <PagerCard View="Session.Pager" OnPage="Session.PageAsync" OnExport="ExportAsync" OnExportTcx="ExportTcxAsync" OnPhone="Session.PhoneAsync" OnPhoneClosed="() => Session.PhoneAsked = false" OnPlace="Session.MarkPlaceAsync" OnToggleRoute="Session.ToggleRouteAsync" OnExplain="Session.ToggleExplainAsync" OnWendIt="Session.WendItAsync" OnBreakdown="Session.BreakdownOpenedAsync" OnUndo="Session.UndoAsync" OnRedo="Session.RedoAsync" OnSave="Session.SaveAsync" />
     }
     @* The first-Loop tour (T158): offered once, taken again from Help. *@
     <TourCard View="Session.Tour" OnShowMe="TakeTourAsync" OnNoThanks="Session.NoTourAsync" OnSkip="Session.SkipTourStepAsync" OnEnd="Session.EndTourAsync" />

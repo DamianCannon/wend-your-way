@@ -21,6 +21,12 @@ public sealed record PagerView(
     /// <summary>Whether Explain? is on (T157): the route's notes on the map.</summary>
     public bool Explaining { get; init; }
 
+    /// <summary>Whether the route shown may be wended (T194): one shown alone, not a variation already.</summary>
+    public bool CanWendIt { get; init; }
+
+    /// <summary>Whether Wend It! is finding the variations (T194).</summary>
+    public bool Wending { get; init; }
+
     /// <summary>Before any Request: no Loops yet.</summary>
     public static PagerView None { get; } = new([], 0, Activity.Run, null, false, null, false, false, null, false, null, false, false, false, null, "", null);
 }

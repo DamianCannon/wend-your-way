@@ -107,6 +107,13 @@ of the Loop around the change and keeps the rest; the user never draws the line
 by hand.
 _Avoid_: edit, drag, reroute.
 
+**Wend It!**:
+A route the user already runs (imported, made from an Outing, or a Saved Route) found again
+through its turning points, offering its variations with less road: each keeps the start, the
+turning points, about its length, and half or more of the route, with no more Main Road. Not a
+Nudge: the whole route is found again, not a stretch of it.
+_Avoid_: optimise, improve, reroute.
+
 **Saved Route**:
 A Loop or Point-to-point the user has chosen to
 keep by name, so it can be run again and exported; listed under Saved Routes.

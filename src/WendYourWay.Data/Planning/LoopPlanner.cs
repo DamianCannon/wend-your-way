@@ -504,6 +504,22 @@ public sealed class LoopPlanner(INetworkSlices slices, MapGeometry geometry, Sco
             return new NudgedLoop(traced, km > request.LongestKm ? km - request.LongestKm : km < request.ShortestKm ? km - request.ShortestKm : 0);
         }
 
+        /// <summary>Wend It! (T194): its variations with less road, alone, each nudgeable and savable as a Loop offered is.</summary>
+        public async Task<IOfferedLoops?> WendItAsync(PlannedLoop planned, CancellationToken cancellationToken)
+        {
+            if (!_behind.TryGetValue(planned, out var behind)) return null;
+            var weights = planner.Weights.For(activity);
+            var variations = await Task.Run(() => WendIt.Of(slice, behind.Loop, weights, cancellationToken), cancellationToken);
+            var wended = new List<PlannedLoop>();
+            foreach (var variation in variations)
+            {
+                var traced = await planner.ForTheMapAsync(slice, variation.Loop, cancellationToken) with { Wended = new Wended(variation.RoadSavedM, variation.KeptShare) };
+                _behind.TryAdd(traced, (variation.Loop, []));
+                wended.Add(traced);
+            }
+            return new Offered(this, wended, alone: true);
+        }
+
         public IReadOnlyList<(SegmentKey Key, bool Forward)>? TraversalsOf(PlannedLoop planned) =>
             _behind.TryGetValue(planned, out var behind) ? [.. Corners.OnTheMap(slice, behind.Loop.Traversals)] : null;
 
@@ -668,6 +684,8 @@ public sealed class LoopPlanner(INetworkSlices slices, MapGeometry geometry, Sco
             found.NudgeAsync(planned, nudge, leans, cancellationToken);
 
         public IReadOnlyList<(SegmentKey Key, bool Forward)>? TraversalsOf(PlannedLoop planned) => found.TraversalsOf(planned);
+
+        public Task<IOfferedLoops?> WendItAsync(PlannedLoop planned, CancellationToken cancellationToken = default) => found.WendItAsync(planned, cancellationToken);
 
         public RouteScore? ScoreOf(PlannedLoop planned) => found.ScoreOf(planned);
 

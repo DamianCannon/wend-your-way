@@ -30,6 +30,12 @@ internal sealed class Leaning
 
     /// <summary>The Nudges asked for, of which Loop.</summary>
     public List<(PlannedLoop Loop, LoopNudge Nudge)> Nudges { get; } = [];
+
+    /// <summary>What Wend It! of a Loop gives (T194): by default, none better.</summary>
+    public Func<PlannedLoop, IReadOnlyList<PlannedLoop>>? WendIt { get; set; }
+
+    /// <summary>The Loops Wend It! was asked of.</summary>
+    public List<PlannedLoop> Wended { get; } = [];
 }
 
 /// <summary>A stand-in for the Loops a planner offers, re-ranked and searched as <paramref name="leaning"/> says.</summary>
@@ -79,6 +85,12 @@ internal sealed class FakeOffer(IReadOnlyList<PlannedLoop> loops, Leaning? leani
     {
         _leaning.Nudges.Add((planned, nudge));
         return Task.FromResult(_leaning.Nudged?.Invoke(planned, nudge));
+    }
+
+    public Task<IOfferedLoops?> WendItAsync(PlannedLoop planned, CancellationToken cancellationToken = default)
+    {
+        _leaning.Wended.Add(planned);
+        return Task.FromResult<IOfferedLoops?>(new FakeOffer(_leaning.WendIt?.Invoke(planned) ?? [], _leaning));
     }
 
     public IEnumerator<PlannedLoop> GetEnumerator() => loops.GetEnumerator();

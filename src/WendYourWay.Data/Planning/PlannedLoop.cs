@@ -60,6 +60,13 @@ public sealed record PlannedLoop(IReadOnlyList<LatLon> Line, LatLon Start, IRead
     public bool InAnotherDirection { get; init; }
 
     /// <summary>
+    /// What it gains as a variation of a route wended (T194, #198): the road it saves and how much of the route it keeps;
+    /// none if it isn't one. Of the route it was wended from, so not kept with a Saved Route.
+    /// </summary>
+    [System.Text.Json.Serialization.JsonIgnore]
+    public Wended? Wended { get; init; }
+
+    /// <summary>
     /// A line ending this near its start is a Loop (T083, T092; T121: the one rule for a route
     /// planned, imported or recorded).
     /// </summary>
@@ -85,3 +92,6 @@ public sealed record MapGapCrossed(LatLon From, LatLon To, double LengthM);
 
 /// <summary>A point on a Loop's elevation profile: how far round, how high, and where on the map.</summary>
 public sealed record ProfileSample(double DistanceM, double HeightM, LatLon At);
+
+/// <summary>A route wended (T194): the road it saves, in metres, and the share of its length on the route, 0 to 1.</summary>
+public sealed record Wended(double RoadSavedM, double KeptShare);
