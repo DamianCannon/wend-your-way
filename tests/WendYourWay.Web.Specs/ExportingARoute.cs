@@ -32,7 +32,7 @@ public class ExportingARoute : PlannerPageSpecs
     //  no feedback"): the button pressed says so at once, and none of the three can be pressed again
     //  till it's done.
     private static string Bar(IRenderedComponent<Planner> screen) =>
-        string.Join(" | ", screen.FindAll(".pager .bar button.phone, .pager .bar button.export").Select(b => $"{b.TextContent.Trim()}{(b.GetAttribute("aria-disabled") == "true" ? " (off)" : "")}"));
+        string.Join(" | ", screen.FindAll(".pager .nudged button.phone, .pager .nudged button.export").Select(b => $"{b.TextContent.Trim()}{(b.GetAttribute("aria-disabled") == "true" ? " (off)" : "")}"));
 
     [TestCase("button.export:not(.export-tcx)", "QR (off) | Preparing… (off) | TCX (off)")]
     [TestCase("button.export-tcx", "QR (off) | GPX (off) | Preparing… (off)")]

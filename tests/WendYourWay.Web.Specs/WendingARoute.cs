@@ -26,11 +26,11 @@ public class WendingARoute : PlannerPageSpecs
     public void A_route_shown_alone_can_be_wended() =>
         Assert.That(Imported().FindAll(".pager .wend-it"), Has.Count.EqualTo(1));
 
-    //  Beside Undo and Redo, not on the bar, so the card keeps its width (T197, #201; user: "the floating page looks
-    //  wider than it should be").
+    //  After Explain? on the bar (T198, #202; user: "maybe move the wend it button back next to explain"); the card keeps
+    //  its width as the downloads are under the bar.
     [Test]
-    public void It_sits_beside_Undo_and_Redo() =>
-        Assert.That(Imported().FindAll(".pager .nudged .wend-it"), Has.Count.EqualTo(1));
+    public void It_sits_after_Explain() =>
+        Assert.That(Imported().FindAll(".pager .bar .explain + .wend-it"), Has.Count.EqualTo(1));
 
     //  Loops offered for a Request are already the planner's best: no Wend It! on them.
     [Test]

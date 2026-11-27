@@ -148,8 +148,8 @@ button:disabled, button[aria-disabled="true"]:not(.preparing) { opacity: 0.5; cu
     left: calc(var(--side) + (100% - var(--side)) / 2); transform: translateX(-50%);
     /* A fixed width, so the buttons never move from under the pointer as Loops change (user, 2026-10-27);
        410 px from T071, so the route's eye fits beside a summary still whole; 440 px from T080, the bookmark;
-       510 px from T099, the QR button; 580 px for TCX beside it (user, 2026-11-10); 660 px for Explain? (T157); Wend It! under the bar, beside Undo (T197) */
-    box-sizing: border-box; width: 660px; max-width: calc(100% - var(--side) - 32px); padding: 12px 20px; text-align: center;
+       510 px from T099, the QR button; 580 px for TCX beside it (user, 2026-11-10); 660 px for Explain? (T157); 560 px with QR, GPX and TCX under the bar and Wend It! on it (T198) */
+    box-sizing: border-box; width: 560px; max-width: calc(100% - var(--side) - 32px); padding: 12px 20px; text-align: center;
     background: var(--paper); border: 1px solid var(--paper-edge); border-radius: var(--radius); box-shadow: var(--shadow);
 }
 .pager .empty { color: var(--ink-soft); font-size: 0.95rem; }
@@ -335,12 +335,14 @@ button:disabled, button[aria-disabled="true"]:not(.preparing) { opacity: 0.5; cu
 .pager .route:hover { background: var(--paper-edge); }
 .pager .route[aria-pressed="true"] { background: var(--hi-vis); color: var(--white); }
 /* Explain? (T157): the route's notes on the map; orange like QR, GPX and TCX beside it (T164), forest green while they're on */
-.pager .explain { height: 30px; padding: 4px 10px; margin-left: 4px; font-size: 0.85rem; line-height: 1; white-space: nowrap; }
-.pager .wend-it { height: 28px; padding: 4px 10px; font-size: 0.85rem; line-height: 1; white-space: nowrap; }
+.pager .explain, .pager .wend-it { height: 30px; padding: 4px 10px; margin-left: 4px; font-size: 0.85rem; line-height: 1; white-space: nowrap; }
 .pager .wend-it:disabled { opacity: 0.7; cursor: progress; }
 .pager .explain[aria-pressed="true"], .pager .explain[aria-pressed="true"]:hover { background: var(--forest); border-color: var(--forest); }
 .pager .export, .pager .phone { display: flex; align-items: center; gap: 4px; height: 30px; padding: 4px 10px 4px 7px; margin-left: 4px; font-size: 0.85rem; line-height: 1; }
 .pager .export svg, .pager .phone svg { width: 18px; height: 18px; stroke-width: 2.2; }
+/* Under the bar with Undo and Redo, set apart from them (T198). */
+.pager .nudged .phone { margin-left: 14px; }
+.pager .nudged :is(.export, .phone) { height: 28px; }
 .pager .expand:hover, .pager .page:hover:not(:disabled) { background: var(--paper-edge); }
 /* The elevation profile (T051): the ground in moss on a simple axis, the place pointed at in hi-vis */
 .profile { margin: 0 0 10px; }
@@ -605,11 +607,11 @@ button:disabled, button[aria-disabled="true"]:not(.preparing) { opacity: 0.5; cu
 @keyframes job-spin { to { transform: rotate(360deg); } }
 
 /* An export being made (T139): its button's spinner, as the job line's. */
-.pager .bar button .spinner {
+.pager button .spinner {
     display: inline-block; width: 13px; height: 13px; border-radius: 50%; vertical-align: middle;
     border: 2px solid rgb(255 255 255 / 0.35); border-top-color: var(--white); animation: job-spin 0.9s linear infinite;
 }
-.pager .bar button.preparing { cursor: progress; }
+.pager button.preparing { cursor: progress; }
 /* The others, off till it's done (T139 review): seen to be off. */
 /* Read by a screen reader, not seen. */
 .visually-hidden { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }

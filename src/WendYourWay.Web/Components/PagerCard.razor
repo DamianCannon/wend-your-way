@@ -146,6 +146,33 @@
             <button type="button" class="explain" aria-pressed="@(View.Explaining ? "true" : "false")"
                     title="@(View.Explaining ? "Take the notes off the map" : "Say on the map why the route goes the way it does: its crossings, gates and stiles, roads, and longest green stretch")"
                     @onclick="OnExplain">Explain?</button>
+            @* Variations of a route with fewer roads, its shape kept (T194, #198; user: "a 'Wend It!' button that comes up with
+               variations on the route"): on a route shown alone; after Explain? (T198, #202; user: "maybe move the wend it button back next to explain").
+            *@
+            @if (View.CanWendIt)
+            {
+                <button type="button" class="wend-it" aria-busy="@(View.Wending ? "true" : "false")" disabled="@View.Wending"
+                        title="Variations of this route with fewer roads: its start and turning points kept, about as long"
+                        @onclick="OnWendIt">@(View.Wending ? "Wending…" : "Wend It!")</button>
+            }
+            <button type="button" class="expand" aria-expanded="@(_open ? "true" : "false")"
+                    aria-label="@(_open ? "Hide the Breakdown" : "Show the Breakdown")" @onclick="ToggleBreakdownAsync">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="@(_open ? "M6.5 9.5L12 15l5.5-5.5" : "M6.5 14.5L12 9l5.5 5.5")" /></svg>
+            </button>
+        </div>
+        @* Undo and Redo (T076, T078) on a line of their own, so the bar stays put; centred, always there once a Loop is,
+           greyed out with nothing to undo or redo (user, 2026-11-07); the only line below the bar (T196, #200: "that text at
+           the bottom shifts the content so my mouse is no longer over the tab arrows"). QR, GPX and TCX after them, apart
+           (T198, #202; user: "push the download buttons (all three) to the second line so that they are grouped separately"). *@
+        <div class="nudged">
+            <button type="button" class="undo" title="Undo (Ctrl+Z): the last change to the route, or the last new start" disabled="@(!CanUndo)" @onclick="OnUndo">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 7L4.5 11.5 9 16M5 11.5h9.5a5 5 0 0 1 0 10H12" /></svg>
+                <span>Undo</span>
+            </button>
+            <button type="button" class="redo" title="Redo (Ctrl+Y)" disabled="@(!CanRedo)" @onclick="OnRedo">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 7l4.5 4.5L15 16M19 11.5H9.5a5 5 0 0 0 0 10H12" /></svg>
+                <span>Redo</span>
+            </button>
             @* Each says so while it's made (T139, user: "there's a short delay with no feedback"), and
                none of the three is pressed again till it's done; a screen reader is told. *@
             <span class="visually-hidden" role="status">@Announced</span>
@@ -187,32 +214,6 @@
                     <span>TCX</span>
                 }
             </button>
-            <button type="button" class="expand" aria-expanded="@(_open ? "true" : "false")"
-                    aria-label="@(_open ? "Hide the Breakdown" : "Show the Breakdown")" @onclick="ToggleBreakdownAsync">
-                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="@(_open ? "M6.5 9.5L12 15l5.5-5.5" : "M6.5 14.5L12 9l5.5 5.5")" /></svg>
-            </button>
-        </div>
-        @* Undo and Redo (T076, T078) on a line of their own, so the bar stays put; centred, always there once a Loop is,
-           greyed out with nothing to undo or redo (user, 2026-11-07); the only thing below the bar (T196, #200: "that text at
-           the bottom shifts the content so my mouse is no longer over the tab arrows"). *@
-        <div class="nudged">
-            <button type="button" class="undo" title="Undo (Ctrl+Z): the last change to the route, or the last new start" disabled="@(!CanUndo)" @onclick="OnUndo">
-                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 7L4.5 11.5 9 16M5 11.5h9.5a5 5 0 0 1 0 10H12" /></svg>
-                <span>Undo</span>
-            </button>
-            <button type="button" class="redo" title="Redo (Ctrl+Y)" disabled="@(!CanRedo)" @onclick="OnRedo">
-                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 7l4.5 4.5L15 16M19 11.5H9.5a5 5 0 0 0 0 10H12" /></svg>
-                <span>Redo</span>
-            </button>
-            @* Variations of a route with fewer roads, its shape kept (T194, #198; user: "a 'Wend It!' button that comes up with
-               variations on the route"): on a route shown alone; here beside Undo and Redo, so the card keeps its width
-               (T197, #201; user: "the floating page looks wider than it should be"). *@
-            @if (View.CanWendIt)
-            {
-                <button type="button" class="wend-it" aria-busy="@(View.Wending ? "true" : "false")" disabled="@View.Wending"
-                        title="Variations of this route with fewer roads: its start and turning points kept, about as long"
-                        @onclick="OnWendIt">@(View.Wending ? "Wending…" : "Wend It!")</button>
-            }
         </div>
     }
     else if (Problem is { } problem)
