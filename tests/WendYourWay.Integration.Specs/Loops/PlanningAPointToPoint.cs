@@ -48,10 +48,14 @@ public class PlanningAPointToPoint
         return Math.Sqrt((dx * dx) + (dy * dy));
     }
 
+    //  The finish is a point on a Loop's line, perhaps partway along a Segment: a route ends at the Node nearest it. Within
+    //  30 m till T199 (#203) changed that Loop, then 46 m off: half a long Segment in a park.
+    private const double AtTheFinishM = 100;
+
     [Test]
     public void Each_goes_from_the_start_to_the_finish()
     {
-        Assert.That(_spread.All(r => Metres(r.Line[0], PembrokeLodge) < 150 && Metres(r.Line[^1], _finish) < 30), Is.True);
+        Assert.That(_spread.All(r => Metres(r.Line[0], PembrokeLodge) < 150 && Metres(r.Line[^1], _finish) < AtTheFinishM), Is.True);
     }
 
     [Test]
@@ -81,7 +85,7 @@ public class PlanningAPointToPoint
     {
         var route = _spread[0];
         var nudged = await _spread.NudgeAsync(route, new AvoidNudge(route.Line[route.Line.Count / 2]), Leans.Centre);
-        Assert.That((nudged is not null, Metres(nudged!.Loop.Line[^1], _finish) < 30, nudged.KmOutsideWindow), Is.EqualTo((true, true, 0.0)));
+        Assert.That((nudged is not null, Metres(nudged!.Loop.Line[^1], _finish) < AtTheFinishM, nudged.KmOutsideWindow), Is.EqualTo((true, true, 0.0)));
     }
 
     [Test]

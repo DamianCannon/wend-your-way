@@ -206,10 +206,11 @@ Geofabrik great-britain-latest.osm.pbf
     attach_obstacles()      barrier and steps nodes ─► obstacles
     derive_crossings()      where paths cross roads; footbridge/underpass = grade_separated
     group_same_ground()     the metres of each path within 12 m of a road Segment running the
-                            same way are that road's ground (segment_beside); a path mostly
-                            beside roads becomes a Connector if it's paved, while dirt paths
-                            stay Off-road (T014, Slice 1 review); only paths tagged unpaved
-                            stay Off-road (T038)
+                            same way (25 m of a dual carriageway or 4+ lanes, T199) are that
+                            road's ground (segment_beside); a path mostly beside roads becomes
+                            a Connector if it's paved, while dirt paths stay Off-road (T014,
+                            Slice 1 review); only paths tagged unpaved stay Off-road (T038),
+                            and not beside roads tagged 50 mph or more (T199)
     build_open_ground()     T039: public open land (open_ground_class(tags): parks, commons,
                             recreation grounds, village greens, nature reserves, heath,
                             beaches; less water, woods, golf, gardens, private land) cut into

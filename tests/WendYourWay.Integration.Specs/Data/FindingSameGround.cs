@@ -141,13 +141,42 @@ public class FindingSameGround
         Assert.That(beside[(200, 2)], Is.EqualTo(35).Within(SampleM));
     }
 
+    //  T199 (#203; user, of a cycle path beside a six-lane trunk road: "one which I avoid as much as possible even though
+    //  it is technically green"): a big road (a dual carriageway, or 4+ lanes) reaches 25 m, not 12, as its carriageways
+    //  are drawn down their own middles; a path 16 m from one is on its ground, one 30 m off isn't.
+    [Test]
+    public async Task Then_a_path_16_m_from_a_dual_carriageway_is_on_its_ground()
+    {
+        Assert.That(await GroundOf(310), Is.EqualTo("connector"));
+        Assert.That((await BesideOf(310)).Keys, Is.EquivalentTo(new[] { (300L, 40L) }));
+    }
+
+    [Test]
+    public async Task Then_a_path_30_m_from_a_dual_carriageway_keeps_its_ground() =>
+        Assert.That((await GroundOf(311), await BesideOf(311)), Is.EqualTo(("traffic_free", new Dictionary<(long, long), double>())));
+
+    //  An ordinary street still reaches 12 m.
+    [Test]
+    public async Task Then_a_path_16_m_from_a_street_keeps_its_ground() =>
+        Assert.That((await GroundOf(340), await BesideOf(340)), Is.EqualTo(("traffic_free", new Dictionary<(long, long), double>())));
+
+    //  T199 (user chose "Both, tagged speeds only"): a dirt path stays Off-road beside a road, but not beside one of 50 mph
+    //  or more, nor beside a road tagged with no speed but the national limit; beside one with no speed tagged it stays.
+    [Test]
+    public async Task Then_a_dirt_path_beside_a_60_mph_road_is_a_Connector() =>
+        Assert.That(await GroundOf(320), Is.EqualTo("connector"));
+
+    [Test]
+    public async Task Then_a_dirt_path_beside_a_road_with_no_speed_tagged_stays_Off_road() =>
+        Assert.That(await GroundOf(330), Is.EqualTo("off_road"));
+
     [Test]
     public async Task Then_a_road_is_beside_nothing() =>
         Assert.That(await BesideOf(200), Is.Empty);
 
     [Test]
     public void Then_the_build_reports_paths_beside_roads() =>
-        Assert.That(_report.PathsBesideRoads, Is.EqualTo(5));   // 210, 211, 212, 231, and 230 though it stays Off-road
+        Assert.That(_report.PathsBesideRoads, Is.EqualTo(8));   // 210, 211, 212, 231, 310, 320, and 230 and 330 though they stay Off-road
 
     //  What the generator sees: each pavement on the road's ground, the far path on its own.
     [Test]

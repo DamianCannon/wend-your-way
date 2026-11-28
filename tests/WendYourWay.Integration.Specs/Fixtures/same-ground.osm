@@ -33,6 +33,24 @@
   <node id="30" lat="51.55395" lon="-0.1630"/>
   <node id="31" lat="51.55507" lon="-0.1617"/>
   <node id="32" lat="51.55507" lon="-0.1611"/>
+  <node id="40" lat="51.5600" lon="-0.1550"/>
+  <node id="41" lat="51.5600" lon="-0.1520"/>
+  <node id="42" lat="51.560144" lon="-0.1550"/>
+  <node id="43" lat="51.560144" lon="-0.1520"/>
+  <node id="44" lat="51.55973" lon="-0.1550"/>
+  <node id="45" lat="51.55973" lon="-0.1520"/>
+  <node id="46" lat="51.5620" lon="-0.1550"/>
+  <node id="47" lat="51.5620" lon="-0.1520"/>
+  <node id="48" lat="51.562081" lon="-0.1550"/>
+  <node id="49" lat="51.562081" lon="-0.1520"/>
+  <node id="50" lat="51.5640" lon="-0.1550"/>
+  <node id="51" lat="51.5640" lon="-0.1520"/>
+  <node id="52" lat="51.564081" lon="-0.1550"/>
+  <node id="53" lat="51.564081" lon="-0.1520"/>
+  <node id="54" lat="51.5660" lon="-0.1550"/>
+  <node id="55" lat="51.5660" lon="-0.1520"/>
+  <node id="56" lat="51.566144" lon="-0.1550"/>
+  <node id="57" lat="51.566144" lon="-0.1520"/>
 
   <!-- A road 200 (1-2-3) running east, with a side street 201 (2-4) going north from it -->
   <way id="200"><nd ref="1"/><nd ref="2"/><nd ref="3"/><tag k="highway" v="residential"/></way>
@@ -67,4 +85,20 @@
   <!-- An alley 260 (27-28) and a footway 261 (29-30) about 6 m beside it -->
   <way id="260"><nd ref="27"/><nd ref="28"/><tag k="highway" v="service"/><tag k="service" v="alley"/></way>
   <way id="261"><nd ref="29"/><nd ref="30"/><tag k="highway" v="footway"/></way>
+
+  <!-- Big and fast roads (T199, #203), east of the rest (ways in ID order, as osm2pgsql needs):
+       300 (40-41), one carriageway of a three-lane 50 mph dual carriageway: an asphalt cycle path 310 (42-43) 16 m
+         beside it, a footway 311 (44-45) 30 m from it;
+       301 (46-47), a 60 mph lane: a dirt bridleway 320 (48-49) 9 m beside it;
+       302 (50-51), a lane with no speed tagged: a dirt path 330 (52-53) 9 m beside it;
+       303 (54-55), an ordinary street: an asphalt footway 340 (56-57) 16 m from it. -->
+  <way id="300"><nd ref="40"/><nd ref="41"/><tag k="highway" v="trunk"/><tag k="oneway" v="yes"/><tag k="lanes" v="3"/><tag k="maxspeed" v="50 mph"/><tag k="dual_carriageway" v="yes"/></way>
+  <way id="301"><nd ref="46"/><nd ref="47"/><tag k="highway" v="tertiary"/><tag k="maxspeed" v="60 mph"/></way>
+  <way id="302"><nd ref="50"/><nd ref="51"/><tag k="highway" v="tertiary"/></way>
+  <way id="303"><nd ref="54"/><nd ref="55"/><tag k="highway" v="residential"/></way>
+  <way id="310"><nd ref="42"/><nd ref="43"/><tag k="highway" v="cycleway"/><tag k="surface" v="asphalt"/></way>
+  <way id="311"><nd ref="44"/><nd ref="45"/><tag k="highway" v="footway"/></way>
+  <way id="320"><nd ref="48"/><nd ref="49"/><tag k="highway" v="bridleway"/><tag k="surface" v="dirt"/></way>
+  <way id="330"><nd ref="52"/><nd ref="53"/><tag k="highway" v="path"/><tag k="surface" v="dirt"/></way>
+  <way id="340"><nd ref="56"/><nd ref="57"/><tag k="highway" v="footway"/><tag k="surface" v="asphalt"/></way>
 </osm>

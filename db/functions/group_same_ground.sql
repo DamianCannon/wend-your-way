@@ -19,6 +19,9 @@ declare
   -- Half of London's tagged pavements lie within 5.5 m of their road's centre line and 96%
   -- within 12 m; roadside cycle tracks are much the same.
   c_within_m  constant double precision := 12;
+  -- A big road (a dual carriageway, or 4+ lanes) is drawn down each carriageway's middle, its verge paths further
+  -- out: 25 m (T199, #203; user, of a cycle path beside a six-lane trunk road: "technically green").
+  c_big_within_m constant double precision := 25;
   -- A path is sampled every 10 m or so. A sample is beside a road when the road is within
   -- c_within_m and runs within 30° of the same way (|sin| < 0.5, either direction).
   c_sample_m  constant double precision := 10;
@@ -33,7 +36,16 @@ begin
   create temporary table tmp_road_pieces on commit drop as
   select s.id as road_id,
          d.geom,
-         ST_Azimuth(ST_StartPoint(d.geom), ST_EndPoint(d.geom)) as azimuth
+         ST_Azimuth(ST_StartPoint(d.geom), ST_EndPoint(d.geom)) as azimuth,
+         case when w.tags ->> 'highway' = any (array['motorway', 'motorway_link', 'trunk', 'trunk_link', 'primary', 'primary_link', 'secondary', 'tertiary'])
+                   and (w.tags ->> 'dual_carriageway' = 'yes'
+                        or (w.tags ->> 'oneway' = 'yes' and coalesce(substring(w.tags ->> 'lanes' from '^\d+')::int, 0) >= 2)
+                        or coalesce(substring(w.tags ->> 'lanes' from '^\d+')::int, 0) >= 4)
+              then c_big_within_m else c_within_m end as reach,
+         -- 50 mph and over (T199: "tagged speeds only"): a speed in mph, the national limit, or km/h bare.
+         coalesce(substring(w.tags ->> 'maxspeed' from '^(\d+) ?mph$')::int >= 50
+                  or w.tags ->> 'maxspeed' = any (array['national', 'GB:nsl_single', 'GB:nsl_dual', 'UK:nsl_single', 'UK:nsl_dual', 'GB:motorway', 'UK:motorway'])
+                  or substring(w.tags ->> 'maxspeed' from '^(\d+)$')::int >= 80, false) as fast
     from network_next.segments s
     join osm.ways w on w.way_id = s.osm_way_id
    cross join lateral ST_DumpSegments(s.geom) d
@@ -53,12 +65,13 @@ begin
 
   -- Each sample, with the nearest road running the same way beside it, if there is one.
   create temporary table tmp_beside on commit drop as
-  select t.id, t.weight, near.road_id
+  select t.id, t.weight, near.road_id, coalesce(near.fast, false) as fast
     from tmp_samples t
     left join lateral (
-      select r.road_id
+      select r.road_id, r.fast
         from tmp_road_pieces r
-       where ST_DWithin(r.geom, t.point, c_within_m)
+       where ST_DWithin(r.geom, t.point, c_big_within_m)
+         and ST_DWithin(r.geom, t.point, r.reach)
          and abs(sin(t.azimuth - r.azimuth)) < c_max_sin
        order by r.geom <-> t.point
        limit 1) near on true;
@@ -75,7 +88,8 @@ begin
 
   -- A path mostly beside roads runs beside traffic: a paved one (a pavement, a cycle track)
   -- becomes a Connector; one tagged unpaved keeps its Off-road ground (user: happy on dirt paths
-  -- anywhere). A path with no surface tag is as likely a shared-use tarmac path, and mapped as a
+  -- anywhere), unless it's mostly beside roads of 50 mph or more (T199, #203: a dirt bridleway beside a 60 mph
+  -- road is beside traffic all the same). A path with no surface tag is as likely a shared-use tarmac path, and mapped as a
   -- footway it would be a Connector, so it becomes one too (T038). It's a Main Road's pavement if
   -- most of its metres beside roads are beside Main Roads, and on no Corridor, whatever route
   -- it's on: a Corridor is green ground (T037).
@@ -88,12 +102,14 @@ begin
          corridor = case when mostly.stays then s.corridor end
     -- Each path joined to its way once, after grouping: osm.ways has no index on way_id, and a
     -- lookup per path took hours on London (T038).
-    from (select m.id, m.main_share, m.paved_share, p.ground = 'off_road' and tagged_unpaved(w.tags) as stays
+    from (select m.id, m.main_share, m.paved_share, p.ground = 'off_road' and tagged_unpaved(w.tags) and m.fast_share < 0.5 as stays
             from (select t.id,
                          coalesce(sum(t.weight) filter (where r.main_road), 0)
                            / nullif(sum(t.weight) filter (where t.road_id is not null), 0) as main_share,
                          coalesce(sum(t.weight) filter (where r.main_road and r.pavement), 0)
-                           / nullif(sum(t.weight) filter (where r.main_road), 0) as paved_share
+                           / nullif(sum(t.weight) filter (where r.main_road), 0) as paved_share,
+                         coalesce(sum(t.weight) filter (where t.fast), 0)
+                           / sum(t.weight) filter (where t.road_id is not null) as fast_share
                     from tmp_beside t
                     left join network_next.segments r on r.id = t.road_id
                    group by t.id
