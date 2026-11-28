@@ -34,12 +34,12 @@ public class UsingThePlannerScreen
         return screen;
     }
 
-    //  No Reference Loops (T109): the user's stars took their place. Admin (T129) before Help.
+    //  No Reference Loops (T109): the user's stars took their place. Admin (T129) before Help; Rules (T200) after Help.
     [Test]
     public void The_rail_offers_every_panel() =>   // R10.1
         Assert.That(
             Open().FindAll(".rail button").Select(b => b.GetAttribute("aria-label")),
-            Is.EqualTo(new[] { "Request", "Saved Routes", "Outings", "Admin", "Help" }));
+            Is.EqualTo(new[] { "Request", "Saved Routes", "Outings", "Admin", "Help", "Rules" }));
 
     [Test]
     public void The_Request_panel_is_open_to_begin_with() =>
@@ -61,7 +61,7 @@ public class UsingThePlannerScreen
         Assert.Multiple(() =>
         {
             Assert.That(screen.FindAll(".panel"), Is.Empty);
-            Assert.That(screen.FindAll(".rail button[aria-label]"), Has.Count.EqualTo(5));
+            Assert.That(screen.FindAll(".rail button[aria-label]"), Has.Count.EqualTo(6));
         });
     }
 

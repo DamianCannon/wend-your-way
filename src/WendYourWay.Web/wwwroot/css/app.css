@@ -759,3 +759,18 @@ button:disabled, button[aria-disabled="true"]:not(.preparing) { opacity: 0.5; cu
 .swatch.toilets::after { content: "WC"; font-size: 6px; }
 .map-key .waiting { color: var(--ink-soft); font-style: italic; }
 .map-key ul.waiting .swatch { opacity: 0.45; }
+
+/* The rules a route is chosen by (T200, #204): in the Rules panel and on How it works. A name and its figure on a line,
+   what it says under them, and its exceptions set in beneath, marked "Except". */
+.rules h3 { margin: 18px 0 2px; font-size: 0.95rem; color: var(--forest); }
+.rules h3:first-child { margin-top: 4px; }
+.rules .intro { margin: 0 0 8px; font-size: 0.8rem; color: var(--ink-soft); line-height: 1.4; }
+.rules ol { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.rules .rule { padding: 6px 0 8px; border-bottom: 1px solid var(--paper-edge); font-size: 0.85rem; line-height: 1.4; }
+.rules .head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+.rules .name { font-weight: 700; }
+.rules .figure { flex: none; font-weight: 700; font-variant-numeric: tabular-nums; color: var(--forest); }
+.rules .says { margin: 2px 0 0; }
+.rules .except { margin: 4px 0 0; padding: 0 0 0 10px; border-left: 3px solid var(--moss); list-style: none; color: var(--ink-soft); }
+.rules .except::before { content: "Except"; display: block; font-size: 0.7rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--forest); }
+.rules .except li + li { margin-top: 3px; }

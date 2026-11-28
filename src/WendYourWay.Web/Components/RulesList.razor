@@ -1,0 +1,37 @@
+@* The rules a route is chosen by (T200, #204; STORY-053; user: "a list of these rules ... in order of how they get
+   chosen/weighted"): one list, from the planner's own weights, in the Rules panel and on How it works. *@
+@using WendYourWay.Core.Scoring
+
+<div class="rules">
+    @foreach (var group in Rules.Of(Weights))
+    {
+        <h3>@group.Heading</h3>
+        <p class="intro">@group.Intro</p>
+        <ol>
+            @foreach (var rule in group.Rules)
+            {
+                <li class="rule">
+                    <div class="head"><span class="name">@rule.Name</span><span class="figure">@rule.Figure</span></div>
+                    @if (rule.Says.Length > 0)
+                    {
+                        <p class="says">@rule.Says</p>
+                    }
+                    @if (rule.Except.Count > 0)
+                    {
+                        <ul class="except" aria-label="Except">
+                            @foreach (var except in rule.Except)
+                            {
+                                <li>@except</li>
+                            }
+                        </ul>
+                    }
+                </li>
+            }
+        </ol>
+    }
+</div>
+
+@code {
+    /// <summary>The weights to list: the planner's own.</summary>
+    [Parameter] public ScoringWeights Weights { get; set; } = ScoringWeights.Default;
+}
